@@ -6,6 +6,7 @@ import (
 	"image/color"
 	"log"
 	"os"
+	"os/exec"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -22,8 +23,8 @@ type App struct {
 
 	main fyne.Window
 
-	// clientDirectory string
 	serverSelector *widget.Select
+	playButton     *widget.Button
 
 	FoundClient bool
 }
@@ -75,18 +76,6 @@ func (app *App) LoadContent() {
 	)
 	app.serverSelector.SetSelectedIndex(app.settings.CurrentServer)
 
-	playButton := widget.NewButtonWithIcon(
-		"Play",
-		theme.MediaPlayIcon(),
-		func() {
-			log.Printf("Launching %s\n", app.serverSelector.Selected)
-		},
-	)
-	playButton.Importance = widget.HighImportance
-	if !app.FoundClient {
-		playButton.Disable()
-	}
-
 	innerContent := container.NewVBox(
 		container.NewPadded(
 			app.serverSelector,
@@ -106,16 +95,23 @@ func (app *App) LoadContent() {
 }
 
 func (app *App) Footer() *fyne.Container {
-	playButton := widget.NewButtonWithIcon(
+	app.playButton = widget.NewButtonWithIcon(
 		"Play",
 		theme.MediaPlayIcon(),
 		func() {
-			log.Printf("Launching %s\n", app.serverSelector.Selected)
+			app.SetButtonPlaying()
+			log.Println("Launching Lego Universe...")
+
+			go func(cmd *exec.Cmd) {
+				cmd.Wait()
+				app.SetButtonNormal()
+			}(app.StartClient())
 		},
 	)
-	playButton.Importance = widget.HighImportance
+
+	app.playButton.Importance = widget.HighImportance
 	if !app.FoundClient {
-		playButton.Disable()
+		app.playButton.Disable()
 	}
 
 	clientLabel := widget.NewLabelWithStyle(
@@ -130,7 +126,7 @@ func (app *App) Footer() *fyne.Container {
 	if app.FoundClient {
 		return container.NewBorder(
 			nil, nil, nil,
-			playButton,
+			app.playButton,
 			clientLabel,
 		)
 	} else {
@@ -139,7 +135,7 @@ func (app *App) Footer() *fyne.Container {
 		return container.NewBorder(
 			nil, nil,
 			widget.NewIcon(themedIcon),
-			playButton,
+			app.playButton,
 			clientLabel,
 		)
 	}
@@ -147,6 +143,23 @@ func (app *App) Footer() *fyne.Container {
 
 func (app *App) SetCurrentServer(index int) {
 	app.serverSelector.SetSelectedIndex(index)
+}
+
+func (app *App) SetButtonPlaying() {
+	app.playButton.Disable()
+	app.playButton.SetText("Playing")
+}
+
+func (app *App) SetButtonNormal() {
+	app.playButton.Enable()
+	app.playButton.SetText("Play")
+}
+
+func (app *App) StartClient() *exec.Cmd {
+	cmd := exec.Command(app.settings.ClientPath())
+	cmd.Dir = app.settings.Client.Directory
+	cmd.Start()
+	return cmd
 }
 
 func (app *App) Start() {
