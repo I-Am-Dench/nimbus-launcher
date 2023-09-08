@@ -94,12 +94,52 @@ func (app *App) LoadContent() {
 		container.NewPadded(
 			container.NewBorder(
 				heading,
-				playButton,
+				app.Footer(),
 				nil, nil,
 				innerContent,
 			),
 		),
 	)
+}
+
+func (app *App) Footer() *fyne.Container {
+	playButton := widget.NewButtonWithIcon(
+		"Play",
+		theme.MediaPlayIcon(),
+		func() {
+			log.Printf("Launching %s\n", app.serverSelector.Selected)
+		},
+	)
+	playButton.Importance = widget.HighImportance
+	if !app.FoundClient {
+		playButton.Disable()
+	}
+
+	clientLabel := widget.NewLabelWithStyle(
+		filepath.Join(app.clientDirectory, EXE_CLIENT),
+		fyne.TextAlignLeading,
+		fyne.TextStyle{
+			Bold: true,
+		},
+	)
+	clientLabel.Truncation = fyne.TextTruncateEllipsis
+
+	if app.FoundClient {
+		return container.NewBorder(
+			nil, nil, nil,
+			playButton,
+			clientLabel,
+		)
+	} else {
+		themedIcon := theme.NewErrorThemedResource(theme.ErrorIcon())
+
+		return container.NewBorder(
+			nil, nil,
+			widget.NewIcon(themedIcon),
+			playButton,
+			clientLabel,
+		)
+	}
 }
 
 func (app *App) SetCurrentServer(index int) {
