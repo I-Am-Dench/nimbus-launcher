@@ -9,6 +9,10 @@ import (
 	"os"
 )
 
+const (
+	DEFAULT_DIR_CLIENT = "LEGO Software\\Lego Universe"
+)
+
 func LocalDataDirectory() (string, error) {
 	localAppData, err := os.UserCacheDir()
 	if err != nil {

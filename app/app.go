@@ -6,7 +6,6 @@ import (
 	"image/color"
 	"log"
 	"os"
-	"path/filepath"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -19,18 +18,21 @@ import (
 
 type App struct {
 	fyne.App
+	settings resource.Settings
 
 	main fyne.Window
 
-	clientDirectory string
-	serverSelector  *widget.Select
+	// clientDirectory string
+	serverSelector *widget.Select
 
 	FoundClient bool
 }
 
-func New() App {
+func New(settings resource.Settings) App {
 	a := App{}
 	a.App = app.New()
+
+	a.settings = settings
 
 	a.main = a.NewWindow("Lego Universe")
 	a.main.SetFixedSize(true)
@@ -43,18 +45,13 @@ func New() App {
 		log.Println(fmt.Errorf("unable to load icon: %v", err))
 	}
 
-	a.clientDirectory = filepath.Join(
-		resource.DefaultAppDataDirectory(),
-		DIR_SOFTWARE,
-		DIR_UNIVERSE,
-	)
-	log.Printf("Using \"%s\" as client directory\n", a.clientDirectory)
+	log.Printf("Using \"%s\" as client directory\n", a.settings.Client.Directory)
 
-	_, err = os.Stat(filepath.Join(a.clientDirectory, EXE_CLIENT))
+	_, err = os.Stat(a.settings.ClientPath())
 	if a.FoundClient = !errors.Is(err, os.ErrNotExist); a.FoundClient {
-		log.Printf("Found valid client \"%s\"\n", EXE_CLIENT)
+		log.Printf("Found valid client \"%s\"\n", a.settings.Client.Name)
 	} else {
-		log.Printf("Cannot find valid executable \"%s\" in client directory: %v", EXE_CLIENT, err)
+		log.Printf("Cannot find valid executable \"%s\" in client directory: %v", a.settings.Client.Name, err)
 	}
 
 	a.LoadContent()
@@ -68,9 +65,15 @@ func (app *App) LoadContent() {
 
 	app.serverSelector = widget.NewSelect(
 		[]string{"Local", "Theo's Crib"},
-		func(s string) {},
+		func(s string) {
+			app.settings.CurrentServer = app.serverSelector.SelectedIndex()
+			err := app.settings.Save()
+			if err != nil {
+				log.Printf("save settings error: %v\n", err)
+			}
+		},
 	)
-	app.serverSelector.SetSelectedIndex(0)
+	app.serverSelector.SetSelectedIndex(app.settings.CurrentServer)
 
 	playButton := widget.NewButtonWithIcon(
 		"Play",
@@ -116,7 +119,7 @@ func (app *App) Footer() *fyne.Container {
 	}
 
 	clientLabel := widget.NewLabelWithStyle(
-		filepath.Join(app.clientDirectory, EXE_CLIENT),
+		app.settings.ClientPath(),
 		fyne.TextAlignLeading,
 		fyne.TextStyle{
 			Bold: true,
