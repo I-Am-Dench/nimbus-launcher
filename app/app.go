@@ -1,9 +1,12 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"image/color"
 	"log"
+	"os"
+	"path/filepath"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -19,7 +22,10 @@ type App struct {
 
 	main fyne.Window
 
-	serverSelector *widget.Select
+	clientDirectory string
+	serverSelector  *widget.Select
+
+	FoundClient bool
 }
 
 func New() App {
@@ -35,6 +41,20 @@ func New() App {
 		a.main.SetIcon(icon)
 	} else {
 		log.Println(fmt.Errorf("unable to load icon: %v", err))
+	}
+
+	a.clientDirectory = filepath.Join(
+		resource.DefaultAppDataDirectory(),
+		DIR_SOFTWARE,
+		DIR_UNIVERSE,
+	)
+	log.Printf("Using \"%s\" as client directory\n", a.clientDirectory)
+
+	_, err = os.Stat(filepath.Join(a.clientDirectory, EXE_CLIENT))
+	if a.FoundClient = !errors.Is(err, os.ErrNotExist); a.FoundClient {
+		log.Printf("Found valid client \"%s\"\n", EXE_CLIENT)
+	} else {
+		log.Printf("Cannot find valid executable \"%s\" in client directory: %v", EXE_CLIENT, err)
 	}
 
 	a.LoadContent()
@@ -60,6 +80,9 @@ func (app *App) LoadContent() {
 		},
 	)
 	playButton.Importance = widget.HighImportance
+	if !app.FoundClient {
+		playButton.Disable()
+	}
 
 	innerContent := container.NewVBox(
 		container.NewPadded(
