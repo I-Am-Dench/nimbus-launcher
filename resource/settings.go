@@ -12,7 +12,8 @@ const (
 )
 
 type Settings struct {
-	CurrentServer int `json:"currentServer"`
+	CurrentServer       int `json:"currentServer"`
+	PreviouslyRunServer int `json:"previouslyRunServer"`
 
 	Client struct {
 		Directory string `json:"directory"`

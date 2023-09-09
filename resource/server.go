@@ -30,6 +30,10 @@ func NewServer(name string, config *luconfig.LUConfig) (*Server, error) {
 	return server, nil
 }
 
+func (server *Server) BootPath() string {
+	return Of(settingsDir, serversDir, server.Boot)
+}
+
 func (server *Server) DeleteConfig() error {
 	return os.Remove(Of(settingsDir, serversDir, server.Boot))
 }

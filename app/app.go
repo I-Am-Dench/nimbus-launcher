@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -82,16 +83,7 @@ func (app *App) LoadContent() {
 	app.serverSelector = widget.NewSelect(
 		app.servers.Names(),
 		func(s string) {
-			app.settings.CurrentServer = app.serverSelector.SelectedIndex()
-			err := app.settings.Save()
-			if err != nil {
-				log.Printf("save settings error: %v\n", err)
-			}
-
-			server := app.servers.Get(app.settings.CurrentServer)
-			app.serverNameBinding.Set(server.Config.ServerName)
-			app.authServerBinding.Set(server.Config.AuthServerIP)
-			app.localeBinding.Set(server.Config.Locale)
+			app.SetCurrentServer(app.serverSelector.SelectedIndex())
 		},
 	)
 	app.serverSelector.SetSelectedIndex(app.settings.CurrentServer)
@@ -298,7 +290,17 @@ func (app *App) ServerSettings(window fyne.Window) *fyne.Container {
 }
 
 func (app *App) SetCurrentServer(index int) {
-	app.serverSelector.SetSelectedIndex(index)
+	app.settings.CurrentServer = index
+
+	err := app.settings.Save()
+	if err != nil {
+		log.Printf("save setings err: %v\n", err)
+	}
+
+	server := app.servers.Get(app.settings.CurrentServer)
+	app.serverNameBinding.Set(server.Config.ServerName)
+	app.authServerBinding.Set(server.Config.AuthServerIP)
+	app.localeBinding.Set(server.Config.Locale)
 }
 
 func (app *App) AddServer(server *resource.Server) error {
@@ -344,8 +346,38 @@ func (app *App) SetUpdateState() {
 
 }
 
+func (app *App) CurrentServer() *resource.Server {
+	return app.servers.Get(app.settings.CurrentServer)
+}
+
+func (app *App) CopyBootConfiguration(server *resource.Server) error {
+	data, err := os.ReadFile(server.BootPath())
+	if err != nil {
+		return fmt.Errorf("cannot read \"%s\": %v", server.BootPath(), err)
+	}
+
+	configPath := filepath.Join(app.settings.Client.Directory, "boot.cfg")
+	return os.WriteFile(configPath, data, 0755)
+}
+
 func (app *App) PressPlay() {
 	app.SetPlayingState()
+	log.Printf("Selected server: %s\n", app.CurrentServer().Name)
+
+	if app.settings.CurrentServer != app.settings.PreviouslyRunServer {
+		log.Println("Selected server does not match previously run server; Copying over boot.cfg")
+		err := app.CopyBootConfiguration(app.CurrentServer())
+		if err != nil {
+			dialog.ShowError(fmt.Errorf("could not copy \"boot.cfg\": %v", err), app.main)
+			app.SetNormalState()
+			return
+		}
+		log.Println("Copy completed.")
+	}
+
+	app.settings.PreviouslyRunServer = app.settings.CurrentServer
+	app.settings.Save()
+
 	log.Println("Launching Lego Universe...")
 
 	go func(cmd *exec.Cmd) {
