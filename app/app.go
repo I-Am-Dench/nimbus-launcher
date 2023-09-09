@@ -138,15 +138,7 @@ func (app *App) Footer() *fyne.Container {
 	app.playButton = widget.NewButtonWithIcon(
 		"Play",
 		theme.MediaPlayIcon(),
-		func() {
-			app.SetPlayingState()
-			log.Println("Launching Lego Universe...")
-
-			go func(cmd *exec.Cmd) {
-				cmd.Wait()
-				app.SetNormalState()
-			}(app.StartClient())
-		},
+		app.PressPlay,
 	)
 
 	app.playButton.Importance = widget.HighImportance
@@ -163,9 +155,17 @@ func (app *App) Footer() *fyne.Container {
 	)
 	clientLabel.Truncation = fyne.TextTruncateEllipsis
 
+	prepareProgressBar := widget.NewProgressBar()
+	prepareProgressBar.TextFormatter = func() string {
+		return ""
+	}
+
+	prepareProgressBar.Hide()
+
 	if app.FoundClient {
 		return container.NewBorder(
-			nil, nil, nil,
+			prepareProgressBar,
+			nil, nil,
 			app.playButton,
 			clientLabel,
 		)
@@ -173,7 +173,8 @@ func (app *App) Footer() *fyne.Container {
 		themedIcon := theme.NewErrorThemedResource(theme.ErrorIcon())
 
 		return container.NewBorder(
-			nil, nil,
+			prepareProgressBar,
+			nil,
 			widget.NewIcon(themedIcon),
 			app.playButton,
 			clientLabel,
@@ -195,8 +196,42 @@ func (app *App) SetPlayingState() {
 func (app *App) SetNormalState() {
 	app.playButton.Enable()
 	app.playButton.SetText("Play")
+	app.playButton.SetIcon(theme.MediaPlayIcon())
+	app.playButton.Importance = widget.HighImportance
+	app.playButton.OnTapped = app.PressPlay
+	app.playButton.Refresh()
 
 	app.serverSelector.Enable()
+}
+
+func (app *App) SetUpdatingState() {
+	app.playButton.Disable()
+	app.playButton.SetText("Updating")
+}
+
+func (app *App) SetUpdateState() {
+	app.playButton.Enable()
+	app.playButton.SetText("Update")
+	app.playButton.SetIcon(theme.DownloadIcon())
+	app.playButton.Importance = widget.SuccessImportance
+	app.playButton.OnTapped = app.PressUpdate
+	app.playButton.Refresh()
+
+}
+
+func (app *App) PressPlay() {
+	app.SetPlayingState()
+	log.Println("Launching Lego Universe...")
+
+	go func(cmd *exec.Cmd) {
+		cmd.Wait()
+		app.SetNormalState()
+	}(app.StartClient())
+}
+
+func (app *App) PressUpdate() {
+	log.Println("Starting update...")
+	app.SetNormalState()
 }
 
 func (app *App) StartClient() *exec.Cmd {
