@@ -23,3 +23,21 @@ func (e UnmarshalError) Error() string {
 func (e *UnmarshalError) Unwrap() error {
 	return e.Err
 }
+
+type MarshalError struct {
+	Err error
+}
+
+func newMarshalError(err error) MarshalError {
+	return MarshalError{
+		Err: err,
+	}
+}
+
+func (e MarshalError) Error() string {
+	return fmt.Sprintf("marshal error: %v", e.Err)
+}
+
+func (e *MarshalError) Unwrap() error {
+	return e.Err
+}

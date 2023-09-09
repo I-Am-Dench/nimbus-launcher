@@ -21,7 +21,7 @@ type cfgValue struct {
 	Value string
 }
 
-func getValueType(r rune) valueType {
+func runeToValueType(r rune) valueType {
 	switch r {
 	case '1':
 		return Integer
@@ -134,7 +134,7 @@ func setStructField(value reflect.Value, cfgValue cfgValue) error {
 }
 
 func parseKeyValuePair(p string) (string, cfgValue, error) {
-	pair := strings.Split(p, "=")
+	pair := strings.SplitN(p, "=", 2)
 	if len(pair) < 2 {
 		return "", cfgValue{}, newUnmarshalError(p, fmt.Errorf("invalid key-value pair"))
 	}
@@ -164,7 +164,7 @@ func parseValue(value string) (cfgValue, error) {
 		return cfgValue{}, newUnmarshalError(value, fmt.Errorf("invalid type identifier '%s'", typeIdentifier))
 	}
 
-	valueType := getValueType(rune(typeIdentifier[0]))
+	valueType := runeToValueType(rune(typeIdentifier[0]))
 	if !isValidValue(rawValue, valueType) {
 		return cfgValue{}, newUnmarshalError(value, fmt.Errorf("incompatible types"))
 	}

@@ -5,7 +5,7 @@ type LUConfig struct {
 	PatchServerIP    string `lucfg:"PATCHSERVERIP"`
 	AuthServerIP     string `lucfg:"AUTHSERVERIP"`
 	PatchServerPort  int32  `lucfg:"PATCHSERVERPORT"`
-	Logging          int64  `lucfg:"LOGGING"`
+	Logging          int32  `lucfg:"LOGGING"`
 	DataCenterID     int64  `lucfg:"DATACENTERID"`
 	CPCode           int32  `lucfg:"CPCODE"`
 	AkamaiDLM        bool   `lucfg:"AKAMAIDLM"`
