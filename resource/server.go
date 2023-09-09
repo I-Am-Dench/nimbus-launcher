@@ -17,16 +17,14 @@ type Server struct {
 	Config *luconfig.LUConfig `json:"-"`
 }
 
-func NewServer(name string, config *luconfig.LUConfig) (Server, error) {
-	server := Server{
-		Name: name,
-
-		Config: config,
-	}
+func NewServer(name string, config *luconfig.LUConfig) (*Server, error) {
+	server := new(Server)
+	server.Name = name
+	server.Config = config
 
 	err := server.SaveConfig()
 	if err != nil {
-		return Server{}, fmt.Errorf("failed to create new server: %v", err)
+		return nil, fmt.Errorf("failed to create new server: %v", err)
 	}
 
 	return server, nil
@@ -77,10 +75,10 @@ func (server *Server) LoadConfig() error {
 }
 
 type ServerList struct {
-	servers []Server
+	servers []*Server
 }
 
-func (servers *ServerList) List() []Server {
+func (servers *ServerList) List() []*Server {
 	return servers.servers
 }
 
@@ -88,7 +86,22 @@ func (servers *ServerList) Size() int {
 	return len(servers.servers)
 }
 
-func (servers *ServerList) Add(server Server) error {
+func (servers *ServerList) Names() []string {
+	names := []string{}
+	for _, server := range servers.servers {
+		names = append(names, server.Name)
+	}
+	return names
+}
+
+func (servers *ServerList) Get(index int) *Server {
+	if 0 <= index && index < servers.Size() {
+		return servers.servers[index]
+	}
+	return nil
+}
+
+func (servers *ServerList) Add(server *Server) error {
 	servers.servers = append(servers.servers, server)
 	return servers.SaveInfo()
 }

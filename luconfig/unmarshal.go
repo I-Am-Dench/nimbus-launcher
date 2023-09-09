@@ -74,7 +74,7 @@ func Unmarshal(data []byte, v any) error {
 		configMapping[key] = value
 	}
 
-	structValue := reflect.Indirect(reflect.ValueOf(v))
+	structValue := reflect.ValueOf(v).Elem()
 	structType := structValue.Type()
 
 	for i := 0; i < structType.NumField(); i++ {
@@ -162,7 +162,7 @@ func parseValue(value string) (cfgValue, error) {
 		return cfgValue{}, newUnmarshalError(value, fmt.Errorf("missing value type"))
 	}
 
-	typeIdentifier, rawValue := pair[0], pair[1]
+	typeIdentifier, rawValue := pair[0], strings.TrimSpace(pair[1])
 	if len(typeIdentifier) != 1 {
 		return cfgValue{}, newUnmarshalError(value, fmt.Errorf("invalid type identifier '%s'", typeIdentifier))
 	}
@@ -174,7 +174,7 @@ func parseValue(value string) (cfgValue, error) {
 
 	return cfgValue{
 		Type:  valueType,
-		Value: strings.TrimSpace(rawValue),
+		Value: rawValue,
 	}, nil
 }
 

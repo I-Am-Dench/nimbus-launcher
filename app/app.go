@@ -12,6 +12,7 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/I-Am-Dench/lu-launcher/resource"
@@ -27,6 +28,10 @@ type App struct {
 	serverSelector *widget.Select
 	playButton     *widget.Button
 
+	serverNameBinding binding.String
+	authServerBinding binding.String
+	localeBinding     binding.String
+
 	FoundClient bool
 }
 
@@ -39,7 +44,7 @@ func New(settings resource.Settings, servers resource.ServerList) App {
 
 	a.main = a.NewWindow("Lego Universe")
 	a.main.SetFixedSize(true)
-	a.main.Resize(fyne.NewSize(800, 600))
+	a.main.Resize(fyne.NewSize(800, 300))
 
 	icon, err := resource.Asset(IMAGE_ICON)
 	if err == nil {
@@ -57,6 +62,10 @@ func New(settings resource.Settings, servers resource.ServerList) App {
 		log.Printf("Cannot find valid executable \"%s\" in client directory: %v", a.settings.Client.Name, err)
 	}
 
+	a.serverNameBinding = binding.NewString()
+	a.authServerBinding = binding.NewString()
+	a.localeBinding = binding.NewString()
+
 	a.LoadContent()
 
 	return a
@@ -67,20 +76,49 @@ func (app *App) LoadContent() {
 	heading.TextSize = 24
 
 	app.serverSelector = widget.NewSelect(
-		[]string{"Local", "Theo's Crib"},
+		app.servers.Names(),
 		func(s string) {
 			app.settings.CurrentServer = app.serverSelector.SelectedIndex()
 			err := app.settings.Save()
 			if err != nil {
 				log.Printf("save settings error: %v\n", err)
 			}
+
+			server := app.servers.Get(app.settings.CurrentServer)
+			app.serverNameBinding.Set(server.Config.ServerName)
+			app.authServerBinding.Set(server.Config.AuthServerIP)
+			app.localeBinding.Set(server.Config.Locale)
 		},
 	)
 	app.serverSelector.SetSelectedIndex(app.settings.CurrentServer)
 
-	innerContent := container.NewVBox(
-		container.NewPadded(
-			app.serverSelector,
+	addServerButton := widget.NewButtonWithIcon(
+		"", theme.SettingsIcon(),
+		func() {
+			log.Println("Heading to settings...")
+		},
+	)
+
+	serverInfo := widget.NewForm(
+		widget.NewFormItem(
+			"Server Name", widget.NewLabelWithData(app.serverNameBinding),
+		),
+		widget.NewFormItem(
+			"Auth Server IP", widget.NewLabelWithData(app.authServerBinding),
+		),
+		widget.NewFormItem(
+			"Locale", widget.NewLabelWithData(app.localeBinding),
+		),
+	)
+
+	innerContent := container.NewPadded(
+		container.NewVBox(
+			container.NewBorder(
+				nil, nil, nil,
+				addServerButton,
+				app.serverSelector,
+			),
+			serverInfo,
 		),
 	)
 
@@ -101,12 +139,12 @@ func (app *App) Footer() *fyne.Container {
 		"Play",
 		theme.MediaPlayIcon(),
 		func() {
-			app.SetButtonPlaying()
+			app.SetPlayingState()
 			log.Println("Launching Lego Universe...")
 
 			go func(cmd *exec.Cmd) {
 				cmd.Wait()
-				app.SetButtonNormal()
+				app.SetNormalState()
 			}(app.StartClient())
 		},
 	)
@@ -147,14 +185,18 @@ func (app *App) SetCurrentServer(index int) {
 	app.serverSelector.SetSelectedIndex(index)
 }
 
-func (app *App) SetButtonPlaying() {
+func (app *App) SetPlayingState() {
 	app.playButton.Disable()
 	app.playButton.SetText("Playing")
+
+	app.serverSelector.Disable()
 }
 
-func (app *App) SetButtonNormal() {
+func (app *App) SetNormalState() {
 	app.playButton.Enable()
 	app.playButton.SetText("Play")
+
+	app.serverSelector.Enable()
 }
 
 func (app *App) StartClient() *exec.Cmd {
