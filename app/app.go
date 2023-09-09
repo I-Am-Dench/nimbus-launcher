@@ -26,8 +26,7 @@ type App struct {
 	settings resource.Settings
 	servers  resource.ServerList
 
-	main           fyne.Window
-	settingsWindow fyne.Window
+	main fyne.Window
 
 	serverSelector *widget.Select
 	playButton     *widget.Button
@@ -51,16 +50,9 @@ func New(settings resource.Settings, servers resource.ServerList) App {
 	a.main.Resize(fyne.NewSize(800, 300))
 	a.main.SetMaster()
 
-	a.settingsWindow = a.NewWindow("Settings")
-	a.settingsWindow.SetFixedSize(true)
-	a.settingsWindow.Resize(fyne.NewSize(800, 600))
-	a.settingsWindow.Show()
-	// a.settingsWindow.Hide()
-
 	icon, err := resource.Asset(IMAGE_ICON)
 	if err == nil {
 		a.main.SetIcon(icon)
-		a.settingsWindow.SetIcon(icon)
 	} else {
 		log.Println(fmt.Errorf("unable to load icon: %v", err))
 	}
@@ -79,7 +71,7 @@ func New(settings resource.Settings, servers resource.ServerList) App {
 	a.localeBinding = binding.NewString()
 
 	a.LoadContent()
-	a.LoadSettingsContent()
+	// a.LoadSettingsContent()
 
 	return a
 }
@@ -106,10 +98,7 @@ func (app *App) LoadContent() {
 	app.serverSelector.SetSelectedIndex(app.settings.CurrentServer)
 
 	addServerButton := widget.NewButtonWithIcon(
-		"", theme.SettingsIcon(),
-		func() {
-			log.Println("Heading to settings...")
-		},
+		"", theme.SettingsIcon(), app.ShowSettings,
 	)
 
 	serverInfo := widget.NewForm(
@@ -195,16 +184,16 @@ func (app *App) Footer() *fyne.Container {
 	}
 }
 
-func (app *App) LoadSettingsContent() {
+func (app *App) LoadSettingsContent(window fyne.Window) {
 	heading := canvas.NewText("Settings", color.White)
 	heading.TextSize = 24
 
 	tabs := container.NewAppTabs(
-		container.NewTabItem("Servers", app.ServerSettings()),
+		container.NewTabItem("Servers", app.ServerSettings(window)),
 		container.NewTabItem("Launcher", widget.NewLabel("Launcher settings")),
 	)
 
-	app.settingsWindow.SetContent(
+	window.SetContent(
 		container.NewPadded(
 			container.NewVBox(
 				heading,
@@ -214,7 +203,7 @@ func (app *App) LoadSettingsContent() {
 	)
 }
 
-func (app *App) ServerSettings() *fyne.Container {
+func (app *App) ServerSettings(window fyne.Window) *fyne.Container {
 	infoHeading := canvas.NewText("Server Info", color.White)
 	infoHeading.TextSize = 16
 
@@ -232,7 +221,7 @@ func (app *App) ServerSettings() *fyne.Container {
 		func() {
 			fileDialog := dialog.NewFileOpen(func(uc fyne.URIReadCloser, err error) {
 				if err != nil {
-					dialog.ShowError(fmt.Errorf("error when opening server.xml file: %v", err), app.settingsWindow)
+					dialog.ShowError(fmt.Errorf("error when opening server.xml file: %v", err), window)
 					return
 				}
 
@@ -243,7 +232,7 @@ func (app *App) ServerSettings() *fyne.Container {
 
 				server, err := resource.LoadXML(uc.URI().Path())
 				if err != nil {
-					dialog.ShowError(err, app.settingsWindow)
+					dialog.ShowError(err, window)
 					return
 				}
 
@@ -253,12 +242,12 @@ func (app *App) ServerSettings() *fyne.Container {
 				bootConfig := luconfig.LUConfig{}
 				err = luconfig.Unmarshal([]byte(server.Boot.Text), &bootConfig)
 				if err != nil {
-					dialog.ShowError(err, app.settingsWindow)
+					dialog.ShowError(err, window)
 					return
 				}
 
 				bootForm.UpdateWith(&bootConfig)
-			}, app.settingsWindow)
+			}, window)
 			fileDialog.SetFilter(storage.NewExtensionFileFilter([]string{".xml"}))
 			fileDialog.Show()
 		},
@@ -285,17 +274,17 @@ func (app *App) ServerSettings() *fyne.Container {
 		config := bootForm.GetConfig()
 		server, err := resource.NewServer(title.Text, config)
 		if err != nil {
-			dialog.ShowError(err, app.settingsWindow)
+			dialog.ShowError(err, window)
 			return
 		}
 
 		err = app.AddServer(server)
 		if err != nil {
-			dialog.ShowError(err, app.settingsWindow)
+			dialog.ShowError(err, window)
 			return
 		}
 
-		dialog.ShowInformation("Server Added", fmt.Sprintf("Added '%s' to server list!", server.Name), app.settingsWindow)
+		dialog.ShowInformation("Server Added", fmt.Sprintf("Added '%s' to server list!", server.Name), window)
 	})
 	addServerButton.Importance = widget.HighImportance
 
@@ -379,12 +368,17 @@ func (app *App) StartClient() *exec.Cmd {
 }
 
 func (app *App) ShowSettings() {
+	settings := app.NewWindow("Settings")
+	settings.SetFixedSize(true)
+	settings.Resize(fyne.NewSize(800, 600))
+	settings.SetIcon(theme.StorageIcon())
 
+	app.LoadSettingsContent(settings)
+	settings.CenterOnScreen()
+	settings.Show()
 }
 
 func (app *App) Start() {
 	app.main.CenterOnScreen()
-	app.settingsWindow.CenterOnScreen()
-
 	app.main.ShowAndRun()
 }
