@@ -56,6 +56,10 @@ func Unmarshal(data []byte, v any) error {
 		return nil
 	}
 
+	if reflect.ValueOf(v).IsNil() {
+		return newUnmarshalError("", fmt.Errorf("reference cannot be a nil pointer"))
+	}
+
 	configMapping := make(map[string]cfgValue)
 
 	s := string(data)
@@ -70,9 +74,8 @@ func Unmarshal(data []byte, v any) error {
 		configMapping[key] = value
 	}
 
-	structPointer := reflect.ValueOf(v)
-	dereferencedStruct := structPointer.Elem()
-	structType := dereferencedStruct.Type()
+	structValue := reflect.Indirect(reflect.ValueOf(v))
+	structType := structValue.Type()
 
 	for i := 0; i < structType.NumField(); i++ {
 		field := structType.Field(i)
@@ -87,7 +90,7 @@ func Unmarshal(data []byte, v any) error {
 			continue
 		}
 
-		value := dereferencedStruct.Field(i)
+		value := structValue.Field(i)
 		if !value.IsValid() || !value.CanSet() {
 			continue
 		}

@@ -20,6 +20,7 @@ import (
 type App struct {
 	fyne.App
 	settings resource.Settings
+	servers  resource.ServerList
 
 	main fyne.Window
 
@@ -29,11 +30,12 @@ type App struct {
 	FoundClient bool
 }
 
-func New(settings resource.Settings) App {
+func New(settings resource.Settings, servers resource.ServerList) App {
 	a := App{}
 	a.App = app.New()
 
 	a.settings = settings
+	a.servers = servers
 
 	a.main = a.NewWindow("Lego Universe")
 	a.main.SetFixedSize(true)

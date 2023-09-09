@@ -21,3 +21,36 @@ type LUConfig struct {
 	Locale           string `lucfg:"LOCALE"`
 	TrackDiskUsage   bool   `lucfg:"TRACK_DSK_USAGE"`
 }
+
+func New() *LUConfig {
+	config := new(LUConfig)
+	return config
+}
+
+func DefaultConfig() *LUConfig {
+	config := New()
+
+	*config = LUConfig{
+		ServerName:       "Overbuild Universe (US)",
+		PatchServerIP:    "localhost",
+		AuthServerIP:     "localhost",
+		PatchServerPort:  80,
+		Logging:          100,
+		DataCenterID:     150,
+		CPCode:           89164,
+		AkamaiDLM:        false,
+		PatchServerDir:   "luclient",
+		UGCUse3DServices: true,
+		UGCServerIP:      "localhost",
+		UGCServerDir:     "3dservices",
+		PasswordURL:      "https://account.lego.com/en-us/SendPassword.aspx?Username=",
+		SigninURL:        "https://account.lego.com/en-us/SignIn.aspx?ReturnUrl=http://universe.lego.com/en-us/myaccount/default.aspx",
+		SignupURL:        "http://universe.lego.com/en-us/myaccount/registration/default.aspx",
+		RegisterURL:      "https://secure.universe.lego.com/en-us/myaccount/subscription/embeddedlandingpage.aspx?username=",
+		CrashLogURL:      "http://services.lego.com/cls.aspx",
+		Locale:           "en_US",
+		TrackDiskUsage:   true,
+	}
+
+	return config
+}

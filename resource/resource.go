@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	"fyne.io/fyne/v2"
+	"github.com/I-Am-Dench/lu-launcher/luconfig"
 )
 
 const (
@@ -17,8 +18,8 @@ const (
 	serversDir  = "servers"
 )
 
-func Of(dir, name string) string {
-	return filepath.Join(dir, name)
+func Of(elem ...string) string {
+	return filepath.Join(elem...)
 }
 
 func Asset(name string) (*fyne.StaticResource, error) {
@@ -36,7 +37,6 @@ func InitializeSettings() error {
 		if !stat.IsDir() {
 			log.Panicf("\"settings\" already exists as a non-directory: %v\n", err)
 		}
-		return nil
 	}
 
 	log.Println("Initializing settings directories...")
@@ -46,9 +46,28 @@ func InitializeSettings() error {
 		return err
 	}
 
-	settings := DefaultSettings()
-	if err := settings.Save(); err != nil {
-		return err
+	if !Exists("launcher.json") {
+		log.Println("\"launcher.json\" does not exist; Generating default version")
+		settings := DefaultSettings()
+		if err := settings.Save(); err != nil {
+			return err
+		}
+		log.Println("Done")
+	}
+
+	if !Exists("servers.json") {
+		log.Println("\"servers.json\" does not exist; Generating default version")
+		localServer, err := NewServer("Local", luconfig.DefaultConfig())
+		if err != nil {
+			return err
+		}
+
+		servers := ServerList{}
+		err = servers.Add(localServer)
+		if err != nil {
+			return err
+		}
+		log.Println("Done")
 	}
 
 	log.Println("Initialization complete.")
@@ -69,4 +88,15 @@ func LauncherSettings() (Settings, error) {
 	}
 
 	return settings, nil
+}
+
+func Servers() (ServerList, error) {
+	servers := ServerList{}
+	err := servers.Load()
+	return servers, err
+}
+
+func Exists(name string) bool {
+	_, err := os.Stat(Of(settingsDir, name))
+	return !errors.Is(err, os.ErrNotExist)
 }

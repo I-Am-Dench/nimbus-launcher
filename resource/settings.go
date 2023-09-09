@@ -55,7 +55,7 @@ func DefaultSettings() Settings {
 	s := Settings{}
 	s.CurrentServer = 0
 	s.Client.Directory = "%{DEFAULTPATH}%"
-	s.Adjust()
 
+	s.Adjust()
 	return s
 }

@@ -19,6 +19,12 @@ func main() {
 	}
 	settings.Adjust()
 
-	app := app.New(settings)
+	servers, err := resource.Servers()
+	if err != nil {
+		log.Println(err)
+	}
+	log.Printf("Loaded %d server configuration(s)\n", servers.Size())
+
+	app := app.New(settings, servers)
 	app.Start()
 }
