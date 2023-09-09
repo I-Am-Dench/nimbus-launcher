@@ -71,7 +71,6 @@ func New(settings resource.Settings, servers resource.ServerList) App {
 	a.localeBinding = binding.NewString()
 
 	a.LoadContent()
-	// a.LoadSettingsContent()
 
 	return a
 }
