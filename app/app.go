@@ -38,8 +38,12 @@ type App struct {
 
 	main fyne.Window
 
-	serverSelector *widget.Select
-	playButton     *widget.Button
+	serverSelector     *widget.Select
+	playButton         *widget.Button
+	definiteProgress   *widget.ProgressBar
+	indefiniteProgress *widget.ProgressBarInfinite
+
+	progressText string
 
 	serverNameBinding binding.String
 	authServerBinding binding.String
@@ -161,12 +165,19 @@ func (app *App) Footer() *fyne.Container {
 	)
 	clientLabel.Truncation = fyne.TextTruncateEllipsis
 
-	prepareProgressBar := widget.NewProgressBar()
-	prepareProgressBar.TextFormatter = func() string {
-		return ""
+	app.definiteProgress = widget.NewProgressBar()
+	app.definiteProgress.TextFormatter = func() string {
+		return app.progressText
 	}
+	app.definiteProgress.Hide()
 
-	prepareProgressBar.Hide()
+	app.indefiniteProgress = widget.NewProgressBarInfinite()
+	app.indefiniteProgress.Hide()
+
+	prepareProgressBar := container.NewStack(
+		app.definiteProgress,
+		app.indefiniteProgress,
+	)
 
 	if app.FoundClient {
 		return container.NewBorder(
@@ -369,6 +380,8 @@ func (app *App) AddServer(server *resource.Server) error {
 }
 
 func (app *App) SetPlayingState() {
+	app.HideProgress()
+
 	app.playButton.Disable()
 	app.playButton.SetText("Playing")
 
@@ -376,6 +389,8 @@ func (app *App) SetPlayingState() {
 }
 
 func (app *App) SetNormalState() {
+	app.HideProgress()
+
 	app.playButton.Enable()
 	app.playButton.SetText("Play")
 	app.playButton.SetIcon(theme.MediaPlayIcon())
@@ -387,25 +402,48 @@ func (app *App) SetNormalState() {
 }
 
 func (app *App) SetUpdatingState() {
+	app.ShowIndefiniteProgress()
+
 	app.playButton.Disable()
 	app.playButton.SetText("Updating")
 }
 
 func (app *App) SetUpdateState() {
+	app.HideProgress()
+
 	app.playButton.Enable()
 	app.playButton.SetText("Update")
 	app.playButton.SetIcon(theme.DownloadIcon())
 	app.playButton.Importance = widget.SuccessImportance
 	app.playButton.OnTapped = app.PressUpdate
 	app.playButton.Refresh()
-
 }
 
 func (app *App) SetCheckingUpdatesState() {
+	app.ShowIndefiniteProgress()
+
 	app.playButton.Disable()
 	app.playButton.SetText("Checking updates")
 	app.playButton.SetIcon(theme.ViewRefreshIcon())
 	app.playButton.Refresh()
+}
+
+func (app *App) ShowIndefiniteProgress() {
+	app.definiteProgress.Hide()
+	app.indefiniteProgress.Show()
+}
+
+func (app *App) ShowProgress(value float64, format string) {
+	app.definiteProgress.SetValue(value)
+	app.progressText = format
+
+	app.indefiniteProgress.Hide()
+	app.definiteProgress.Show()
+}
+
+func (app *App) HideProgress() {
+	app.definiteProgress.Hide()
+	app.indefiniteProgress.Hide()
 }
 
 func (app *App) CurrentServer() *resource.Server {
