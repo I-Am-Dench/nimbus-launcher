@@ -27,7 +27,7 @@ type Settings struct {
 func (settings *Settings) Adjust() {
 	if settings.Client.Directory == "%{DEFAULTPATH}%" {
 		settings.Client.Directory = filepath.Join(
-			DefaultAppDataDirectory(),
+			DefaultApplicationsDirectory(),
 			DEFAULT_DIR_CLIENT,
 		)
 	}

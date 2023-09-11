@@ -18,7 +18,7 @@ func localDataDirectory() (string, error) {
 	return localAppData, nil
 }
 
-func DefaultAppDataDirectory() string {
+func DefaultApplicationsDirectory() string {
 	localData, err := LocalDataDirectory()
 	if err != nil {
 		log.Println(err)

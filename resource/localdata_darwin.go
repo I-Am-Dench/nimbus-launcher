@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 )
 
-func DefaultAppDataDirectory() string {
+func DefaultApplicationsDirectory() string {
 	configDir, err := os.UserConfigDir()
 	if err != nil {
 		log.Printf("cannot find ~/Library/Application Support: %v\n", err)
