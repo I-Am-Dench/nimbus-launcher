@@ -194,7 +194,7 @@ func (app *App) LoadSettingsContent(window fyne.Window) {
 
 	tabs := container.NewAppTabs(
 		container.NewTabItem("Servers", app.ServerSettings(window)),
-		container.NewTabItem("Launcher", widget.NewLabel("Launcher settings")),
+		container.NewTabItem("Launcher", app.LauncherSettings(window)),
 	)
 
 	window.SetContent(
@@ -269,10 +269,6 @@ func (app *App) ServerSettings(window fyne.Window) *fyne.Container {
 		bootForm.Container(),
 	)
 
-	scrolled := container.NewVScroll(
-		innerContent,
-	)
-
 	addServerButton := widget.NewButton("Add Server", func() {
 		config := bootForm.GetConfig()
 		server, err := resource.NewServer(title.Text, config)
@@ -296,7 +292,45 @@ func (app *App) ServerSettings(window fyne.Window) *fyne.Container {
 			nil,
 			container.NewBorder(nil, nil, nil, addServerButton),
 			nil, nil,
-			scrolled,
+			container.NewVScroll(
+				innerContent,
+			),
+		),
+	)
+}
+
+func (app *App) LauncherSettings(window fyne.Window) *fyne.Container {
+	generalHeading := canvas.NewText("General", color.White)
+	generalHeading.TextSize = 16
+
+	closeOnPlay := widget.NewCheck("", func(b bool) {})
+	closeOnPlay.Checked = app.settings.CloseOnPlay
+
+	saveButton := widget.NewButton("Save", func() {
+		app.settings.CloseOnPlay = closeOnPlay.Checked
+
+		err := app.settings.Save()
+		if err != nil {
+			dialog.ShowError(err, window)
+		} else {
+			dialog.ShowInformation("Launcher Settings", "Settings saved!", window)
+		}
+	})
+	saveButton.Importance = widget.HighImportance
+
+	return container.NewPadded(
+		container.NewBorder(
+			nil,
+			container.NewBorder(nil, nil, nil, saveButton),
+			nil, nil,
+			container.NewVScroll(
+				container.NewVBox(
+					generalHeading,
+					widget.NewForm(
+						widget.NewFormItem("Close Launcher When Played", closeOnPlay),
+					),
+				),
+			),
 		),
 	)
 }
@@ -407,11 +441,18 @@ func (app *App) PressPlay() {
 	app.settings.Save()
 
 	log.Println("Launching Lego Universe...")
+	log.Printf("Close launcher when played: %v\n", app.settings.CloseOnPlay)
+
+	cmd := app.StartClient()
+	if app.settings.CloseOnPlay {
+		app.main.Close()
+		return
+	}
 
 	go func(cmd *exec.Cmd) {
 		cmd.Wait()
 		app.SetNormalState()
-	}(app.StartClient())
+	}(cmd)
 }
 
 func (app *App) PressUpdate() {
