@@ -12,7 +12,7 @@ const (
 )
 
 type Settings struct {
-	CurrentServer       int `json:"currentServer"`
+	SelectedServer      int `json:"selectedServer"`
 	PreviouslyRunServer int `json:"previouslyRunServer"`
 
 	Client struct {
@@ -56,7 +56,7 @@ func (settings *Settings) Save() error {
 
 func DefaultSettings() Settings {
 	s := Settings{}
-	s.CurrentServer = 0
+	s.SelectedServer = 0
 	s.Client.Directory = "%{DEFAULTPATH}%"
 	s.CloseOnPlay = true
 

@@ -49,6 +49,9 @@ type App struct {
 	authServerBinding binding.String
 	localeBinding     binding.String
 
+	signupBinding binding.String
+	signinBinding binding.String
+
 	serverPatches map[string]resource.Patches
 
 	FoundClient bool
@@ -86,6 +89,9 @@ func New(settings resource.Settings, servers resource.ServerList) App {
 	a.authServerBinding = binding.NewString()
 	a.localeBinding = binding.NewString()
 
+	a.signupBinding = binding.NewString()
+	a.signinBinding = binding.NewString()
+
 	a.serverPatches = make(map[string]resource.Patches)
 
 	a.LoadContent()
@@ -103,7 +109,7 @@ func (app *App) LoadContent() {
 			app.SetCurrentServer(app.serverSelector.SelectedIndex())
 		},
 	)
-	app.serverSelector.SetSelectedIndex(app.settings.CurrentServer)
+	app.serverSelector.SetSelectedIndex(app.settings.SelectedServer)
 
 	addServerButton := widget.NewButtonWithIcon(
 		"", theme.SettingsIcon(), app.ShowSettings,
@@ -121,6 +127,19 @@ func (app *App) LoadContent() {
 		),
 	)
 
+	accountInfo := container.NewBorder(
+		nil, nil,
+		container.NewVBox(
+			HyperLinkButton("Signup", theme.AccountIcon(), app.signupBinding),
+			HyperLinkButton("Signin", theme.LoginIcon(), app.signinBinding),
+		),
+		nil,
+		container.NewVBox(
+			AddEllipsis(widget.NewLabelWithData(app.signupBinding)),
+			AddEllipsis(widget.NewLabelWithData(app.signinBinding)),
+		),
+	)
+
 	innerContent := container.NewPadded(
 		container.NewVBox(
 			container.NewBorder(
@@ -128,7 +147,9 @@ func (app *App) LoadContent() {
 				addServerButton,
 				app.serverSelector,
 			),
-			serverInfo,
+			container.NewGridWithColumns(
+				2, serverInfo, accountInfo,
+			),
 		),
 	)
 
@@ -350,17 +371,20 @@ func (app *App) SetCurrentServerInfo(server *resource.Server) {
 	app.serverNameBinding.Set(server.Config.ServerName)
 	app.authServerBinding.Set(server.Config.AuthServerIP)
 	app.localeBinding.Set(server.Config.Locale)
+
+	app.signupBinding.Set(server.Config.SignupURL)
+	app.signinBinding.Set(server.Config.SigninURL)
 }
 
 func (app *App) SetCurrentServer(index int) {
-	app.settings.CurrentServer = index
+	app.settings.SelectedServer = index
 
 	err := app.settings.Save()
 	if err != nil {
 		log.Printf("save setings err: %v\n", err)
 	}
 
-	server := app.servers.Get(app.settings.CurrentServer)
+	server := app.servers.Get(app.settings.SelectedServer)
 	app.SetCurrentServerInfo(server)
 
 	// If it's nil, the app has not started yet
@@ -447,7 +471,7 @@ func (app *App) HideProgress() {
 }
 
 func (app *App) CurrentServer() *resource.Server {
-	return app.servers.Get(app.settings.CurrentServer)
+	return app.servers.Get(app.settings.SelectedServer)
 }
 
 func (app *App) CopyBootConfiguration(server *resource.Server) error {
@@ -464,7 +488,7 @@ func (app *App) PressPlay() {
 	app.SetPlayingState()
 	log.Printf("Selected server: %s\n", app.CurrentServer().Name)
 
-	if app.settings.CurrentServer != app.settings.PreviouslyRunServer {
+	if app.settings.SelectedServer != app.settings.PreviouslyRunServer {
 		log.Println("Selected server does not match previously run server; Copying over boot.cfg")
 		err := app.CopyBootConfiguration(app.CurrentServer())
 		if err != nil {
@@ -475,7 +499,7 @@ func (app *App) PressPlay() {
 		log.Println("Copy completed.")
 	}
 
-	app.settings.PreviouslyRunServer = app.settings.CurrentServer
+	app.settings.PreviouslyRunServer = app.settings.SelectedServer
 	app.settings.Save()
 
 	log.Println("Launching Lego Universe...")
