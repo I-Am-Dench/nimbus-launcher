@@ -1,10 +1,14 @@
 package app
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"image/color"
+	"io"
 	"log"
+	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -22,6 +26,11 @@ import (
 	"github.com/I-Am-Dench/lu-launcher/resource"
 )
 
+var (
+	ErrPatchesUnsupported = errors.New("patches unsupported")
+	ErrPatchesUnavailable = errors.New("patch server could not be reached")
+)
+
 type App struct {
 	fyne.App
 	settings resource.Settings
@@ -35,6 +44,8 @@ type App struct {
 	serverNameBinding binding.String
 	authServerBinding binding.String
 	localeBinding     binding.String
+
+	serverPatches map[string]resource.Patches
 
 	FoundClient bool
 }
@@ -70,6 +81,8 @@ func New(settings resource.Settings, servers resource.ServerList) App {
 	a.serverNameBinding = binding.NewString()
 	a.authServerBinding = binding.NewString()
 	a.localeBinding = binding.NewString()
+
+	a.serverPatches = make(map[string]resource.Patches)
 
 	a.LoadContent()
 
@@ -289,6 +302,12 @@ func (app *App) ServerSettings(window fyne.Window) *fyne.Container {
 	)
 }
 
+func (app *App) SetCurrentServerInfo(server *resource.Server) {
+	app.serverNameBinding.Set(server.Config.ServerName)
+	app.authServerBinding.Set(server.Config.AuthServerIP)
+	app.localeBinding.Set(server.Config.Locale)
+}
+
 func (app *App) SetCurrentServer(index int) {
 	app.settings.CurrentServer = index
 
@@ -298,9 +317,12 @@ func (app *App) SetCurrentServer(index int) {
 	}
 
 	server := app.servers.Get(app.settings.CurrentServer)
-	app.serverNameBinding.Set(server.Config.ServerName)
-	app.authServerBinding.Set(server.Config.AuthServerIP)
-	app.localeBinding.Set(server.Config.Locale)
+	app.SetCurrentServerInfo(server)
+
+	// If it's nil, the app has not started yet
+	if app.playButton != nil {
+		app.CheckForUpdates(server)
+	}
 }
 
 func (app *App) AddServer(server *resource.Server) error {
@@ -346,6 +368,13 @@ func (app *App) SetUpdateState() {
 
 }
 
+func (app *App) SetCheckingUpdatesState() {
+	app.playButton.Disable()
+	app.playButton.SetText("Checking updates")
+	app.playButton.SetIcon(theme.ViewRefreshIcon())
+	app.playButton.Refresh()
+}
+
 func (app *App) CurrentServer() *resource.Server {
 	return app.servers.Get(app.settings.CurrentServer)
 }
@@ -387,8 +416,7 @@ func (app *App) PressPlay() {
 }
 
 func (app *App) PressUpdate() {
-	log.Println("Starting update...")
-	app.SetNormalState()
+	app.Update(app.CurrentServer())
 }
 
 func (app *App) StartClient() *exec.Cmd {
@@ -409,7 +437,153 @@ func (app *App) ShowSettings() {
 	settings.Show()
 }
 
+func (app *App) RequestPatch(version string, server *resource.Server) (resource.Update, error) {
+	url, err := url.JoinPath(server.PatchServer, "patches", version)
+	if err != nil {
+		return resource.Update{}, fmt.Errorf("could not create patch version URL with \"%s\": %v", server.PatchServer, err)
+	}
+
+	response, err := http.Get(url)
+	if err != nil {
+		return resource.Update{}, ErrPatchesUnavailable
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode >= 300 {
+		return resource.Update{}, ErrPatchesUnavailable
+	}
+
+	data, err := io.ReadAll(response.Body)
+	if err != nil {
+		return resource.Update{}, fmt.Errorf("cannot read body of patch version response: %v", err)
+	}
+
+	update := resource.Update{}
+	err = json.Unmarshal(data, &update)
+	if err != nil {
+		return resource.Update{}, fmt.Errorf("malformed response body from patch version: %v", err)
+	}
+
+	return update, nil
+}
+
+func (app *App) Update(server *resource.Server) {
+	app.SetUpdatingState()
+
+	patches, ok := app.serverPatches[server.Id]
+	if !ok {
+		log.Printf("Patches missing for \"%s\"\n", server.Name)
+		return
+	}
+
+	go func(version string, server *resource.Server) {
+		log.Printf("Getting patch \"%s\" for %s\n", version, server.Name)
+		update, err := app.RequestPatch(version, server)
+		if err != nil {
+			log.Printf("Patch error: %v\n", err)
+			if err != ErrPatchesUnavailable {
+				dialog.ShowError(err, app.main)
+			}
+
+			app.SetNormalState()
+			return
+		}
+
+		log.Printf("Patch received with %d downloads\n", len(update.Download))
+
+		log.Println("Starting update...")
+		err = update.Run(server)
+		if err != nil {
+			dialog.ShowError(err, app.main)
+		}
+		log.Println("Update completed.")
+
+		if app.CurrentServer().Id == server.Id {
+			app.SetCurrentServerInfo(server)
+		}
+
+		server.CurrentPatch = version
+		app.servers.SaveInfo()
+
+		app.SetNormalState()
+	}(patches.CurrentVersion, server)
+}
+
+func (app *App) RequestPatches(server *resource.Server) (resource.Patches, error) {
+	url, err := url.JoinPath(server.PatchServer, "patches")
+	if err != nil {
+		return resource.Patches{}, fmt.Errorf("could not create patch server URL with \"%s\": %v", server.PatchServer, err)
+	}
+
+	response, err := http.Get(url)
+	if err != nil {
+		return resource.Patches{}, ErrPatchesUnavailable
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode == http.StatusServiceUnavailable {
+		return resource.Patches{}, ErrPatchesUnsupported
+	}
+
+	if response.StatusCode >= 300 {
+		return resource.Patches{}, fmt.Errorf("invalid response status code from patch server: %d", response.StatusCode)
+	}
+
+	data, err := io.ReadAll(response.Body)
+	if err != nil {
+		return resource.Patches{}, fmt.Errorf("cannot read body of patch server response: %v", err)
+	}
+
+	patches := resource.Patches{}
+	err = json.Unmarshal(data, &patches)
+	if err != nil {
+		return resource.Patches{}, fmt.Errorf("malformed response body from patch server: %v", err)
+	}
+
+	return patches, nil
+}
+
+func (app *App) CheckForUpdates(server *resource.Server) {
+	if len(server.PatchServer) == 0 {
+		return
+	}
+
+	if _, ok := app.serverPatches[server.Id]; ok {
+		log.Printf("Patches for \"%s\" already received", server.Name)
+		return
+	}
+
+	app.SetCheckingUpdatesState()
+	go func(server *resource.Server) {
+		log.Printf("Checking for updates for \"%s\"\n", server.Name)
+		patches, err := app.RequestPatches(server)
+		if err != nil {
+			log.Printf("Patch server error: %v\n", err)
+			if err != ErrPatchesUnavailable && err != ErrPatchesUnsupported {
+				dialog.ShowError(err, app.main)
+			}
+
+			app.serverPatches[server.Id] = resource.Patches{}
+			app.SetNormalState()
+			return
+		}
+
+		if server.CurrentPatch == patches.CurrentVersion {
+			app.serverPatches[server.Id] = resource.Patches{}
+			app.SetNormalState()
+			return
+		}
+
+		log.Printf("Patch version \"%s\" is available\n", patches.CurrentVersion)
+
+		app.serverPatches[server.Id] = patches
+		app.SetUpdateState()
+	}(server)
+}
+
 func (app *App) Start() {
+	app.CheckForUpdates(app.CurrentServer())
+
 	app.main.CenterOnScreen()
 	app.main.ShowAndRun()
 }

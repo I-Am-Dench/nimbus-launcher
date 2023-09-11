@@ -11,14 +11,18 @@ import (
 )
 
 type Server struct {
-	Name string `json:"name"`
-	Boot string `json:"boot"`
+	Id           string `json:"id"`
+	Name         string `json:"name"`
+	Boot         string `json:"boot"`
+	PatchServer  string `json:"patchServer"`
+	CurrentPatch string `json:"currentPatch"`
 
 	Config *luconfig.LUConfig `json:"-"`
 }
 
 func NewServer(name string, config *luconfig.LUConfig) (*Server, error) {
 	server := new(Server)
+	server.Id = fmt.Sprint(time.Now().Unix())
 	server.Name = name
 	server.Config = config
 
