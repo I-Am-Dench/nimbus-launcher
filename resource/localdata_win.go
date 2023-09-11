@@ -19,7 +19,7 @@ func localDataDirectory() (string, error) {
 }
 
 func DefaultApplicationsDirectory() string {
-	localData, err := LocalDataDirectory()
+	localData, err := localDataDirectory()
 	if err != nil {
 		log.Println(err)
 		log.Println("Using C:\\")
