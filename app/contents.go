@@ -20,6 +20,13 @@ func (app *App) LoadContent() {
 	heading := canvas.NewText("Launch Lego Universe", color.White)
 	heading.TextSize = 24
 
+	// refreshUpdates := widget.NewButtonWithIcon(
+	// 	"Check For Updates", theme.ViewRefreshIcon(),
+	// 	func() {
+	// 		app.CheckForUpdates(app.CurrentServer())
+	// 	},
+	// )
+
 	app.serverSelector = widget.NewSelect(
 		app.servers.Names(),
 		func(s string) {
@@ -88,11 +95,7 @@ func (app *App) Footer() *fyne.Container {
 		theme.MediaPlayIcon(),
 		app.PressPlay,
 	)
-
 	app.playButton.Importance = widget.HighImportance
-	// if !app.FoundClient {
-	// 	app.playButton.Disable()
-	// }
 
 	clientLabel := widget.NewLabelWithStyle(
 		app.settings.ClientPath(),
