@@ -335,15 +335,47 @@ func (app *App) LauncherSettings(window fyne.Window) *fyne.Container {
 	generalHeading := canvas.NewText("General", color.White)
 	generalHeading.TextSize = 16
 
+	clientHeading := canvas.NewText("Client", color.White)
+	clientHeading.TextSize = 16
+
 	closeOnPlay := widget.NewCheck("", func(b bool) {})
 	closeOnPlay.Checked = app.settings.CloseOnPlay
 
 	checkPatchesAutomatically := widget.NewCheck("", func(b bool) {})
 	checkPatchesAutomatically.Checked = app.settings.CheckPatchesAutomatically
 
+	clientDirectory := widget.NewEntry()
+	clientDirectoryButton := widget.NewButtonWithIcon(
+		"", theme.FolderOpenIcon(), func() {
+			dialog.ShowFolderOpen(func(lu fyne.ListableURI, err error) {
+				if err != nil {
+					dialog.ShowError(err, window)
+					return
+				}
+
+				if lu == nil {
+					return
+				}
+
+				clientDirectory.SetText(filepath.Clean(lu.Path()))
+			}, window)
+		},
+	)
+	clientDirectoryButton.Importance = widget.LowImportance
+	clientDirectory.ActionItem = clientDirectoryButton
+
+	clientDirectory.SetText(app.settings.Client.Directory)
+
+	clientName := widget.NewEntry()
+	clientName.PlaceHolder = ".exe"
+	clientName.SetText(app.settings.Client.Name)
+
 	saveButton := widget.NewButton("Save", func() {
 		app.settings.CloseOnPlay = closeOnPlay.Checked
 		app.settings.CheckPatchesAutomatically = checkPatchesAutomatically.Checked
+
+		app.settings.Client.Directory = clientDirectory.Text
+		app.settings.Client.Name = clientName.Text
 
 		err := app.settings.Save()
 		if err != nil {
@@ -365,6 +397,12 @@ func (app *App) LauncherSettings(window fyne.Window) *fyne.Container {
 					widget.NewForm(
 						widget.NewFormItem("Close Launcher When Played", closeOnPlay),
 						widget.NewFormItem("Check Patches Automatically", checkPatchesAutomatically),
+					),
+					widget.NewSeparator(),
+					clientHeading,
+					widget.NewForm(
+						widget.NewFormItem("Directory", clientDirectory),
+						widget.NewFormItem("Name", clientName),
 					),
 				),
 			),
