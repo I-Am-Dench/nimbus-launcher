@@ -199,8 +199,8 @@ func (app *App) LoadSettingsContent(window fyne.Window) {
 
 	window.SetContent(
 		container.NewPadded(
-			container.NewVBox(
-				heading,
+			container.NewBorder(
+				heading, nil, nil, nil,
 				tabs,
 			),
 		),
@@ -272,7 +272,6 @@ func (app *App) ServerSettings(window fyne.Window) *fyne.Container {
 	scrolled := container.NewVScroll(
 		innerContent,
 	)
-	scrolled.SetMinSize(innerContent.MinSize().AddWidthHeight(0, 75))
 
 	addServerButton := widget.NewButton("Add Server", func() {
 		config := bootForm.GetConfig()

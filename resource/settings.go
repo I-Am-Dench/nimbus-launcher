@@ -19,6 +19,8 @@ type Settings struct {
 		Directory string `json:"directory"`
 		Name      string `json:"name"`
 	} `json:"client"`
+
+	CloseOnPlay bool `json:"closeOnPlay"`
 }
 
 func (settings *Settings) Adjust() {
@@ -56,6 +58,7 @@ func DefaultSettings() Settings {
 	s := Settings{}
 	s.CurrentServer = 0
 	s.Client.Directory = "%{DEFAULTPATH}%"
+	s.CloseOnPlay = true
 
 	s.Adjust()
 	return s
