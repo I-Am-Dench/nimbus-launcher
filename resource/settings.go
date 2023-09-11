@@ -16,8 +16,10 @@ type Settings struct {
 	PreviouslyRunServer int `json:"previouslyRunServer"`
 
 	Client struct {
-		Directory string `json:"directory"`
-		Name      string `json:"name"`
+		Directory            string `json:"directory"`
+		Name                 string `json:"name"`
+		RunCommand           string `json:"runCommand"`
+		EnvironmentVariables string `json:"environmentVariables"`
 	} `json:"client"`
 
 	CloseOnPlay               bool `json:"closeOnPlay"`
@@ -27,7 +29,7 @@ type Settings struct {
 func (settings *Settings) Adjust() {
 	if settings.Client.Directory == "%{DEFAULTPATH}%" {
 		settings.Client.Directory = filepath.Join(
-			DefaultAppDataDirectory(),
+			DefaultApplicationsDirectory(),
 			DEFAULT_DIR_CLIENT,
 		)
 	}

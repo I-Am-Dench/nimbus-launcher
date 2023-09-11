@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -253,7 +254,12 @@ func (app *App) PressUpdate() {
 
 func (app *App) StartClient() *exec.Cmd {
 	cmd := exec.Command(app.settings.ClientPath())
+	if len(strings.TrimSpace(app.settings.Client.RunCommand)) > 0 {
+		cmd = exec.Command(app.settings.Client.RunCommand, app.settings.ClientPath())
+	}
+
 	cmd.Dir = app.settings.Client.Directory
+	cmd.Env = strings.Split(app.settings.Client.EnvironmentVariables, ";")
 	cmd.Start()
 	return cmd
 }
