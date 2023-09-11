@@ -9,11 +9,7 @@ import (
 	"os"
 )
 
-const (
-	DEFAULT_DIR_CLIENT = "LEGO Software\\Lego Universe"
-)
-
-func LocalDataDirectory() (string, error) {
+func localDataDirectory() (string, error) {
 	localAppData, err := os.UserCacheDir()
 	if err != nil {
 		return "", fmt.Errorf("cannot find AppData\\Local: %v", err)

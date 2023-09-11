@@ -18,6 +18,10 @@ const (
 	serversDir  = "servers"
 )
 
+const (
+	DEFAULT_DIR_CLIENT = "LEGO Software/Lego Universe"
+)
+
 func Of(elem ...string) string {
 	return filepath.Join(elem...)
 }
