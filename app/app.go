@@ -178,7 +178,7 @@ func (app *App) SetCheckingUpdatesState() {
 
 	app.playButton.Disable()
 	app.playButton.SetText("Checking updates")
-	app.playButton.SetIcon(theme.ViewRefreshIcon())
+	app.playButton.SetIcon(nil)
 	app.playButton.Refresh()
 }
 
