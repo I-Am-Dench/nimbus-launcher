@@ -338,8 +338,12 @@ func (app *App) LauncherSettings(window fyne.Window) *fyne.Container {
 	closeOnPlay := widget.NewCheck("", func(b bool) {})
 	closeOnPlay.Checked = app.settings.CloseOnPlay
 
+	checkPatchesAutomatically := widget.NewCheck("", func(b bool) {})
+	checkPatchesAutomatically.Checked = app.settings.CheckPatchesAutomatically
+
 	saveButton := widget.NewButton("Save", func() {
 		app.settings.CloseOnPlay = closeOnPlay.Checked
+		app.settings.CheckPatchesAutomatically = checkPatchesAutomatically.Checked
 
 		err := app.settings.Save()
 		if err != nil {
@@ -360,6 +364,7 @@ func (app *App) LauncherSettings(window fyne.Window) *fyne.Container {
 					generalHeading,
 					widget.NewForm(
 						widget.NewFormItem("Close Launcher When Played", closeOnPlay),
+						widget.NewFormItem("Check Patches Automatically", checkPatchesAutomatically),
 					),
 				),
 			),
@@ -388,7 +393,7 @@ func (app *App) SetCurrentServer(index int) {
 	app.SetCurrentServerInfo(server)
 
 	// If it's nil, the app has not started yet
-	if app.playButton != nil {
+	if app.playButton != nil && app.settings.CheckPatchesAutomatically {
 		app.CheckForUpdates(server)
 	}
 }
@@ -684,7 +689,9 @@ func (app *App) CheckForUpdates(server *resource.Server) {
 }
 
 func (app *App) Start() {
-	app.CheckForUpdates(app.CurrentServer())
+	if app.settings.CheckPatchesAutomatically {
+		app.CheckForUpdates(app.CurrentServer())
+	}
 
 	app.main.CenterOnScreen()
 	app.main.ShowAndRun()

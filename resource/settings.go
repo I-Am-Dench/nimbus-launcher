@@ -20,7 +20,8 @@ type Settings struct {
 		Name      string `json:"name"`
 	} `json:"client"`
 
-	CloseOnPlay bool `json:"closeOnPlay"`
+	CloseOnPlay               bool `json:"closeOnPlay"`
+	CheckPatchesAutomatically bool `json:"checkPatchesAutomatically"`
 }
 
 func (settings *Settings) Adjust() {
