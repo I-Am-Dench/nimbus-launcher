@@ -32,7 +32,8 @@ type App struct {
 	settings resource.Settings
 	servers  resource.ServerList
 
-	main fyne.Window
+	main           fyne.Window
+	settingsWindow fyne.Window
 
 	serverSelector     *widget.Select
 	playButton         *widget.Button
@@ -64,6 +65,8 @@ func New(settings resource.Settings, servers resource.ServerList) App {
 	a.main.SetFixedSize(true)
 	a.main.Resize(fyne.NewSize(800, 300))
 	a.main.SetMaster()
+
+	a.settingsWindow = nil
 
 	icon, err := resource.Asset(IMAGE_ICON)
 	if err == nil {
@@ -265,12 +268,22 @@ func (app *App) StartClient() *exec.Cmd {
 }
 
 func (app *App) ShowSettings() {
+	if app.settingsWindow != nil {
+		app.settingsWindow.RequestFocus()
+		return
+	}
+
 	settings := app.NewWindow("Settings")
 	settings.SetFixedSize(true)
 	settings.Resize(fyne.NewSize(800, 600))
 	settings.SetIcon(theme.StorageIcon())
+	settings.SetOnClosed(func() {
+		app.settingsWindow = nil
+	})
 
 	app.LoadSettingsContent(settings)
+	app.settingsWindow = settings
+
 	settings.CenterOnScreen()
 	settings.Show()
 }
