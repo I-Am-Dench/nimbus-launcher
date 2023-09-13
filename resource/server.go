@@ -109,6 +109,14 @@ func (servers *ServerList) Get(index int) *Server {
 	return nil
 }
 
+func (servers *ServerList) Set(index int, server *Server) {
+	if index >= servers.Size() {
+		return
+	}
+
+	servers.servers[index] = server
+}
+
 func (servers *ServerList) Add(server *Server) error {
 	servers.servers = append(servers.servers, server)
 	return servers.SaveInfo()

@@ -6,6 +6,7 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/data/binding"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
 
@@ -39,4 +40,11 @@ func HyperLinkButton(text string, icon fyne.Resource, urlBinding binding.String)
 func AddEllipsis(label *widget.Label) *widget.Label {
 	label.Truncation = fyne.TextTruncateEllipsis
 	return label
+}
+
+func BackButton(tapped func()) *widget.Button {
+	button := widget.NewButtonWithIcon("Back", theme.NavigateBackIcon(), tapped)
+	button.Importance = widget.LowImportance
+
+	return button
 }

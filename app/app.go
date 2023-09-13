@@ -127,6 +127,14 @@ func (app *App) SetCurrentServer(index int) {
 	}
 }
 
+func (app *App) GetServer(index int) *resource.Server {
+	return app.servers.Get(index)
+}
+
+func (app *App) SetServer(index int, server *resource.Server) {
+	app.servers.Set(index, server)
+}
+
 func (app *App) AddServer(server *resource.Server) error {
 	err := app.servers.Add(server)
 	if err != nil {
@@ -135,6 +143,14 @@ func (app *App) AddServer(server *resource.Server) error {
 
 	app.serverSelector.SetOptions(app.servers.Names())
 	return nil
+}
+
+func (app *App) SaveServers() error {
+	return app.servers.SaveInfo()
+}
+
+func (app *App) ServerNames() []string {
+	return app.servers.Names()
 }
 
 func (app *App) SetPlayingState() {

@@ -1,4 +1,4 @@
-package app
+package forms
 
 import (
 	"fyne.io/fyne/v2"
