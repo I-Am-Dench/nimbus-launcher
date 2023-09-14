@@ -271,6 +271,9 @@ func (app *App) ShowSettings() {
 		return
 	}
 
+	app.settings.PreviouslyRunServer = ""
+	app.settings.Save()
+
 	settings := app.NewWindow("Settings")
 	settings.SetFixedSize(true)
 	settings.Resize(fyne.NewSize(800, 600))
@@ -482,7 +485,7 @@ func (app *App) CheckForUpdates(server *resource.Server) {
 		return
 	}
 
-	if len(server.PatchServer) == 0 || !app.clientErrorIcon.Hidden {
+	if len(server.Config.PatchServerIP) == 0 || !app.clientErrorIcon.Hidden {
 		return
 	}
 

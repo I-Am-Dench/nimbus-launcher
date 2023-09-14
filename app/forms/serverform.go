@@ -18,8 +18,8 @@ import (
 type ServerForm struct {
 	container *fyne.Container
 
-	title       *widget.Entry
-	patchServer *widget.Entry
+	title *widget.Entry
+	// patchServer *widget.Entry
 
 	bootForm *BootForm
 }
@@ -38,7 +38,7 @@ func NewServerForm(window fyne.Window) *ServerForm {
 	form.title = widget.NewEntry()
 	form.title.PlaceHolder = "My Server"
 
-	form.patchServer = widget.NewEntry()
+	// form.patchServer = widget.NewEntry()
 
 	form.bootForm = NewBootForm()
 
@@ -63,7 +63,7 @@ func NewServerForm(window fyne.Window) *ServerForm {
 				}
 
 				form.title.SetText(server.Name)
-				form.patchServer.SetText(server.PatchServer)
+				// form.patchServer.SetText(server.PatchServer)
 
 				bootConfig := luconfig.LUConfig{}
 				err = luconfig.Unmarshal([]byte(server.Boot.Text), &bootConfig)
@@ -84,7 +84,7 @@ func NewServerForm(window fyne.Window) *ServerForm {
 		widget.NewForm(
 			widget.NewFormItem("Server XML", container.NewHBox(serverXMLOpen, serverXML)),
 			widget.NewFormItem("Name", form.title),
-			widget.NewFormItem("Patch Server", form.patchServer),
+			// widget.NewFormItem("Patch Server", form.patchServer),
 		),
 		widget.NewSeparator(),
 		bootHeading,
@@ -95,7 +95,7 @@ func NewServerForm(window fyne.Window) *ServerForm {
 }
 
 func (form *ServerForm) CreateServer() (*resource.Server, error) {
-	return resource.CreateServer(form.title.Text, form.patchServer.Text, form.bootForm.GetConfig())
+	return resource.CreateServer(form.title.Text, form.bootForm.GetConfig())
 }
 
 func (form *ServerForm) UpdateWith(server *resource.Server) {
@@ -104,13 +104,13 @@ func (form *ServerForm) UpdateWith(server *resource.Server) {
 	}
 
 	form.title.SetText(server.Name)
-	form.patchServer.SetText(server.PatchServer)
+	// form.patchServer.SetText(server.PatchServer)
 
 	form.bootForm.UpdateWith(server.Config)
 }
 
 func (form *ServerForm) Get() *resource.Server {
-	return resource.NewServer(form.title.Text, form.patchServer.Text, form.bootForm.GetConfig())
+	return resource.NewServer(form.title.Text, form.bootForm.GetConfig())
 }
 
 func (form *ServerForm) Container() *fyne.Container {

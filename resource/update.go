@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -26,11 +25,13 @@ type ServerPatches struct {
 }
 
 func GetServerPatches(server *Server) (ServerPatches, error) {
-	url, err := url.JoinPath(server.PatchServer, "patches")
+	// url, err := url.JoinPath(server.Config.PatchServerIP, "patches")
+	url, err := server.PatchServerUrl()
 	if err != nil {
-		return ServerPatches{}, fmt.Errorf("could not create patch server URL with \"%s\": %v", server.PatchServer, err)
+		return ServerPatches{}, fmt.Errorf("could not create patch server URL with \"%s\": %v", server.PatchServerHost(), err)
 	}
 
+	log.Printf("Getting server patches: %s\n", url)
 	response, err := http.Get(url)
 	if err != nil {
 		return ServerPatches{}, ErrPatchesUnavailable
@@ -161,11 +162,13 @@ func GetPatch(version string, server *Server) (Patch, error) {
 		return patch, nil
 	}
 
-	url, err := url.JoinPath(server.PatchServer, "patches", version)
+	// url, err := url.JoinPath(server.PatchServer, "patches", version)
+	url, err := server.PatchServerUrl(version)
 	if err != nil {
-		return Patch{}, fmt.Errorf("could not create patch version URL with \"%s\": %v", server.PatchServer, err)
+		return Patch{}, fmt.Errorf("could not create patch version URL with \"%s\": %v", server.PatchServerHost(), err)
 	}
 
+	log.Printf("Getting patch version: %s\n", url)
 	response, err := http.Get(url)
 	if err != nil {
 		return Patch{}, ErrPatchesUnavailable
@@ -198,7 +201,8 @@ func (patch *Patch) downloadFiles(server *Server) error {
 	os.MkdirAll(path, 0755)
 
 	for _, download := range patch.Downloads {
-		url, err := url.JoinPath(server.PatchServer, download.Path)
+		// url, err := url.JoinPath(server.PatchServer, download.Path)
+		url, err := server.PatchServerUrl(download.Path)
 		if err != nil {
 			return fmt.Errorf("could not create download URL to \"%s\": %v", download.Path, err)
 		}

@@ -16,12 +16,12 @@ func (app *App) LoadContent() {
 	heading := canvas.NewText("Launch Lego Universe", color.White)
 	heading.TextSize = 24
 
-	// refreshUpdates := widget.NewButtonWithIcon(
-	// 	"Check For Updates", theme.ViewRefreshIcon(),
-	// 	func() {
-	// 		app.CheckForUpdates(app.CurrentServer())
-	// 	},
-	// )
+	refreshUpdates := widget.NewButtonWithIcon(
+		"Check For Updates", theme.ViewRefreshIcon(),
+		func() {
+			app.CheckForUpdates(app.CurrentServer())
+		},
+	)
 
 	app.serverSelector = widget.NewSelect(
 		app.servers.Names(),
@@ -64,6 +64,7 @@ func (app *App) LoadContent() {
 		container.NewVBox(
 			AddEllipsis(widget.NewLabelWithData(app.signupBinding)),
 			AddEllipsis(widget.NewLabelWithData(app.signinBinding)),
+			refreshUpdates,
 		),
 	)
 

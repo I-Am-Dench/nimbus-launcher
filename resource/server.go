@@ -2,6 +2,7 @@ package resource
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"time"
 
@@ -12,23 +13,21 @@ type Server struct {
 	Id           string `json:"id"`
 	Name         string `json:"name"`
 	Boot         string `json:"boot"`
-	PatchServer  string `json:"patchServer"`
 	CurrentPatch string `json:"currentPatch"`
 
 	Config *luconfig.LUConfig `json:"-"`
 }
 
-func NewServer(name, patchServer string, config *luconfig.LUConfig) *Server {
+func NewServer(name string, config *luconfig.LUConfig) *Server {
 	server := new(Server)
 	server.Id = fmt.Sprint(time.Now().Unix())
 	server.Name = name
-	server.PatchServer = patchServer
 	server.Config = config
 	return server
 }
 
-func CreateServer(name, patchServer string, config *luconfig.LUConfig) (*Server, error) {
-	server := NewServer(name, patchServer, config)
+func CreateServer(name string, config *luconfig.LUConfig) (*Server, error) {
+	server := NewServer(name, config)
 	return server, server.SaveConfig()
 }
 
@@ -80,11 +79,19 @@ func (server *Server) BootPath() string {
 	return Of(settingsDir, serversDir, server.Boot)
 }
 
+func (server *Server) PatchServerHost() string {
+	return fmt.Sprint(server.Config.PatchServerIP, ":", server.Config.PatchServerPort)
+}
+
+func (server *Server) PatchServerUrl(elem ...string) (string, error) {
+	path := []string{server.Config.PatchServerDir}
+	return url.JoinPath(server.PatchServerHost(), append(path, elem...)...)
+}
+
 func (server *Server) ToXML() ServerXML {
 	data, _ := luconfig.Marshal(server.Config)
 	return ServerXML{
-		Name:        server.Name,
-		PatchServer: server.PatchServer,
+		Name: server.Name,
 		Boot: struct {
 			Text string `xml:",innerxml"`
 		}{
