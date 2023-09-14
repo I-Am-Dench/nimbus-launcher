@@ -1,13 +1,9 @@
 package app
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
-	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -21,11 +17,6 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"github.com/I-Am-Dench/lu-launcher/luconfig"
 	"github.com/I-Am-Dench/lu-launcher/resource"
-)
-
-var (
-	ErrPatchesUnsupported = errors.New("patches unsupported")
-	ErrPatchesUnavailable = errors.New("patch server could not be reached")
 )
 
 type App struct {
@@ -50,7 +41,7 @@ type App struct {
 	signupBinding binding.String
 	signinBinding binding.String
 
-	serverPatches map[string]resource.Patches
+	serverPatches map[string]resource.ServerPatches
 
 	clientErrorIcon *widget.Icon
 }
@@ -95,7 +86,7 @@ func New(settings resource.Settings, servers resource.ServerList) App {
 	a.signupBinding = binding.NewString()
 	a.signinBinding = binding.NewString()
 
-	a.serverPatches = make(map[string]resource.Patches)
+	a.serverPatches = make(map[string]resource.ServerPatches)
 
 	a.LoadContent()
 
@@ -298,38 +289,80 @@ func (app *App) ShowSettings() {
 	settings.Show()
 }
 
-func (app *App) RequestPatch(version string, server *resource.Server) (resource.Update, error) {
-	url, err := url.JoinPath(server.PatchServer, "patches", version)
-	if err != nil {
-		return resource.Update{}, fmt.Errorf("could not create patch version URL with \"%s\": %v", server.PatchServer, err)
-	}
+// func (app *App) RequestPatch(version string, server *resource.Server) (resource.Update, error) {
+// 	url, err := url.JoinPath(server.PatchServer, "patches", version)
+// 	if err != nil {
+// 		return resource.Update{}, fmt.Errorf("could not create patch version URL with \"%s\": %v", server.PatchServer, err)
+// 	}
 
-	response, err := http.Get(url)
-	if err != nil {
-		return resource.Update{}, ErrPatchesUnavailable
-	}
-	defer response.Body.Close()
+// 	response, err := http.Get(url)
+// 	if err != nil {
+// 		return resource.Update{}, ErrPatchesUnavailable
+// 	}
+// 	defer response.Body.Close()
 
-	if response.StatusCode >= 300 {
-		return resource.Update{}, ErrPatchesUnavailable
-	}
+// 	if response.StatusCode >= 300 {
+// 		return resource.Update{}, ErrPatchesUnavailable
+// 	}
 
-	data, err := io.ReadAll(response.Body)
-	if err != nil {
-		return resource.Update{}, fmt.Errorf("cannot read body of patch version response: %v", err)
-	}
+// 	data, err := io.ReadAll(response.Body)
+// 	if err != nil {
+// 		return resource.Update{}, fmt.Errorf("cannot read body of patch version response: %v", err)
+// 	}
 
-	update := resource.Update{}
-	err = json.Unmarshal(data, &update)
-	if err != nil {
-		return resource.Update{}, fmt.Errorf("malformed response body from patch version: %v", err)
-	}
+// 	update := resource.Update{}
+// 	err = json.Unmarshal(data, &update)
+// 	if err != nil {
+// 		return resource.Update{}, fmt.Errorf("malformed response body from patch version: %v", err)
+// 	}
 
-	return update, nil
-}
+// 	return update, nil
+// }
+
+// func (app *App) Update(server *resource.Server) {
+// 	app.SetUpdatingState()
+
+// 	patches, ok := app.serverPatches[server.Id]
+// 	if !ok {
+// 		log.Printf("Patches missing for \"%s\"\n", server.Name)
+// 		return
+// 	}
+
+// 	go func(version string, server *resource.Server) {
+// 		log.Printf("Getting patch \"%s\" for %s\n", version, server.Name)
+// 		update, err := app.RequestPatch(version, server)
+// 		if err != nil {
+// 			log.Printf("Patch error: %v\n", err)
+// 			if err != ErrPatchesUnavailable {
+// 				dialog.ShowError(err, app.main)
+// 			}
+
+// 			app.SetNormalState()
+// 			return
+// 		}
+
+// 		log.Printf("Patch received with %d downloads\n", len(update.Download))
+
+// 		log.Println("Starting update...")
+// 		err = update.Run(server)
+// 		if err != nil {
+// 			dialog.ShowError(err, app.main)
+// 		}
+// 		log.Println("Update completed.")
+
+// 		if app.CurrentServer().Id == server.Id {
+// 			app.SetCurrentServerInfo(server)
+// 		}
+
+// 		server.CurrentPatch = version
+// 		app.servers.SaveInfos()
+
+// 		app.SetNormalState()
+// 	}(patches.CurrentVersion, server)
+// }
 
 func (app *App) Update(server *resource.Server) {
-	app.SetUpdatingState()
+	app.SetUpdateState()
 
 	patches, ok := app.serverPatches[server.Id]
 	if !ok {
@@ -339,10 +372,10 @@ func (app *App) Update(server *resource.Server) {
 
 	go func(version string, server *resource.Server) {
 		log.Printf("Getting patch \"%s\" for %s\n", version, server.Name)
-		update, err := app.RequestPatch(version, server)
+		patch, err := resource.GetPatch(version, server)
 		if err != nil {
 			log.Printf("Patch error: %v\n", err)
-			if err != ErrPatchesUnavailable {
+			if err != resource.ErrPatchesUnavailable {
 				dialog.ShowError(err, app.main)
 			}
 
@@ -350,18 +383,16 @@ func (app *App) Update(server *resource.Server) {
 			return
 		}
 
-		log.Printf("Patch received with %d downloads\n", len(update.Download))
+		log.Printf("Patch received with %d downloads\n", len(patch.Downloads))
 
 		log.Println("Starting update...")
-		err = update.Run(server)
+		err = patch.RunWithDependencies(server)
 		if err != nil {
 			dialog.ShowError(err, app.main)
 		}
 		log.Println("Update completed.")
 
-		if app.CurrentServer().Id == server.Id {
-			app.SetCurrentServerInfo(server)
-		}
+		app.Refresh()
 
 		server.CurrentPatch = version
 		app.servers.SaveInfos()
@@ -370,39 +401,81 @@ func (app *App) Update(server *resource.Server) {
 	}(patches.CurrentVersion, server)
 }
 
-func (app *App) RequestPatches(server *resource.Server) (resource.Patches, error) {
-	url, err := url.JoinPath(server.PatchServer, "patches")
-	if err != nil {
-		return resource.Patches{}, fmt.Errorf("could not create patch server URL with \"%s\": %v", server.PatchServer, err)
-	}
+// func (app *App) RequestPatches(server *resource.Server) (resource.Patches, error) {
+// 	url, err := url.JoinPath(server.PatchServer, "patches")
+// 	if err != nil {
+// 		return resource.Patches{}, fmt.Errorf("could not create patch server URL with \"%s\": %v", server.PatchServer, err)
+// 	}
 
-	response, err := http.Get(url)
-	if err != nil {
-		return resource.Patches{}, ErrPatchesUnavailable
-	}
-	defer response.Body.Close()
+// 	response, err := http.Get(url)
+// 	if err != nil {
+// 		return resource.Patches{}, ErrPatchesUnavailable
+// 	}
+// 	defer response.Body.Close()
 
-	if response.StatusCode == http.StatusServiceUnavailable {
-		return resource.Patches{}, ErrPatchesUnsupported
-	}
+// 	if response.StatusCode == http.StatusServiceUnavailable {
+// 		return resource.Patches{}, ErrPatchesUnsupported
+// 	}
 
-	if response.StatusCode >= 300 {
-		return resource.Patches{}, fmt.Errorf("invalid response status code from patch server: %d", response.StatusCode)
-	}
+// 	if response.StatusCode >= 300 {
+// 		return resource.Patches{}, fmt.Errorf("invalid response status code from patch server: %d", response.StatusCode)
+// 	}
 
-	data, err := io.ReadAll(response.Body)
-	if err != nil {
-		return resource.Patches{}, fmt.Errorf("cannot read body of patch server response: %v", err)
-	}
+// 	data, err := io.ReadAll(response.Body)
+// 	if err != nil {
+// 		return resource.Patches{}, fmt.Errorf("cannot read body of patch server response: %v", err)
+// 	}
 
-	patches := resource.Patches{}
-	err = json.Unmarshal(data, &patches)
-	if err != nil {
-		return resource.Patches{}, fmt.Errorf("malformed response body from patch server: %v", err)
-	}
+// 	patches := resource.Patches{}
+// 	err = json.Unmarshal(data, &patches)
+// 	if err != nil {
+// 		return resource.Patches{}, fmt.Errorf("malformed response body from patch server: %v", err)
+// 	}
 
-	return patches, nil
-}
+// 	return patches, nil
+// }
+
+// func (app *App) CheckForUpdates(server *resource.Server) {
+// 	if server == nil {
+// 		return
+// 	}
+
+// 	if len(server.PatchServer) == 0 || !app.clientErrorIcon.Hidden {
+// 		return
+// 	}
+
+// 	if _, ok := app.serverPatches[server.Id]; ok {
+// 		log.Printf("Patches for \"%s\" already received", server.Name)
+// 		return
+// 	}
+
+// 	app.SetCheckingUpdatesState()
+// 	go func(server *resource.Server) {
+// 		log.Printf("Checking for updates for \"%s\"\n", server.Name)
+// 		patches, err := app.RequestPatches(server)
+// 		if err != nil {
+// 			log.Printf("Patch server error: %v\n", err)
+// 			if err != ErrPatchesUnavailable && err != ErrPatchesUnsupported {
+// 				dialog.ShowError(err, app.main)
+// 			}
+
+// 			app.serverPatches[server.Id] = resource.Patches{}
+// 			app.SetNormalState()
+// 			return
+// 		}
+
+// 		if server.CurrentPatch == patches.CurrentVersion {
+// 			app.serverPatches[server.Id] = resource.Patches{}
+// 			app.SetNormalState()
+// 			return
+// 		}
+
+// 		log.Printf("Patch version \"%s\" is available\n", patches.CurrentVersion)
+
+// 		app.serverPatches[server.Id] = patches
+// 		app.SetUpdateState()
+// 	}(server)
+// }
 
 func (app *App) CheckForUpdates(server *resource.Server) {
 	if server == nil {
@@ -421,20 +494,20 @@ func (app *App) CheckForUpdates(server *resource.Server) {
 	app.SetCheckingUpdatesState()
 	go func(server *resource.Server) {
 		log.Printf("Checking for updates for \"%s\"\n", server.Name)
-		patches, err := app.RequestPatches(server)
+		patches, err := resource.GetServerPatches(server)
 		if err != nil {
 			log.Printf("Patch server error: %v\n", err)
-			if err != ErrPatchesUnavailable && err != ErrPatchesUnsupported {
+			if err != resource.ErrPatchesUnavailable && err != resource.ErrPatchesUnsupported {
 				dialog.ShowError(err, app.main)
 			}
 
-			app.serverPatches[server.Id] = resource.Patches{}
+			app.serverPatches[server.Id] = resource.ServerPatches{}
 			app.SetNormalState()
 			return
 		}
 
 		if server.CurrentPatch == patches.CurrentVersion {
-			app.serverPatches[server.Id] = resource.Patches{}
+			app.serverPatches[server.Id] = patches
 			app.SetNormalState()
 			return
 		}

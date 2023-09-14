@@ -1,6 +1,8 @@
 package resource
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -8,33 +10,197 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/I-Am-Dench/lu-launcher/luconfig"
 )
 
-type Patches struct {
+var (
+	ErrPatchesUnsupported = errors.New("patches unsupported")
+	ErrPatchesUnavailable = errors.New("patch server could not be reached")
+)
+
+type ServerPatches struct {
 	CurrentVersion string   `json:"currentVersion"`
 	Patches        []string `json:"versions"`
 }
 
-type Update struct {
-	Download []struct {
-		Path string `json:"path"`
-		Name string `json:"name"`
-	} `json:"download"`
+func GetServerPatches(server *Server) (ServerPatches, error) {
+	url, err := url.JoinPath(server.PatchServer, "patches")
+	if err != nil {
+		return ServerPatches{}, fmt.Errorf("could not create patch server URL with \"%s\": %v", server.PatchServer, err)
+	}
 
-	Boot string `json:"boot"`
+	response, err := http.Get(url)
+	if err != nil {
+		return ServerPatches{}, ErrPatchesUnavailable
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode == http.StatusServiceUnavailable {
+		return ServerPatches{}, ErrPatchesUnsupported
+	}
+
+	if response.StatusCode >= 300 {
+		return ServerPatches{}, fmt.Errorf("invalid response status code from patch server (%d)", response.StatusCode)
+	}
+
+	data, err := io.ReadAll(response.Body)
+	if err != nil {
+		return ServerPatches{}, fmt.Errorf("cannot read body of patch server response: %v", err)
+	}
+
+	patches := ServerPatches{}
+	err = json.Unmarshal(data, &patches)
+	if err != nil {
+		return ServerPatches{}, fmt.Errorf("malformed response body from patch server: %v", err)
+	}
+
+	return patches, nil
 }
 
-func (update *Update) download(server *Server) error {
-	log.Println("Starting downloads...")
-	updatePath := filepath.Join("updates", server.Id)
-	os.MkdirAll(updatePath, 0755)
+type Patch struct {
+	Version string `json:"-"`
 
-	for _, download := range update.Download {
+	Dependencies []string `json:"depend"`
+
+	Downloads []struct {
+		Path string `json:"path"`
+		Name string `json:"name"`
+	} `json:"downloads"`
+
+	Updates struct {
+		Boot string `json:"boot"`
+	} `json:"updates"`
+
+	Patches map[string]string `json:"patches"`
+}
+
+// func (update *Patch) download(server *Server) error {
+// 	log.Println("Starting downloads...")
+// 	updatePath := filepath.Join("updates", server.Id)
+// 	os.MkdirAll(updatePath, 0755)
+
+// 	for _, download := range update.Downloads {
+// 		url, err := url.JoinPath(server.PatchServer, download.Path)
+// 		if err != nil {
+// 			return fmt.Errorf("could not create download URL to \"%s\": %v", download.Path, err)
+// 		}
+
+// 		response, err := http.Get(url)
+// 		if err != nil {
+// 			return fmt.Errorf("could not GET download URL: %v", err)
+// 		}
+// 		defer response.Body.Close()
+
+// 		if response.StatusCode >= 300 {
+// 			return fmt.Errorf("invalid response status code (%d) from \"%s\"", response.StatusCode, url)
+// 		}
+
+// 		data, err := io.ReadAll(response.Body)
+// 		if err != nil {
+// 			return fmt.Errorf("could not read body of download response: %v", err)
+// 		}
+
+// 		err = os.WriteFile(filepath.Join(updatePath, download.Name), data, 0755)
+// 		if err != nil {
+// 			return fmt.Errorf("could not save download \"%s\" to \"%s\": %v", download.Path, download.Name, err)
+// 		}
+// 	}
+// 	return nil
+// }
+
+// func (update *Patch) updateBoot(server *Server) error {
+// 	log.Println("Updating boot file...")
+// 	updatePath := filepath.Join("updates", server.Id)
+
+// 	data, err := os.ReadFile(filepath.Join(updatePath, update.Updates.Boot))
+// 	if err != nil {
+// 		return fmt.Errorf("could not read boot patch file \"%s\": %v", update.Updates.Boot, err)
+// 	}
+
+// 	config := luconfig.New()
+// 	err = luconfig.Unmarshal(data, config)
+// 	if err != nil {
+// 		return fmt.Errorf("could not unmarshal boot patch file: %v", err)
+// 	}
+
+// 	server.Config = config
+// 	return server.SaveConfig()
+// }
+
+// func (update *Patch) Run(server *Server) error {
+
+// 	err := update.download(server)
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	if len(update.Updates.Boot) > 0 {
+// 		err := update.updateBoot(server)
+// 		if err != nil {
+// 			return err
+// 		}
+// 	}
+
+// 	return nil
+// }
+
+func GetPatch(version string, server *Server) (Patch, error) {
+	path := filepath.Join("patches", server.Id, version)
+
+	data, err := os.ReadFile(filepath.Join(path, "patch.json"))
+	if err == nil {
+		patch := Patch{
+			Version: version,
+		}
+		err = json.Unmarshal(data, &patch)
+		if err != nil {
+			return Patch{}, fmt.Errorf("cannot unmarshal \"%s/patch.json\": %v", path, err)
+		}
+		return patch, nil
+	}
+
+	url, err := url.JoinPath(server.PatchServer, "patches", version)
+	if err != nil {
+		return Patch{}, fmt.Errorf("could not create patch version URL with \"%s\": %v", server.PatchServer, err)
+	}
+
+	response, err := http.Get(url)
+	if err != nil {
+		return Patch{}, ErrPatchesUnavailable
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode >= 300 {
+		return Patch{}, ErrPatchesUnavailable
+	}
+
+	data, err = io.ReadAll(response.Body)
+	if err != nil {
+		return Patch{}, fmt.Errorf("cannot read body of patch version response: %v", err)
+	}
+
+	patch := Patch{
+		Version: version,
+	}
+	err = json.Unmarshal(data, &patch)
+	if err != nil {
+		return Patch{}, fmt.Errorf("malformed response body for patch version: %v", err)
+	}
+
+	return patch, nil
+}
+
+func (patch *Patch) downloadFiles(server *Server) error {
+	log.Println("Starting downloads...")
+	path := filepath.Join("patches", server.Id, patch.Version)
+	os.MkdirAll(path, 0755)
+
+	for _, download := range patch.Downloads {
 		url, err := url.JoinPath(server.PatchServer, download.Path)
 		if err != nil {
-			return fmt.Errorf("could not create download url to \"%s\": %v", download.Path, err)
+			return fmt.Errorf("could not create download URL to \"%s\": %v", download.Path, err)
 		}
 
 		response, err := http.Get(url)
@@ -52,21 +218,26 @@ func (update *Update) download(server *Server) error {
 			return fmt.Errorf("could not read body of download response: %v", err)
 		}
 
-		err = os.WriteFile(filepath.Join(updatePath, download.Name), data, 0755)
+		err = os.WriteFile(filepath.Join(path, download.Name), data, 0755)
 		if err != nil {
 			return fmt.Errorf("could not save download \"%s\" to \"%s\": %v", download.Path, download.Name, err)
 		}
 	}
+
 	return nil
 }
 
-func (update *Update) updateBoot(server *Server) error {
-	log.Println("Updating boot file...")
-	updatePath := filepath.Join("updates", server.Id)
+func (patch *Patch) updateBoot(server *Server) error {
+	if len(patch.Updates.Boot) == 0 {
+		return nil
+	}
 
-	data, err := os.ReadFile(filepath.Join(updatePath, update.Boot))
+	log.Println("Updating boot file...")
+	path := filepath.Join("patches", server.Id, patch.Version)
+
+	data, err := os.ReadFile(filepath.Join(path, patch.Updates.Boot))
 	if err != nil {
-		return fmt.Errorf("could not read boot patch file \"%s\": %v", update.Boot, err)
+		return fmt.Errorf("could not read boot patch file \"%s\": %v", patch.Updates.Boot, err)
 	}
 
 	config := luconfig.New()
@@ -79,18 +250,70 @@ func (update *Update) updateBoot(server *Server) error {
 	return server.SaveConfig()
 }
 
-func (update *Update) Run(server *Server) error {
-	err := update.download(server)
+func (patch *Patch) updateFiles(server *Server) error {
+	return patch.updateBoot(server)
+}
+
+func (patch *Patch) parseDependencyVersion(version string) (string, bool) {
+	stripped := strings.TrimSpace(version)
+	if len(stripped) > 0 && stripped[len(stripped)-1] == '*' {
+		return stripped[:len(stripped)-1], true
+	}
+
+	return stripped, false
+}
+
+func (patch *Patch) getDependencies(server *Server, recurse ...bool) ([]Patch, error) {
+	recursive := false
+	if len(recurse) > 0 {
+		recursive = recurse[0]
+	}
+
+	patches := []Patch{}
+
+	for _, dependencyVersion := range patch.Dependencies {
+		version, fetchSubDependencies := patch.parseDependencyVersion(dependencyVersion)
+		if len(version) == 0 {
+			continue
+		}
+
+		dependency, err := GetPatch(version, server)
+		if err != nil {
+			return []Patch{}, fmt.Errorf("cannot resolve patch dependency '%s': %v", version, err)
+		}
+
+		patches = append(patches, dependency)
+		if fetchSubDependencies || recursive {
+			subDependencies, err := dependency.getDependencies(server, recurse...)
+			if err != nil {
+				return []Patch{}, fmt.Errorf("resolve resursive dependency '%s': %v", version, err)
+			}
+			patches = append(patches, subDependencies...)
+		}
+	}
+
+	return patches, nil
+}
+
+func (patch *Patch) Run(server *Server) error {
+	return errors.Join(
+		patch.downloadFiles(server),
+		patch.updateFiles(server),
+	)
+}
+
+func (patch *Patch) RunWithDependencies(server *Server) error {
+	dependencies, err := patch.getDependencies(server)
 	if err != nil {
 		return err
 	}
 
-	if len(update.Boot) > 0 {
-		err := update.updateBoot(server)
+	for _, dependency := range dependencies {
+		err := dependency.Run(server)
 		if err != nil {
-			return err
+			return fmt.Errorf("dependency run error: %v", err)
 		}
 	}
 
-	return nil
+	return patch.Run(server)
 }
