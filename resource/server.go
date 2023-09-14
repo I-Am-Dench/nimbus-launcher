@@ -78,3 +78,16 @@ func (server *Server) DeleteConfig() error {
 func (server *Server) BootPath() string {
 	return Of(settingsDir, serversDir, server.Boot)
 }
+
+func (server *Server) ToXML() ServerXML {
+	data, _ := luconfig.Marshal(server.Config)
+	return ServerXML{
+		Name:        server.Name,
+		PatchServer: server.PatchServer,
+		Boot: struct {
+			Text string `xml:",innerxml"`
+		}{
+			Text: string(data),
+		},
+	}
+}

@@ -1,6 +1,7 @@
 package app
 
 import (
+	"encoding/xml"
 	"fmt"
 	"image/color"
 
@@ -8,10 +9,15 @@ import (
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/I-Am-Dench/lu-launcher/app/forms"
 	"github.com/I-Am-Dench/lu-launcher/resource"
+)
+
+const (
+	EXPORT_HEADER = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n\n"
 )
 
 // type serverList interface {
@@ -189,12 +195,48 @@ func (page *ServersPage) editServerPage(form *forms.ServerForm, window fyne.Wind
 	)
 	saveButton.Importance = widget.HighImportance
 
+	exportButton := widget.NewButtonWithIcon(
+		"Export", theme.DocumentIcon(),
+		func() {
+			dialog := dialog.NewFileSave(func(uc fyne.URIWriteCloser, err error) {
+				if err != nil {
+					dialog.ShowError(fmt.Errorf("error when choosing file: %v", err), window)
+					return
+				}
+
+				server := list.GetServer(page.serverList.SelectedIndex())
+				if server == nil {
+					dialog.ShowError(fmt.Errorf("fatal export server error: server is nil"), window)
+					return
+				}
+
+				serverXML := server.ToXML()
+				data, err := xml.MarshalIndent(serverXML, "", "    ")
+				if err != nil {
+					dialog.ShowError(fmt.Errorf("cannot marshal server.xml: %v", err), window)
+					return
+				}
+
+				_, err = uc.Write(append([]byte(EXPORT_HEADER), data...))
+				if err != nil {
+					dialog.ShowError(fmt.Errorf("error when writing to server.xml: %v", err), window)
+					return
+				}
+
+				dialog.ShowInformation("Export Complete", "Exported server configuration successfully!", window)
+			}, window)
+			dialog.SetFileName("server.xml")
+			dialog.SetFilter(storage.NewExtensionFileFilter([]string{".xml"}))
+			dialog.Show()
+		},
+	)
+
 	return container.NewBorder(
 		nil,
 		container.NewBorder(nil, nil, BackButton(func() {
 			page.editServers.Hide()
 			page.buttons.Show()
-		}), saveButton),
+		}), container.NewHBox(exportButton, saveButton)),
 		nil, nil,
 		container.NewVScroll(
 			form.Container(),
