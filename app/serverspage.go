@@ -25,6 +25,8 @@ import (
 type ServersPage struct {
 	container *fyne.Container
 
+	serverList *widget.Select
+
 	buttons *fyne.Container
 
 	addServers  *fyne.Container
@@ -34,87 +36,17 @@ type ServersPage struct {
 func NewServersPage(window fyne.Window, list resource.ServerListContainer) *ServersPage {
 	page := new(ServersPage)
 
-	serverList := widget.NewSelect(
+	page.serverList = widget.NewSelect(
 		list.ServerNames(), func(s string) {},
 	)
-	serverList.SetSelectedIndex(0)
+	page.serverList.SetSelectedIndex(0)
 
 	addServerForm := forms.NewServerForm(window)
-	addServerButton := widget.NewButton("Add Server", func() {
-		server, err := addServerForm.CreateServer()
-		if err != nil {
-			dialog.ShowError(err, window)
-			return
-		}
-
-		err = list.AddServer(server)
-		if err != nil {
-			dialog.ShowError(err, window)
-			return
-		}
-
-		serverList.SetOptions(list.ServerNames())
-		serverList.SetSelectedIndex(serverList.SelectedIndex())
-		dialog.ShowInformation("Server Added", fmt.Sprintf("Added '%s' to server list!", server.Name), window)
-	})
-	addServerButton.Importance = widget.HighImportance
-
-	page.addServers = container.NewBorder(
-		nil,
-		container.NewBorder(nil, nil, BackButton(func() {
-			page.addServers.Hide()
-			page.buttons.Show()
-		}), addServerButton),
-		nil, nil,
-		container.NewVScroll(
-			addServerForm.Container(),
-		),
-	)
+	page.addServers = page.addServerPage(addServerForm, window, list)
 	page.addServers.Hide()
 
 	editServerForm := forms.NewServerForm(window)
-	editServerButton := widget.NewButton(
-		"Save", func() {
-			server := list.GetServer(serverList.SelectedIndex())
-			if server == nil {
-				dialog.ShowError(fmt.Errorf("fatal save error: server is nil"), window)
-				return
-			}
-
-			id := server.Id
-			*server = *editServerForm.Get()
-			server.Id = id
-
-			err := server.SaveConfig()
-			if err != nil {
-				dialog.ShowError(err, window)
-				return
-			}
-
-			err = list.SaveServers()
-			if err != nil {
-				dialog.ShowError(err, window)
-				return
-			}
-
-			serverList.SetOptions(list.ServerNames())
-			serverList.SetSelectedIndex(serverList.SelectedIndex())
-			dialog.ShowInformation("Servers Saved", fmt.Sprintf("Server '%s' saved successfully!", server.Name), window)
-		},
-	)
-	editServerButton.Importance = widget.HighImportance
-
-	page.editServers = container.NewBorder(
-		nil,
-		container.NewBorder(nil, nil, BackButton(func() {
-			page.editServers.Hide()
-			page.buttons.Show()
-		}), editServerButton),
-		nil, nil,
-		container.NewVScroll(
-			editServerForm.Container(),
-		),
-	)
+	page.editServers = page.editServerPage(editServerForm, window, list)
 	page.editServers.Hide()
 
 	heading := canvas.NewText("Servers", color.White)
@@ -130,7 +62,7 @@ func NewServersPage(window fyne.Window, list resource.ServerListContainer) *Serv
 	editServerTab := widget.NewButtonWithIcon(
 		"", theme.DocumentCreateIcon(),
 		func() {
-			server := list.GetServer(serverList.SelectedIndex())
+			server := list.GetServer(page.serverList.SelectedIndex())
 			editServerForm.UpdateWith(server)
 
 			page.buttons.Hide()
@@ -141,7 +73,7 @@ func NewServersPage(window fyne.Window, list resource.ServerListContainer) *Serv
 	removeServerButton := widget.NewButtonWithIcon(
 		"Remove Server", theme.ContentRemoveIcon(),
 		func() {
-			server := list.GetServer(serverList.SelectedIndex())
+			server := list.GetServer(page.serverList.SelectedIndex())
 			if server == nil {
 				dialog.ShowError(fmt.Errorf("fatal remove error: server is nil"), window)
 				return
@@ -160,8 +92,8 @@ func NewServersPage(window fyne.Window, list resource.ServerListContainer) *Serv
 						return
 					}
 
-					serverList.SetOptions(list.ServerNames())
-					serverList.SetSelectedIndex(0)
+					page.serverList.SetOptions(list.ServerNames())
+					page.serverList.SetSelectedIndex(0)
 					dialog.ShowInformation("Remove Server", fmt.Sprintf("Server '%s' removed successfully!", server.Name), window)
 				},
 				window,
@@ -178,7 +110,7 @@ func NewServersPage(window fyne.Window, list resource.ServerListContainer) *Serv
 		container.NewBorder(
 			nil, nil, nil,
 			editServerTab,
-			serverList,
+			page.serverList,
 		),
 		container.NewBorder(nil, nil, removeServerButton, nil),
 	)
@@ -190,6 +122,84 @@ func NewServersPage(window fyne.Window, list resource.ServerListContainer) *Serv
 	)
 
 	return page
+}
+
+func (page *ServersPage) addServerPage(form *forms.ServerForm, window fyne.Window, list resource.ServerListContainer) *fyne.Container {
+	addButton := widget.NewButton("Add Server", func() {
+		server, err := form.CreateServer()
+		if err != nil {
+			dialog.ShowError(err, window)
+			return
+		}
+
+		err = list.AddServer(server)
+		if err != nil {
+			dialog.ShowError(err, window)
+			return
+		}
+
+		page.serverList.SetOptions(list.ServerNames())
+		page.serverList.SetSelectedIndex(page.serverList.SelectedIndex())
+		dialog.ShowInformation("Server Added", fmt.Sprintf("Added '%s' to server list!", server.Name), window)
+	})
+	addButton.Importance = widget.HighImportance
+
+	return container.NewBorder(
+		nil,
+		container.NewBorder(nil, nil, BackButton(func() {
+			page.addServers.Hide()
+			page.buttons.Show()
+		}), addButton),
+		nil, nil,
+		container.NewVScroll(
+			form.Container(),
+		),
+	)
+}
+
+func (page *ServersPage) editServerPage(form *forms.ServerForm, window fyne.Window, list resource.ServerListContainer) *fyne.Container {
+	saveButton := widget.NewButton(
+		"Save", func() {
+			server := list.GetServer(page.serverList.SelectedIndex())
+			if server == nil {
+				dialog.ShowError(fmt.Errorf("fatal save error: server is nil"), window)
+				return
+			}
+
+			id := server.Id
+			*server = *form.Get()
+			server.Id = id
+
+			err := server.SaveConfig()
+			if err != nil {
+				dialog.ShowError(err, window)
+				return
+			}
+
+			err = list.SaveServers()
+			if err != nil {
+				dialog.ShowError(err, window)
+				return
+			}
+
+			page.serverList.SetOptions(list.ServerNames())
+			page.serverList.SetSelectedIndex(page.serverList.SelectedIndex())
+			dialog.ShowInformation("Servers Saved", fmt.Sprintf("Server '%s' saved successfully!", server.Name), window)
+		},
+	)
+	saveButton.Importance = widget.HighImportance
+
+	return container.NewBorder(
+		nil,
+		container.NewBorder(nil, nil, BackButton(func() {
+			page.editServers.Hide()
+			page.buttons.Show()
+		}), saveButton),
+		nil, nil,
+		container.NewVScroll(
+			form.Container(),
+		),
+	)
 }
 
 func (page *ServersPage) Container() *fyne.Container {
