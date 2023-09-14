@@ -1,6 +1,6 @@
 # LEGO® Universe Launcher
 
-The LEGO® Universe Launcher helps players add, swap, and run variable server configurations with just a few clicks of a button.
+The LEGO® Universe Launcher helps players to quickly add, swap, and run variable server configurations.
 
 This program DOES NOT include a LEGO® Universe client and/or its contents. Players must already have a client located on their system and configure the launcher to point to the client's directory.
 
