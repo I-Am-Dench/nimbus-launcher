@@ -1,9 +1,7 @@
 package resource
 
 import (
-	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"time"
 
@@ -20,33 +18,24 @@ type Server struct {
 	Config *luconfig.LUConfig `json:"-"`
 }
 
-func NewServer(name string, config *luconfig.LUConfig) (*Server, error) {
+func NewServer(name, patchServer string, config *luconfig.LUConfig) *Server {
 	server := new(Server)
 	server.Id = fmt.Sprint(time.Now().Unix())
 	server.Name = name
 	server.Config = config
-
-	err := server.SaveConfig()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create new server: %v", err)
-	}
-
-	return server, nil
+	return server
 }
 
-func (server *Server) BootPath() string {
-	return Of(settingsDir, serversDir, server.Boot)
-}
-
-func (server *Server) DeleteConfig() error {
-	return os.Remove(Of(settingsDir, serversDir, server.Boot))
+func CreateServer(name, patchServer string, config *luconfig.LUConfig) (*Server, error) {
+	server := NewServer(name, patchServer, config)
+	return server, server.SaveConfig()
 }
 
 func (server *Server) SaveConfig() error {
-	bootTempName := server.Boot
+	bootName := server.Boot
 	if len(server.Boot) == 0 {
-		bootTempName = fmt.Sprintf("boot_%d.cfg", time.Now().Unix())
-		server.Boot = bootTempName
+		bootName = fmt.Sprintf("boot_%s.cfg", server.Id)
+		server.Boot = bootName
 	}
 
 	data, err := luconfig.Marshal(server.Config)
@@ -54,7 +43,7 @@ func (server *Server) SaveConfig() error {
 		return fmt.Errorf("cannot marshal boot.cfg: %v", err)
 	}
 
-	err = os.WriteFile(Of(settingsDir, serversDir, bootTempName), data, 0755)
+	err = os.WriteFile(Of(settingsDir, serversDir, bootName), data, 0755)
 	if err != nil {
 		return fmt.Errorf("cannot save boot.cfg: %v", err)
 	}
@@ -82,82 +71,10 @@ func (server *Server) LoadConfig() error {
 	return nil
 }
 
-type ServerList struct {
-	servers []*Server
+func (server *Server) DeleteConfig() error {
+	return os.Remove(server.BootPath())
 }
 
-func (servers *ServerList) List() []*Server {
-	return servers.servers
-}
-
-func (servers *ServerList) Size() int {
-	return len(servers.servers)
-}
-
-func (servers *ServerList) Names() []string {
-	names := []string{}
-	for _, server := range servers.servers {
-		names = append(names, server.Name)
-	}
-	return names
-}
-
-func (servers *ServerList) Get(index int) *Server {
-	if 0 <= index && index < servers.Size() {
-		return servers.servers[index]
-	}
-	return nil
-}
-
-func (servers *ServerList) Set(index int, server *Server) {
-	if index >= servers.Size() {
-		return
-	}
-
-	servers.servers[index] = server
-}
-
-func (servers *ServerList) Add(server *Server) error {
-	servers.servers = append(servers.servers, server)
-	return servers.SaveInfo()
-}
-
-func (servers *ServerList) Remove(index int) error {
-	servers.servers = append(servers.servers[:index], servers.servers[index+1:]...)
-	return servers.SaveInfo()
-}
-
-func (servers *ServerList) SaveInfo() error {
-	data, err := json.MarshalIndent(servers.servers, "", "    ")
-	if err != nil {
-		return fmt.Errorf("failed to save servers: %v", err)
-	}
-
-	err = os.WriteFile(Of(settingsDir, "servers.json"), data, 0755)
-	if err != nil {
-		return fmt.Errorf("failed to save servers: %v", err)
-	}
-
-	return nil
-}
-
-func (servers *ServerList) Load() error {
-	data, err := os.ReadFile(Of(settingsDir, "servers.json"))
-	if err != nil {
-		return fmt.Errorf("cannot read servers.json: %v", err)
-	}
-
-	err = json.Unmarshal(data, &servers.servers)
-	if err != nil {
-		return fmt.Errorf("cannot unmarshal servers.json: %v", err)
-	}
-
-	for _, server := range servers.servers {
-		err := server.LoadConfig()
-		if err != nil {
-			log.Printf("load servers error: %v\n", err)
-		}
-	}
-
-	return nil
+func (server *Server) BootPath() string {
+	return Of(settingsDir, serversDir, server.Boot)
 }

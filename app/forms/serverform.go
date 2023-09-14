@@ -94,8 +94,8 @@ func NewServerForm(window fyne.Window) *ServerForm {
 	return form
 }
 
-func (form *ServerForm) NewServer() (*resource.Server, error) {
-	return resource.NewServer(form.title.Text, form.bootForm.GetConfig())
+func (form *ServerForm) CreateServer() (*resource.Server, error) {
+	return resource.CreateServer(form.title.Text, form.patchServer.Text, form.bootForm.GetConfig())
 }
 
 func (form *ServerForm) UpdateWith(server *resource.Server) {
@@ -110,11 +110,7 @@ func (form *ServerForm) UpdateWith(server *resource.Server) {
 }
 
 func (form *ServerForm) Get() *resource.Server {
-	server := new(resource.Server)
-	server.Name = form.title.Text
-	server.PatchServer = form.patchServer.Text
-	server.Config = form.bootForm.GetConfig()
-	return server
+	return resource.NewServer(form.title.Text, form.patchServer.Text, form.bootForm.GetConfig())
 }
 
 func (form *ServerForm) Container() *fyne.Container {

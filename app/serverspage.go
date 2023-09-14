@@ -14,25 +14,24 @@ import (
 	"github.com/I-Am-Dench/lu-launcher/resource"
 )
 
-type serverList interface {
-	ServerNames() []string
-	GetServer(int) *resource.Server
-	SetServer(int, *resource.Server)
-	SaveServers() error
-	AddServer(*resource.Server) error
-}
+// type serverList interface {
+// 	ServerNames() []string
+// 	GetServer(int) *resource.Server
+// 	SetServer(int, *resource.Server)
+// 	SaveServers() error
+// 	AddServer(*resource.Server) error
+// }
 
 type ServersPage struct {
 	container *fyne.Container
 
 	buttons *fyne.Container
 
-	addServers *fyne.Container
-	// removeServers *fyne.Container
+	addServers  *fyne.Container
 	editServers *fyne.Container
 }
 
-func NewServersPage(window fyne.Window, list serverList) *ServersPage {
+func NewServersPage(window fyne.Window, list resource.ServerListContainer) *ServersPage {
 	page := new(ServersPage)
 
 	serverList := widget.NewSelect(
@@ -42,7 +41,7 @@ func NewServersPage(window fyne.Window, list serverList) *ServersPage {
 
 	addServerForm := forms.NewServerForm(window)
 	addServerButton := widget.NewButton("Add Server", func() {
-		server, err := addServerForm.NewServer()
+		server, err := addServerForm.CreateServer()
 		if err != nil {
 			dialog.ShowError(err, window)
 			return
@@ -54,6 +53,8 @@ func NewServersPage(window fyne.Window, list serverList) *ServersPage {
 			return
 		}
 
+		serverList.SetOptions(list.ServerNames())
+		serverList.SetSelectedIndex(serverList.SelectedIndex())
 		dialog.ShowInformation("Server Added", fmt.Sprintf("Added '%s' to server list!", server.Name), window)
 	})
 	addServerButton.Importance = widget.HighImportance
@@ -74,8 +75,15 @@ func NewServersPage(window fyne.Window, list serverList) *ServersPage {
 	editServerForm := forms.NewServerForm(window)
 	editServerButton := widget.NewButton(
 		"Save", func() {
-			selected := serverList.SelectedIndex()
-			server := editServerForm.Get()
+			server := list.GetServer(serverList.SelectedIndex())
+			if server == nil {
+				dialog.ShowError(fmt.Errorf("fatal save error: server is nil"), window)
+				return
+			}
+
+			id := server.Id
+			*server = *editServerForm.Get()
+			server.Id = id
 
 			err := server.SaveConfig()
 			if err != nil {
@@ -89,7 +97,9 @@ func NewServersPage(window fyne.Window, list serverList) *ServersPage {
 				return
 			}
 
-			list.SetServer(selected, server)
+			serverList.SetOptions(list.ServerNames())
+			serverList.SetSelectedIndex(serverList.SelectedIndex())
+			dialog.ShowInformation("Servers Saved", fmt.Sprintf("Server '%s' saved successfully!", server.Name), window)
 		},
 	)
 	editServerButton.Importance = widget.HighImportance
@@ -128,6 +138,40 @@ func NewServersPage(window fyne.Window, list serverList) *ServersPage {
 		},
 	)
 
+	removeServerButton := widget.NewButtonWithIcon(
+		"Remove Server", theme.ContentRemoveIcon(),
+		func() {
+			server := list.GetServer(serverList.SelectedIndex())
+			if server == nil {
+				dialog.ShowError(fmt.Errorf("fatal remove error: server is nil"), window)
+				return
+			}
+
+			confirm := dialog.NewCustomConfirm(
+				"Remove Server", "Remove", "Cancel", widget.NewLabel(fmt.Sprintf("Remove server configuration '%s'?", server.Name)),
+				func(ok bool) {
+					if !ok {
+						return
+					}
+
+					err := list.RemoveServer(server)
+					if err != nil {
+						dialog.ShowError(err, window)
+						return
+					}
+
+					serverList.SetOptions(list.ServerNames())
+					serverList.SetSelectedIndex(0)
+					dialog.ShowInformation("Remove Server", fmt.Sprintf("Server '%s' removed successfully!", server.Name), window)
+				},
+				window,
+			)
+
+			confirm.Show()
+		},
+	)
+	removeServerButton.Importance = widget.LowImportance
+
 	page.buttons = container.NewVBox(
 		heading,
 		container.NewBorder(nil, nil, addServerTab, nil),
@@ -136,6 +180,7 @@ func NewServersPage(window fyne.Window, list serverList) *ServersPage {
 			editServerTab,
 			serverList,
 		),
+		container.NewBorder(nil, nil, removeServerButton, nil),
 	)
 
 	page.container = container.NewStack(

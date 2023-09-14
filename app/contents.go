@@ -26,10 +26,17 @@ func (app *App) LoadContent() {
 	app.serverSelector = widget.NewSelect(
 		app.servers.Names(),
 		func(s string) {
-			app.SetCurrentServer(app.serverSelector.SelectedIndex())
+			index := app.serverSelector.SelectedIndex()
+			if index < 0 {
+				return
+			}
+
+			server := app.servers.GetIndex(index)
+			app.SetCurrentServer(server)
 		},
 	)
-	app.serverSelector.SetSelectedIndex(app.settings.SelectedServer)
+	app.serverSelector.PlaceHolder = "(Select Server)"
+	app.serverSelector.SetSelectedIndex(app.servers.Find(app.settings.SelectedServer))
 
 	addServerButton := widget.NewButtonWithIcon(
 		"", theme.SettingsIcon(), app.ShowSettings,

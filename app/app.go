@@ -19,6 +19,7 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"github.com/I-Am-Dench/lu-launcher/luconfig"
 	"github.com/I-Am-Dench/lu-launcher/resource"
 )
 
@@ -102,6 +103,11 @@ func New(settings resource.Settings, servers resource.ServerList) App {
 }
 
 func (app *App) SetCurrentServerInfo(server *resource.Server) {
+	if server == nil {
+		server = &resource.Server{}
+		server.Config = &luconfig.LUConfig{}
+	}
+
 	app.serverNameBinding.Set(server.Config.ServerName)
 	app.authServerBinding.Set(server.Config.AuthServerIP)
 	app.localeBinding.Set(server.Config.Locale)
@@ -110,47 +116,32 @@ func (app *App) SetCurrentServerInfo(server *resource.Server) {
 	app.signinBinding.Set(server.Config.SigninURL)
 }
 
-func (app *App) SetCurrentServer(index int) {
-	app.settings.SelectedServer = index
+func (app *App) SetCurrentServer(server *resource.Server) {
+	app.SetCurrentServerInfo(server)
+
+	if server != nil {
+		app.settings.SelectedServer = server.Id
+	} else {
+		app.settings.SelectedServer = ""
+		app.serverSelector.ClearSelected()
+	}
 
 	err := app.settings.Save()
 	if err != nil {
-		log.Printf("save setings err: %v\n", err)
+		log.Printf("save settings err: %v\n", err)
 	}
 
-	server := app.servers.Get(app.settings.SelectedServer)
-	app.SetCurrentServerInfo(server)
-
-	// If it's nil, the app has not started yet
-	if app.playButton != nil && app.settings.CheckPatchesAutomatically {
+	if app.IsReady() && app.settings.CheckPatchesAutomatically {
 		app.CheckForUpdates(server)
 	}
 }
 
-func (app *App) GetServer(index int) *resource.Server {
-	return app.servers.Get(index)
-}
-
-func (app *App) SetServer(index int, server *resource.Server) {
-	app.servers.Set(index, server)
-}
-
-func (app *App) AddServer(server *resource.Server) error {
-	err := app.servers.Add(server)
-	if err != nil {
-		return err
+func (app *App) Refresh() {
+	if server := app.CurrentServer(); server != nil {
+		app.serverSelector.SetSelectedIndex(app.servers.Find(server.Id))
+		return
 	}
-
-	app.serverSelector.SetOptions(app.servers.Names())
-	return nil
-}
-
-func (app *App) SaveServers() error {
-	return app.servers.SaveInfo()
-}
-
-func (app *App) ServerNames() []string {
-	return app.servers.Names()
+	app.SetCurrentServer(nil)
 }
 
 func (app *App) SetPlayingState() {
@@ -295,7 +286,10 @@ func (app *App) ShowSettings() {
 	settings.SetIcon(theme.StorageIcon())
 	settings.SetOnClosed(func() {
 		app.settingsWindow = nil
+		app.serverSelector.Enable()
 	})
+
+	app.serverSelector.Disable()
 
 	app.LoadSettingsContent(settings)
 	app.settingsWindow = settings
@@ -370,7 +364,7 @@ func (app *App) Update(server *resource.Server) {
 		}
 
 		server.CurrentPatch = version
-		app.servers.SaveInfo()
+		app.servers.SaveInfos()
 
 		app.SetNormalState()
 	}(patches.CurrentVersion, server)
@@ -411,6 +405,10 @@ func (app *App) RequestPatches(server *resource.Server) (resource.Patches, error
 }
 
 func (app *App) CheckForUpdates(server *resource.Server) {
+	if server == nil {
+		return
+	}
+
 	if len(server.PatchServer) == 0 || !app.clientErrorIcon.Hidden {
 		return
 	}
@@ -446,6 +444,10 @@ func (app *App) CheckForUpdates(server *resource.Server) {
 		app.serverPatches[server.Id] = patches
 		app.SetUpdateState()
 	}(server)
+}
+
+func (app *App) IsReady() bool {
+	return app.playButton != nil
 }
 
 // This functionality can be expanded upon later
