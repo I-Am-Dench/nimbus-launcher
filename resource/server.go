@@ -22,6 +22,7 @@ func NewServer(name, patchServer string, config *luconfig.LUConfig) *Server {
 	server := new(Server)
 	server.Id = fmt.Sprint(time.Now().Unix())
 	server.Name = name
+	server.PatchServer = patchServer
 	server.Config = config
 	return server
 }
