@@ -75,7 +75,7 @@ type Patch struct {
 		Boot string `json:"boot"`
 	} `json:"updates"`
 
-	Patches map[string]string `json:"patches"`
+	Transfers map[string]string `json:"transfer"`
 }
 
 func GetPatch(version string, server *Server) (Patch, error) {
