@@ -64,7 +64,7 @@ func (app *App) LoadContent() {
 		container.NewVBox(
 			AddEllipsis(widget.NewLabelWithData(app.signupBinding)),
 			AddEllipsis(widget.NewLabelWithData(app.signinBinding)),
-			refreshUpdates,
+			container.NewBorder(nil, nil, nil, refreshUpdates),
 		),
 	)
 
