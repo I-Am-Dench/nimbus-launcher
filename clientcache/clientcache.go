@@ -24,7 +24,7 @@ type ClientCache interface {
 	GetResources() ([]ClientResource, error)
 }
 
-func OpenResource(clientDirectory, resource string) (ClientResource, error) {
+func ReadResource(clientDirectory, resource string) (ClientResource, error) {
 	file, err := os.Open(filepath.Join(clientDirectory, resource))
 	if err != nil {
 		return ClientResource{}, fmt.Errorf("clientcache: cannot open resource: %v", err)
@@ -37,4 +37,14 @@ func OpenResource(clientDirectory, resource string) (ClientResource, error) {
 		ModTime: stat.ModTime().Unix(),
 		Data:    data,
 	}, nil
+}
+
+func WriteResource(clientDirectory string, resource ClientResource) error {
+	path := filepath.Join(clientDirectory, resource.Path)
+	err := os.WriteFile(path, resource.Data, 0755)
+	if err != nil {
+		return fmt.Errorf("clientcache: cannot write resource: %v", err)
+	}
+
+	return os.Chtimes(path, time.Time{}, resource.Time())
 }
