@@ -496,7 +496,7 @@ func (app *App) CheckForUpdates(server *resource.Server) {
 
 	app.SetCheckingUpdatesState()
 	go func(server *resource.Server) {
-		log.Printf("Checking for updates for \"%s\"\n", server.Name)
+		log.Printf("Checking for updates for \"%s\"; Current version: \"%s\"\n", server.Name, server.CurrentPatch)
 		patches, err := resource.GetServerPatches(server)
 		if err != nil {
 			log.Printf("Patch server error: %v\n", err)
