@@ -29,14 +29,6 @@ type ServerPatches struct {
 }
 
 func GetServerPatches(server *Server) (ServerPatches, error) {
-	// url, err := url.JoinPath(server.Config.PatchServerIP, "patches")
-	// url, err := server.PatchServerUrl()
-	// if err != nil {
-	// 	return ServerPatches{}, fmt.Errorf("could not create patch server URL with \"%s\": %v", server.PatchServerHost(), err)
-	// }
-
-	// log.Printf("Getting server patches: %s\n", url)
-	// response, err := http.Get(url)
 	response, err := server.PatchServerRequest()
 	if err != nil {
 		return ServerPatches{}, ErrPatchesUnavailable
@@ -86,76 +78,6 @@ type Patch struct {
 	Patches map[string]string `json:"patches"`
 }
 
-// func (update *Patch) download(server *Server) error {
-// 	log.Println("Starting downloads...")
-// 	updatePath := filepath.Join("updates", server.Id)
-// 	os.MkdirAll(updatePath, 0755)
-
-// 	for _, download := range update.Downloads {
-// 		url, err := url.JoinPath(server.PatchServer, download.Path)
-// 		if err != nil {
-// 			return fmt.Errorf("could not create download URL to \"%s\": %v", download.Path, err)
-// 		}
-
-// 		response, err := http.Get(url)
-// 		if err != nil {
-// 			return fmt.Errorf("could not GET download URL: %v", err)
-// 		}
-// 		defer response.Body.Close()
-
-// 		if response.StatusCode >= 300 {
-// 			return fmt.Errorf("invalid response status code (%d) from \"%s\"", response.StatusCode, url)
-// 		}
-
-// 		data, err := io.ReadAll(response.Body)
-// 		if err != nil {
-// 			return fmt.Errorf("could not read body of download response: %v", err)
-// 		}
-
-// 		err = os.WriteFile(filepath.Join(updatePath, download.Name), data, 0755)
-// 		if err != nil {
-// 			return fmt.Errorf("could not save download \"%s\" to \"%s\": %v", download.Path, download.Name, err)
-// 		}
-// 	}
-// 	return nil
-// }
-
-// func (update *Patch) updateBoot(server *Server) error {
-// 	log.Println("Updating boot file...")
-// 	updatePath := filepath.Join("updates", server.Id)
-
-// 	data, err := os.ReadFile(filepath.Join(updatePath, update.Updates.Boot))
-// 	if err != nil {
-// 		return fmt.Errorf("could not read boot patch file \"%s\": %v", update.Updates.Boot, err)
-// 	}
-
-// 	config := luconfig.New()
-// 	err = luconfig.Unmarshal(data, config)
-// 	if err != nil {
-// 		return fmt.Errorf("could not unmarshal boot patch file: %v", err)
-// 	}
-
-// 	server.Config = config
-// 	return server.SaveConfig()
-// }
-
-// func (update *Patch) Run(server *Server) error {
-
-// 	err := update.download(server)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	if len(update.Updates.Boot) > 0 {
-// 		err := update.updateBoot(server)
-// 		if err != nil {
-// 			return err
-// 		}
-// 	}
-
-// 	return nil
-// }
-
 func GetPatch(version string, server *Server) (Patch, error) {
 	path := filepath.Join("patches", server.Id, version)
 
@@ -171,14 +93,6 @@ func GetPatch(version string, server *Server) (Patch, error) {
 		return patch, nil
 	}
 
-	// url, err := url.JoinPath(server.PatchServer, "patches", version)
-	// url, err := server.PatchServerUrl(version)
-	// if err != nil {
-	// 	return Patch{}, fmt.Errorf("could not create patch version URL with \"%s\": %v", server.PatchServerHost(), err)
-	// }
-
-	// log.Printf("Getting patch version: %s\n", url)
-	// response, err := http.Get(url)
 	response, err := server.PatchServerRequest(version)
 	if err != nil {
 		return Patch{}, ErrPatchesUnavailable
@@ -215,13 +129,6 @@ func (patch *Patch) downloadFiles(server *Server) error {
 	os.MkdirAll(path, 0755)
 
 	for _, download := range patch.Downloads {
-		// url, err := url.JoinPath(server.PatchServer, download.Path)
-		// url, err := server.PatchServerUrl(download.Path)
-		// if err != nil {
-		// 	return fmt.Errorf("could not create download URL to \"%s\": %v", download.Path, err)
-		// }
-
-		// response, err := http.Get(url)
 		response, err := server.PatchServerRequest(download.Path)
 		if err != nil {
 			return fmt.Errorf("could not GET download URL: %v", err)
