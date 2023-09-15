@@ -510,6 +510,7 @@ func (app *App) CheckForUpdates(server *resource.Server) {
 		}
 
 		if server.CurrentPatch == patches.CurrentVersion {
+			log.Println("Server is already latest version.")
 			app.serverPatches[server.Id] = patches
 			app.SetNormalState()
 			return
