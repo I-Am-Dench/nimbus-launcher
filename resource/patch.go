@@ -120,6 +120,11 @@ func GetPatch(version string, server *Server) (Patch, error) {
 		return Patch{}, fmt.Errorf("malformed response body for patch version: %v", err)
 	}
 
+	err = os.WriteFile(filepath.Join(path, "patch.json"), data, 0755)
+	if err != nil {
+		fmt.Printf("Could not save patch.json: %v", err)
+	}
+
 	return patch, nil
 }
 
