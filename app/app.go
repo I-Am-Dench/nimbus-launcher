@@ -504,7 +504,10 @@ func (app *App) CheckForUpdates(server *resource.Server) {
 				dialog.ShowError(err, app.main)
 			}
 
-			app.serverPatches[server.Id] = resource.ServerPatches{}
+			if err != resource.ErrPatchesUnauthorized {
+				app.serverPatches[server.Id] = resource.ServerPatches{}
+			}
+
 			app.SetNormalState()
 			return
 		}

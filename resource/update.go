@@ -7,6 +7,9 @@ import (
 	"io"
 	"log"
 	"net/http"
+
+	// "net/http"
+
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,8 +18,9 @@ import (
 )
 
 var (
-	ErrPatchesUnsupported = errors.New("patches unsupported")
-	ErrPatchesUnavailable = errors.New("patch server could not be reached")
+	ErrPatchesUnsupported  = errors.New("patches unsupported")
+	ErrPatchesUnavailable  = errors.New("patch server could not be reached")
+	ErrPatchesUnauthorized = errors.New("invalid patch token")
 )
 
 type ServerPatches struct {
@@ -26,13 +30,14 @@ type ServerPatches struct {
 
 func GetServerPatches(server *Server) (ServerPatches, error) {
 	// url, err := url.JoinPath(server.Config.PatchServerIP, "patches")
-	url, err := server.PatchServerUrl()
-	if err != nil {
-		return ServerPatches{}, fmt.Errorf("could not create patch server URL with \"%s\": %v", server.PatchServerHost(), err)
-	}
+	// url, err := server.PatchServerUrl()
+	// if err != nil {
+	// 	return ServerPatches{}, fmt.Errorf("could not create patch server URL with \"%s\": %v", server.PatchServerHost(), err)
+	// }
 
-	log.Printf("Getting server patches: %s\n", url)
-	response, err := http.Get(url)
+	// log.Printf("Getting server patches: %s\n", url)
+	// response, err := http.Get(url)
+	response, err := server.PatchServerRequest()
 	if err != nil {
 		return ServerPatches{}, ErrPatchesUnavailable
 	}
@@ -40,6 +45,10 @@ func GetServerPatches(server *Server) (ServerPatches, error) {
 
 	if response.StatusCode == http.StatusServiceUnavailable {
 		return ServerPatches{}, ErrPatchesUnsupported
+	}
+
+	if response.StatusCode == http.StatusUnauthorized {
+		return ServerPatches{}, ErrPatchesUnauthorized
 	}
 
 	if response.StatusCode >= 300 {
@@ -163,17 +172,22 @@ func GetPatch(version string, server *Server) (Patch, error) {
 	}
 
 	// url, err := url.JoinPath(server.PatchServer, "patches", version)
-	url, err := server.PatchServerUrl(version)
-	if err != nil {
-		return Patch{}, fmt.Errorf("could not create patch version URL with \"%s\": %v", server.PatchServerHost(), err)
-	}
+	// url, err := server.PatchServerUrl(version)
+	// if err != nil {
+	// 	return Patch{}, fmt.Errorf("could not create patch version URL with \"%s\": %v", server.PatchServerHost(), err)
+	// }
 
-	log.Printf("Getting patch version: %s\n", url)
-	response, err := http.Get(url)
+	// log.Printf("Getting patch version: %s\n", url)
+	// response, err := http.Get(url)
+	response, err := server.PatchServerRequest(version)
 	if err != nil {
 		return Patch{}, ErrPatchesUnavailable
 	}
 	defer response.Body.Close()
+
+	if response.StatusCode == http.StatusUnauthorized {
+		return Patch{}, ErrPatchesUnauthorized
+	}
 
 	if response.StatusCode >= 300 {
 		return Patch{}, ErrPatchesUnavailable
@@ -202,19 +216,24 @@ func (patch *Patch) downloadFiles(server *Server) error {
 
 	for _, download := range patch.Downloads {
 		// url, err := url.JoinPath(server.PatchServer, download.Path)
-		url, err := server.PatchServerUrl(download.Path)
-		if err != nil {
-			return fmt.Errorf("could not create download URL to \"%s\": %v", download.Path, err)
-		}
+		// url, err := server.PatchServerUrl(download.Path)
+		// if err != nil {
+		// 	return fmt.Errorf("could not create download URL to \"%s\": %v", download.Path, err)
+		// }
 
-		response, err := http.Get(url)
+		// response, err := http.Get(url)
+		response, err := server.PatchServerRequest(download.Path)
 		if err != nil {
 			return fmt.Errorf("could not GET download URL: %v", err)
 		}
 		defer response.Body.Close()
 
+		if response.StatusCode == http.StatusUnauthorized {
+			return ErrPatchesUnauthorized
+		}
+
 		if response.StatusCode >= 300 {
-			return fmt.Errorf("invalid response status code (%d) from \"%s\"", response.StatusCode, url)
+			return fmt.Errorf("invalid response status code from patch server: %d", response.StatusCode)
 		}
 
 		data, err := io.ReadAll(response.Body)

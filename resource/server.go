@@ -2,6 +2,8 @@ package resource
 
 import (
 	"fmt"
+	"log"
+	"net/http"
 	"net/url"
 	"os"
 	"time"
@@ -9,25 +11,31 @@ import (
 	"github.com/I-Am-Dench/lu-launcher/luconfig"
 )
 
+const (
+	HEADER_PATCH_TOKEN = "TPP-Token"
+)
+
 type Server struct {
 	Id           string `json:"id"`
 	Name         string `json:"name"`
 	Boot         string `json:"boot"`
+	PatchToken   string `json:"patchToken"`
 	CurrentPatch string `json:"currentPatch"`
 
 	Config *luconfig.LUConfig `json:"-"`
 }
 
-func NewServer(name string, config *luconfig.LUConfig) *Server {
+func NewServer(name, patchToken string, config *luconfig.LUConfig) *Server {
 	server := new(Server)
 	server.Id = fmt.Sprint(time.Now().Unix())
 	server.Name = name
+	server.PatchToken = patchToken
 	server.Config = config
 	return server
 }
 
-func CreateServer(name string, config *luconfig.LUConfig) (*Server, error) {
-	server := NewServer(name, config)
+func CreateServer(name, patchToken string, config *luconfig.LUConfig) (*Server, error) {
+	server := NewServer(name, patchToken, config)
 	return server, server.SaveConfig()
 }
 
@@ -86,6 +94,26 @@ func (server *Server) PatchServerHost() string {
 func (server *Server) PatchServerUrl(elem ...string) (string, error) {
 	path := []string{server.Config.PatchServerDir}
 	return url.JoinPath(server.PatchServerHost(), append(path, elem...)...)
+}
+
+func (server *Server) PatchServerRequest(elem ...string) (*http.Response, error) {
+	url, err := server.PatchServerUrl(elem...)
+	if err != nil {
+		return nil, fmt.Errorf("could not create patch server URL with \"%s\": %v", server.PatchServerHost(), err)
+	}
+
+	log.Printf("Patch server request: %s\n", url)
+	request, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(server.PatchToken) > 0 {
+		request.Header.Set(HEADER_PATCH_TOKEN, server.PatchToken)
+	}
+
+	client := http.Client{}
+	return client.Do(request)
 }
 
 func (server *Server) ToXML() ServerXML {
