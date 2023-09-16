@@ -8,7 +8,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -308,21 +307,16 @@ func (app *App) PressPlay() {
 	log.Println("Launching Lego Universe...")
 	log.Printf("Close launcher when played: %v\n", app.settings.CloseOnPlay)
 
-	go func() {
-		time.Sleep(2 * time.Second)
+	cmd := app.StartClient()
+	if app.settings.CloseOnPlay {
+		app.main.Close()
+		return
+	}
+
+	go func(cmd *exec.Cmd) {
+		cmd.Wait()
 		app.SetNormalState()
-	}()
-
-	// cmd := app.StartClient()
-	// if app.settings.CloseOnPlay {
-	// 	app.main.Close()
-	// 	return
-	// }
-
-	// go func(cmd *exec.Cmd) {
-	// 	cmd.Wait()
-	// 	app.SetNormalState()
-	// }(cmd)
+	}(cmd)
 }
 
 func (app *App) PressUpdate() {
