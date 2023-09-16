@@ -274,6 +274,12 @@ func (app *App) PressPlay() {
 	app.SetPlayingState()
 
 	server := app.CurrentServer()
+	if server == nil {
+		dialog.ShowInformation("Select Server", "Please select a server.", app.main)
+		app.SetNormalState()
+		return
+	}
+
 	log.Printf("Selected server: %s\n", server.Name)
 
 	err := app.TransferCachedClientResources()
