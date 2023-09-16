@@ -65,18 +65,18 @@ func GetServerPatches(server *Server) (ServerPatches, error) {
 type Patch struct {
 	Version string `json:"-"`
 
-	Dependencies []string `json:"depend"`
+	Dependencies []string `json:"depend,omitempty"`
 
 	Downloads []struct {
 		Path string `json:"path"`
 		Name string `json:"name"`
-	} `json:"downloads"`
+	} `json:"downloads,omitempty"`
 
 	Updates struct {
-		Boot string `json:"boot"`
-	} `json:"updates"`
+		Boot string `json:"boot,omitempty"`
+	} `json:"updates,omitempty"`
 
-	Transfers map[string]string `json:"transfer"`
+	Transfers map[string]string `json:"transfer,omitempty"`
 }
 
 func GetPatch(version string, server *Server) (Patch, error) {
