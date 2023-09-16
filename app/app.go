@@ -462,6 +462,11 @@ func (app *App) UpdateWithPrompt(server *resource.Server) {
 		}
 
 		log.Printf("Patch received with %d downloads\n", len(patch.Downloads))
+		if !app.settings.ReviewPatchBeforeUpdate {
+			app.Update(server)
+			return
+		}
+
 		app.ShowPatch(patch, func(confirmed bool) {
 			if !confirmed {
 				app.SetNormalState()

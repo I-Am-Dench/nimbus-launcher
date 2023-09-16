@@ -24,6 +24,7 @@ type Settings struct {
 
 	CloseOnPlay               bool `json:"closeOnPlay"`
 	CheckPatchesAutomatically bool `json:"checkPatchesAutomatically"`
+	ReviewPatchBeforeUpdate   bool `json:"reviewPatchBeforeUpdate"`
 }
 
 func (settings *Settings) Adjust() {
@@ -62,6 +63,7 @@ func DefaultSettings() Settings {
 	s.SelectedServer = ""
 	s.Client.Directory = "%{DEFAULTPATH}%"
 	s.CloseOnPlay = true
+	s.ReviewPatchBeforeUpdate = true
 
 	s.Adjust()
 	return s

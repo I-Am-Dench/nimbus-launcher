@@ -263,6 +263,9 @@ func (app *App) LauncherSettings(window fyne.Window) *fyne.Container {
 	checkPatchesAutomatically := widget.NewCheck("", func(b bool) {})
 	checkPatchesAutomatically.Checked = app.settings.CheckPatchesAutomatically
 
+	reviewPatchBeforeUpdate := widget.NewCheck("", func(b bool) {})
+	reviewPatchBeforeUpdate.Checked = app.settings.ReviewPatchBeforeUpdate
+
 	clientDirectory := widget.NewEntry()
 	clientDirectoryButton := widget.NewButtonWithIcon(
 		"", theme.FolderOpenIcon(), func() {
@@ -298,6 +301,7 @@ func (app *App) LauncherSettings(window fyne.Window) *fyne.Container {
 	saveButton := widget.NewButton("Save", func() {
 		app.settings.CloseOnPlay = closeOnPlay.Checked
 		app.settings.CheckPatchesAutomatically = checkPatchesAutomatically.Checked
+		app.settings.ReviewPatchBeforeUpdate = reviewPatchBeforeUpdate.Checked
 
 		app.settings.Client.Directory = clientDirectory.Text
 		app.settings.Client.Name = clientName.Text
@@ -325,6 +329,7 @@ func (app *App) LauncherSettings(window fyne.Window) *fyne.Container {
 					widget.NewForm(
 						widget.NewFormItem("Close Launcher When Played", closeOnPlay),
 						widget.NewFormItem("Check Patches Automatically", checkPatchesAutomatically),
+						widget.NewFormItem("Review Patch Before Update", reviewPatchBeforeUpdate),
 					),
 					widget.NewSeparator(),
 					clientHeading,
