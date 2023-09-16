@@ -25,6 +25,6 @@ func main() {
 	}
 	log.Printf("Loaded %d server configuration(s)\n", servers.Size())
 
-	app := app.New(settings, servers)
+	app := app.New(&settings, servers)
 	app.Start()
 }

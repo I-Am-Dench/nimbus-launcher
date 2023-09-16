@@ -23,7 +23,7 @@ import (
 
 type App struct {
 	fyne.App
-	settings    resource.Settings
+	settings    *resource.Settings
 	servers     resource.ServerList
 	clientCache clientcache.ClientCache
 
@@ -49,7 +49,7 @@ type App struct {
 	clientErrorIcon *widget.Icon
 }
 
-func New(settings resource.Settings, servers resource.ServerList) App {
+func New(settings *resource.Settings, servers resource.ServerList) App {
 	a := App{}
 	a.App = app.New()
 
