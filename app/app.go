@@ -28,6 +28,7 @@ type App struct {
 
 	main           fyne.Window
 	settingsWindow fyne.Window
+	patchWindow    fyne.Window
 
 	serverSelector       *widget.Select
 	playButton           *widget.Button
@@ -333,7 +334,8 @@ func (app *App) PressPlay() {
 }
 
 func (app *App) PressUpdate() {
-	app.Update(app.CurrentServer())
+	app.UpdateWithPrompt(app.CurrentServer())
+	// app.Update(app.CurrentServer())
 }
 
 func (app *App) StartClient() *exec.Cmd {
@@ -375,6 +377,28 @@ func (app *App) ShowSettings() {
 	settings.Show()
 }
 
+func (app *App) ShowPatch(patch resource.Patch, onConfirmCancel func(bool)) {
+	if app.patchWindow != nil {
+		app.patchWindow.RequestFocus()
+		return
+	}
+
+	window := app.NewWindow("Review Patch")
+	window.SetFixedSize(true)
+	window.Resize(fyne.NewSize(800, 600))
+	window.SetIcon(theme.QuestionIcon())
+	window.SetOnClosed(func() {
+		app.patchWindow = nil
+		onConfirmCancel(false)
+	})
+
+	app.LoadPatchContent(window, patch, onConfirmCancel)
+	app.patchWindow = window
+
+	app.patchWindow.CenterOnScreen()
+	app.patchWindow.Show()
+}
+
 func (app *App) Update(server *resource.Server) {
 	app.SetUpdatingState()
 
@@ -412,6 +436,40 @@ func (app *App) Update(server *resource.Server) {
 		app.servers.SaveInfos()
 
 		app.SetNormalState()
+	}(patches.CurrentVersion, server)
+}
+
+func (app *App) UpdateWithPrompt(server *resource.Server) {
+	app.SetUpdatingState()
+
+	patches, ok := app.serverPatches[server.Id]
+	if !ok {
+		log.Printf("Patches missing for \"%s\"\n", server.Name)
+		return
+	}
+
+	go func(version string, server *resource.Server) {
+		log.Printf("Getting patch \"%s\" for %s\n", version, server.Name)
+		patch, err := resource.GetPatch(version, server)
+		if err != nil {
+			log.Printf("Patch error: %v\n", err)
+			if err != resource.ErrPatchesUnavailable {
+				dialog.ShowError(err, app.main)
+			}
+
+			app.SetNormalState()
+			return
+		}
+
+		log.Printf("Patch received with %d downloads\n", len(patch.Downloads))
+		app.ShowPatch(patch, func(confirmed bool) {
+			if !confirmed {
+				app.SetNormalState()
+				return
+			}
+
+			app.Update(server)
+		})
 	}(patches.CurrentVersion, server)
 }
 

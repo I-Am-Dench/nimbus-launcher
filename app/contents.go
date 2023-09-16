@@ -1,6 +1,8 @@
 package app
 
 import (
+	"encoding/json"
+	"fmt"
 	"image/color"
 	"path/filepath"
 
@@ -10,6 +12,7 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"github.com/I-Am-Dench/lu-launcher/resource"
 )
 
 func (app *App) LoadContent() {
@@ -331,6 +334,54 @@ func (app *App) LauncherSettings(window fyne.Window) *fyne.Container {
 						widget.NewFormItem("Run Command", runCommand),
 						widget.NewFormItem("EnvironmentVariables", environmentVariables),
 					),
+				),
+			),
+		),
+	)
+}
+
+func (app *App) LoadPatchContent(window fyne.Window, patch resource.Patch, onConfirmCancel func(bool)) {
+	heading := canvas.NewText(fmt.Sprintf("Received patch.json (%s):", patch.Version), color.White)
+	heading.TextSize = 16
+
+	confirm := widget.NewButton(
+		"Continue", func() {
+			window.Close()
+			onConfirmCancel(true)
+		},
+	)
+	confirm.Importance = widget.HighImportance
+
+	cancel := widget.NewButton(
+		"Cancel", func() {
+			window.Close()
+			onConfirmCancel(false)
+		},
+	)
+
+	footer := container.NewBorder(
+		nil, nil, nil,
+		container.NewHBox(cancel, confirm),
+		widget.NewLabelWithStyle(
+			"Continue with update?",
+			fyne.TextAlignLeading,
+			fyne.TextStyle{
+				Bold: true,
+			},
+		),
+	)
+
+	data, _ := json.MarshalIndent(patch, "", "    ")
+	patchContent := NewCodeBox()
+	patchContent.SetText(string(data))
+
+	window.SetContent(
+		container.NewPadded(
+			container.NewBorder(
+				heading, footer,
+				nil, nil,
+				container.NewVScroll(
+					patchContent,
 				),
 			),
 		),
