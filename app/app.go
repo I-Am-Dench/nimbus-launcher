@@ -29,10 +29,11 @@ type App struct {
 	main           fyne.Window
 	settingsWindow fyne.Window
 
-	serverSelector     *widget.Select
-	playButton         *widget.Button
-	definiteProgress   *widget.ProgressBar
-	indefiniteProgress *widget.ProgressBarInfinite
+	serverSelector       *widget.Select
+	playButton           *widget.Button
+	refreshUpdatesButton *widget.Button
+	definiteProgress     *widget.ProgressBar
+	indefiniteProgress   *widget.ProgressBarInfinite
 
 	progressText string
 
@@ -113,6 +114,12 @@ func (app *App) SetCurrentServerInfo(server *resource.Server) {
 
 	app.signupBinding.Set(server.Config.SignupURL)
 	app.signinBinding.Set(server.Config.SigninURL)
+
+	if len(server.Config.PatchServerIP) > 0 {
+		app.refreshUpdatesButton.Show()
+	} else {
+		app.refreshUpdatesButton.Hide()
+	}
 }
 
 func (app *App) SetCurrentServer(server *resource.Server) {
