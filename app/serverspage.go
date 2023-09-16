@@ -199,6 +199,10 @@ func (page *ServersPage) editServerPage(form *forms.ServerForm, window fyne.Wind
 		"Export", theme.DocumentIcon(),
 		func() {
 			dialog := dialog.NewFileSave(func(uc fyne.URIWriteCloser, err error) {
+				if uc == nil {
+					return
+				}
+
 				if err != nil {
 					dialog.ShowError(fmt.Errorf("error when choosing file: %v", err), window)
 					return
