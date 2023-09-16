@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -15,14 +16,16 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"github.com/I-Am-Dench/lu-launcher/clientcache"
 	"github.com/I-Am-Dench/lu-launcher/luconfig"
 	"github.com/I-Am-Dench/lu-launcher/resource"
 )
 
 type App struct {
 	fyne.App
-	settings resource.Settings
-	servers  resource.ServerList
+	settings    resource.Settings
+	servers     resource.ServerList
+	clientCache clientcache.ClientCache
 
 	main           fyne.Window
 	settingsWindow fyne.Window
@@ -52,6 +55,12 @@ func New(settings resource.Settings, servers resource.ServerList) App {
 
 	a.settings = settings
 	a.servers = servers
+
+	cache, err := resource.ClientCache()
+	if err != nil {
+		log.Panicf("Could not create client cache database: %v", err)
+	}
+	a.clientCache = cache
 
 	a.main = a.NewWindow("Lego Universe")
 	a.main.SetFixedSize(true)
@@ -128,11 +137,13 @@ func (app *App) SetCurrentServer(server *resource.Server) {
 }
 
 func (app *App) Refresh() {
-	if server := app.CurrentServer(); server != nil {
-		app.serverSelector.SetSelectedIndex(app.servers.Find(server.Id))
+	server := app.CurrentServer()
+	if server == nil {
+		app.SetCurrentServer(nil)
 		return
 	}
-	app.SetCurrentServer(nil)
+
+	app.serverSelector.SetSelectedIndex(app.servers.Find(server.Id))
 }
 
 func (app *App) SetPlayingState() {
@@ -197,6 +208,10 @@ func (app *App) ShowProgress(value float64, format string) {
 	app.definiteProgress.Show()
 }
 
+func (app *App) SetProgress(value float64) {
+	app.ShowProgress(value, app.progressText)
+}
+
 func (app *App) HideProgress() {
 	app.definiteProgress.Hide()
 	app.indefiniteProgress.Hide()
@@ -204,6 +219,46 @@ func (app *App) HideProgress() {
 
 func (app *App) CurrentServer() *resource.Server {
 	return app.servers.Get(app.settings.SelectedServer)
+}
+
+func (app *App) TransferCachedClientResources() error {
+	log.Println("Transferring cached client resources...")
+
+	resources, err := app.clientCache.GetResources()
+	if err != nil {
+		return fmt.Errorf("could not query resources")
+	}
+	log.Printf("Queried %d cached resources.", len(resources))
+
+	app.ShowProgress(0, "Transferring resources: %f%%")
+	defer app.HideProgress()
+	for i, resource := range resources {
+		log.Printf("Transferring cached resource: %s\n", resource.Path)
+		err := clientcache.WriteResource(app.settings.Client.Directory, resource)
+		if err != nil {
+			return fmt.Errorf("could not transfer cached resource")
+		}
+		app.SetProgress(float64((i + 1) / len(resources)))
+	}
+
+	log.Println("Completed transfer(s)!")
+	return nil
+}
+
+func (app *App) TransferPatchResources(server *resource.Server) error {
+	log.Println("Transfer patch resources...")
+	patch, err := resource.GetPatch(server.CurrentPatch, server)
+	if err != nil {
+		return err
+	}
+
+	err = patch.TransferResources(app.settings.Client.Directory, app.clientCache, server)
+	if err != nil {
+		return err
+	}
+
+	log.Println("Completed transfer(s)!")
+	return nil
 }
 
 func (app *App) CopyBootConfiguration(server *resource.Server) error {
@@ -218,11 +273,19 @@ func (app *App) CopyBootConfiguration(server *resource.Server) error {
 
 func (app *App) PressPlay() {
 	app.SetPlayingState()
-	log.Printf("Selected server: %s\n", app.CurrentServer().Name)
+
+	server := app.CurrentServer()
+	log.Printf("Selected server: %s\n", server.Name)
+
+	err := app.TransferCachedClientResources()
+	if err != nil {
+		log.Println(err)
+		dialog.ShowError(fmt.Errorf("client resources may be incorrect when running: %v", err), app.main)
+	}
 
 	if app.settings.SelectedServer != app.settings.PreviouslyRunServer {
 		log.Println("Selected server does not match previously run server; Copying over boot.cfg")
-		err := app.CopyBootConfiguration(app.CurrentServer())
+		err := app.CopyBootConfiguration(server)
 		if err != nil {
 			dialog.ShowError(fmt.Errorf("could not copy \"boot.cfg\": %v", err), app.main)
 			app.SetNormalState()
@@ -231,22 +294,35 @@ func (app *App) PressPlay() {
 		log.Println("Copy completed.")
 	}
 
+	if len(server.CurrentPatch) > 0 {
+		err := app.TransferPatchResources(server)
+		if err != nil {
+			log.Println(err)
+			dialog.ShowError(fmt.Errorf("patch resources may be incorrect when running: %v", err), app.main)
+		}
+	}
+
 	app.settings.PreviouslyRunServer = app.settings.SelectedServer
 	app.settings.Save()
 
 	log.Println("Launching Lego Universe...")
 	log.Printf("Close launcher when played: %v\n", app.settings.CloseOnPlay)
 
-	cmd := app.StartClient()
-	if app.settings.CloseOnPlay {
-		app.main.Close()
-		return
-	}
-
-	go func(cmd *exec.Cmd) {
-		cmd.Wait()
+	go func() {
+		time.Sleep(2 * time.Second)
 		app.SetNormalState()
-	}(cmd)
+	}()
+
+	// cmd := app.StartClient()
+	// if app.settings.CloseOnPlay {
+	// 	app.main.Close()
+	// 	return
+	// }
+
+	// go func(cmd *exec.Cmd) {
+	// 	cmd.Wait()
+	// 	app.SetNormalState()
+	// }(cmd)
 }
 
 func (app *App) PressUpdate() {

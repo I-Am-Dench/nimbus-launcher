@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/I-Am-Dench/lu-launcher/clientcache"
 	"github.com/I-Am-Dench/lu-launcher/luconfig"
 )
 
@@ -119,6 +120,8 @@ func GetPatch(version string, server *Server) (Patch, error) {
 	if err != nil {
 		return Patch{}, fmt.Errorf("malformed response body for patch version: %v", err)
 	}
+
+	os.MkdirAll(path, 0755)
 
 	err = os.WriteFile(filepath.Join(path, "patch.json"), data, 0755)
 	if err != nil {
@@ -251,4 +254,46 @@ func (patch *Patch) RunWithDependencies(server *Server) error {
 	}
 
 	return patch.Run(server)
+}
+
+func (patch *Patch) TransferResources(clientDirectory string, cache clientcache.ClientCache, server *Server) error {
+	for source, destination := range patch.Transfers {
+		if !filepath.IsLocal(source) {
+			return fmt.Errorf("invalid source resource \"%s\": file is nonlocal", source)
+		}
+
+		if !filepath.IsLocal(destination) {
+			return fmt.Errorf("invalid destination resource \"%s\": file is nonlocal", destination)
+		}
+
+		log.Printf("Transferring: %s -> %s\n", source, destination)
+
+		resourceName := filepath.Clean(destination)
+		if !cache.ResourceExists(resourceName) {
+			resource, err := clientcache.ReadResource(clientDirectory, resourceName)
+			if err != nil {
+				return fmt.Errorf("could not read patch destination: %v", err)
+			}
+
+			fmt.Printf("Adding %s to cache\n", resource.Path)
+			err = cache.Add(resource)
+			if err != nil {
+				return fmt.Errorf("could not add patch destination to cache: %v", err)
+			}
+		}
+
+		sourcePath := filepath.Join("patches", server.Id, patch.Version, source)
+		data, err := os.ReadFile(sourcePath)
+		if err != nil {
+			return fmt.Errorf("cannot read patch source: %v", err)
+		}
+
+		destinationPath := filepath.Join(clientDirectory, resourceName)
+		err = os.WriteFile(destinationPath, data, 0755)
+		if err != nil {
+			return fmt.Errorf("cannot write patch source: %v", err)
+		}
+	}
+
+	return nil
 }

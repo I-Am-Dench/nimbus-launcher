@@ -89,3 +89,8 @@ func (cache *sqliteCache) GetResources() ([]ClientResource, error) {
 
 	return resources, nil
 }
+
+func (cache *sqliteCache) ResourceExists(path string) bool {
+	_, err := cache.Get(path)
+	return err == nil
+}

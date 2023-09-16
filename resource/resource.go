@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	"fyne.io/fyne/v2"
+	"github.com/I-Am-Dench/lu-launcher/clientcache"
 	"github.com/I-Am-Dench/lu-launcher/luconfig"
 )
 
@@ -98,6 +99,10 @@ func Servers() (ServerList, error) {
 	servers := ServerList{}
 	err := servers.Load()
 	return servers, err
+}
+
+func ClientCache() (clientcache.ClientCache, error) {
+	return clientcache.NewSqlite(settingsDir)
 }
 
 func Exists(name string) bool {

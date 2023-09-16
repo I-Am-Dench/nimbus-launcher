@@ -22,6 +22,7 @@ type ClientCache interface {
 	Add(resource ClientResource) error
 	Get(path string) (ClientResource, error)
 	GetResources() ([]ClientResource, error)
+	ResourceExists(path string) bool
 }
 
 func ReadResource(clientDirectory, resource string) (ClientResource, error) {
@@ -33,7 +34,7 @@ func ReadResource(clientDirectory, resource string) (ClientResource, error) {
 	data, _ := io.ReadAll(file)
 	stat, _ := file.Stat()
 	return ClientResource{
-		Path:    resource,
+		Path:    filepath.Clean(resource),
 		ModTime: stat.ModTime().Unix(),
 		Data:    data,
 	}, nil
