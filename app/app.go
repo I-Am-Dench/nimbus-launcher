@@ -363,7 +363,7 @@ func (app *App) ShowSettings() {
 }
 
 func (app *App) Update(server *resource.Server) {
-	app.SetUpdateState()
+	app.SetUpdatingState()
 
 	patches, ok := app.serverPatches[server.Id]
 	if !ok {
