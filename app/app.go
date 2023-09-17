@@ -334,8 +334,7 @@ func (app *App) PressPlay() {
 }
 
 func (app *App) PressUpdate() {
-	app.UpdateWithPrompt(app.CurrentServer())
-	// app.Update(app.CurrentServer())
+	app.Update(app.CurrentServer())
 }
 
 func (app *App) StartClient() *exec.Cmd {
@@ -399,6 +398,22 @@ func (app *App) ShowPatch(patch resource.Patch, onConfirmCancel func(bool)) {
 	app.patchWindow.Show()
 }
 
+func (app *App) RunUpdate(server *resource.Server, patch resource.Patch) {
+	log.Println("Starting update...")
+	err := patch.RunWithDependencies(server)
+	if err != nil {
+		log.Println(err)
+		dialog.ShowError(err, app.main)
+		return
+	}
+	log.Println("Update completed.")
+
+	app.Refresh()
+
+	server.CurrentPatch = patch.Version
+	app.servers.SaveInfos()
+}
+
 func (app *App) Update(server *resource.Server) {
 	app.SetUpdatingState()
 
@@ -423,57 +438,20 @@ func (app *App) Update(server *resource.Server) {
 
 		log.Printf("Patch received with %d downloads\n", len(patch.Downloads))
 
-		log.Println("Starting update...")
-		err = patch.RunWithDependencies(server)
-		if err != nil {
-			dialog.ShowError(err, app.main)
-		}
-		log.Println("Update completed.")
-
-		app.Refresh()
-
-		server.CurrentPatch = version
-		app.servers.SaveInfos()
-
-		app.SetNormalState()
-	}(patches.CurrentVersion, server)
-}
-
-func (app *App) UpdateWithPrompt(server *resource.Server) {
-	app.SetUpdatingState()
-
-	patches, ok := app.serverPatches[server.Id]
-	if !ok {
-		log.Printf("Patches missing for \"%s\"\n", server.Name)
-		return
-	}
-
-	go func(version string, server *resource.Server) {
-		log.Printf("Getting patch \"%s\" for %s\n", version, server.Name)
-		patch, err := resource.GetPatch(version, server)
-		if err != nil {
-			log.Printf("Patch error: %v\n", err)
-			if err != resource.ErrPatchesUnavailable {
-				dialog.ShowError(err, app.main)
-			}
-
+		if !app.settings.ReviewPatchBeforeUpdate {
+			app.RunUpdate(server, patch)
 			app.SetNormalState()
 			return
 		}
 
-		log.Printf("Patch received with %d downloads\n", len(patch.Downloads))
-		if !app.settings.ReviewPatchBeforeUpdate {
-			app.Update(server)
-			return
-		}
-
 		app.ShowPatch(patch, func(confirmed bool) {
+			defer app.SetNormalState()
+
 			if !confirmed {
-				app.SetNormalState()
 				return
 			}
 
-			app.Update(server)
+			app.RunUpdate(server, patch)
 		})
 	}(patches.CurrentVersion, server)
 }
