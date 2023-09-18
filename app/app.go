@@ -28,6 +28,7 @@ type App struct {
 
 	main           fyne.Window
 	settingsWindow fyne.Window
+	patchWindow    fyne.Window
 
 	serverSelector       *widget.Select
 	playButton           *widget.Button
@@ -375,6 +376,44 @@ func (app *App) ShowSettings() {
 	settings.Show()
 }
 
+func (app *App) ShowPatch(patch resource.Patch, onConfirmCancel func(bool)) {
+	if app.patchWindow != nil {
+		app.patchWindow.RequestFocus()
+		return
+	}
+
+	window := app.NewWindow("Review Patch")
+	window.SetFixedSize(true)
+	window.Resize(fyne.NewSize(800, 600))
+	window.SetIcon(theme.QuestionIcon())
+	window.SetOnClosed(func() {
+		app.patchWindow = nil
+		onConfirmCancel(false)
+	})
+
+	app.LoadPatchContent(window, patch, onConfirmCancel)
+	app.patchWindow = window
+
+	app.patchWindow.CenterOnScreen()
+	app.patchWindow.Show()
+}
+
+func (app *App) RunUpdate(server *resource.Server, patch resource.Patch) {
+	log.Println("Starting update...")
+	err := patch.RunWithDependencies(server)
+	if err != nil {
+		log.Println(err)
+		dialog.ShowError(err, app.main)
+		return
+	}
+	log.Println("Update completed.")
+
+	app.Refresh()
+
+	server.CurrentPatch = patch.Version
+	app.servers.SaveInfos()
+}
+
 func (app *App) Update(server *resource.Server) {
 	app.SetUpdatingState()
 
@@ -399,19 +438,21 @@ func (app *App) Update(server *resource.Server) {
 
 		log.Printf("Patch received with %d downloads\n", len(patch.Downloads))
 
-		log.Println("Starting update...")
-		err = patch.RunWithDependencies(server)
-		if err != nil {
-			dialog.ShowError(err, app.main)
+		if !app.settings.ReviewPatchBeforeUpdate {
+			app.RunUpdate(server, patch)
+			app.SetNormalState()
+			return
 		}
-		log.Println("Update completed.")
 
-		app.Refresh()
+		app.ShowPatch(patch, func(confirmed bool) {
+			defer app.SetNormalState()
 
-		server.CurrentPatch = version
-		app.servers.SaveInfos()
+			if !confirmed {
+				return
+			}
 
-		app.SetNormalState()
+			app.RunUpdate(server, patch)
+		})
 	}(patches.CurrentVersion, server)
 }
 
