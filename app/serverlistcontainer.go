@@ -1,50 +1,44 @@
 package app
 
-import (
-	"fmt"
+// func (app *App) ServerNames() []string {
+// 	return app.servers.Names()
+// }
 
-	"github.com/I-Am-Dench/lu-launcher/resource"
-)
+// func (app *App) GetServer(index int) *resource.Server {
+// 	return app.servers.GetIndex(index)
+// }
 
-func (app *App) ServerNames() []string {
-	return app.servers.Names()
-}
+// func (app *App) AddServer(server *resource.Server) error {
+// 	if server == nil {
+// 		return fmt.Errorf("fatal add server error: server is nil")
+// 	}
 
-func (app *App) GetServer(index int) *resource.Server {
-	return app.servers.GetIndex(index)
-}
+// 	err := app.servers.Add(server)
+// 	if err != nil {
+// 		return err
+// 	}
 
-func (app *App) AddServer(server *resource.Server) error {
-	if server == nil {
-		return fmt.Errorf("fatal add server error: server is nil")
-	}
+// 	app.serverSelector.SetOptions(app.servers.Names())
+// 	return nil
+// }
 
-	err := app.servers.Add(server)
-	if err != nil {
-		return err
-	}
+// func (app *App) RemoveServer(server *resource.Server) error {
+// 	if server == nil {
+// 		return fmt.Errorf("fatal remove server error: server is nil")
+// 	}
 
-	app.serverSelector.SetOptions(app.servers.Names())
-	return nil
-}
+// 	err := app.servers.Remove(server.Id)
+// 	if err != nil {
+// 		return err
+// 	}
 
-func (app *App) RemoveServer(server *resource.Server) error {
-	if server == nil {
-		return fmt.Errorf("fatal remove server error: server is nil")
-	}
+// 	app.serverSelector.SetOptions(app.servers.Names())
+// 	app.Refresh()
+// 	return nil
+// }
 
-	err := app.servers.Remove(server.Id)
-	if err != nil {
-		return err
-	}
-
-	app.serverSelector.SetOptions(app.servers.Names())
-	app.Refresh()
-	return nil
-}
-
-func (app *App) SaveServers() error {
-	app.serverSelector.SetOptions(app.servers.Names())
-	app.Refresh()
-	return app.servers.SaveInfos()
-}
+// func (app *App) SaveServers() error {
+// 	app.serverSelector.SetOptions(app.servers.Names())
+// 	app.Refresh()
+// 	return app.servers.SaveInfos()
+// }

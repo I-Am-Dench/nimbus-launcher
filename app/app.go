@@ -22,15 +22,17 @@ import (
 
 type App struct {
 	fyne.App
-	settings    *resource.Settings
-	servers     resource.ServerList
+	settings *resource.Settings
+	// servers     resource.ServerList
 	clientCache clientcache.ClientCache
 
 	main           fyne.Window
 	settingsWindow fyne.Window
 	patchWindow    fyne.Window
 
-	serverSelector       *widget.Select
+	serverList *ServerList
+
+	// serverSelector       *widget.Select
 	playButton           *widget.Button
 	refreshUpdatesButton *widget.Button
 	definiteProgress     *widget.ProgressBar
@@ -55,7 +57,7 @@ func New(settings *resource.Settings, servers resource.ServerList) App {
 	a.App = app.New()
 
 	a.settings = settings
-	a.servers = servers
+	// a.servers = servers
 
 	cache, err := resource.ClientCache()
 	if err != nil {
@@ -77,9 +79,6 @@ func New(settings *resource.Settings, servers resource.ServerList) App {
 		log.Println(fmt.Errorf("unable to load icon: %v", err))
 	}
 
-	a.clientErrorIcon = widget.NewIcon(theme.NewErrorThemedResource(theme.ErrorIcon()))
-	a.clientErrorIcon.Hide()
-
 	// log.Printf("Using \"%s\" as client directory\n", a.settings.Client.Directory)
 
 	// _, err = os.Stat(a.settings.ClientPath())
@@ -98,9 +97,41 @@ func New(settings *resource.Settings, servers resource.ServerList) App {
 
 	a.serverPatches = make(map[string]resource.ServerPatches)
 
+	a.InitializeGlobalWidgets(servers)
+
 	a.LoadContent()
 
 	return a
+}
+
+func (app *App) InitializeGlobalWidgets(servers resource.ServerList) {
+	app.clientErrorIcon = widget.NewIcon(theme.NewErrorThemedResource(theme.ErrorIcon()))
+	app.clientErrorIcon.Hide()
+
+	app.refreshUpdatesButton = widget.NewButtonWithIcon(
+		"Check For Updates", theme.ViewRefreshIcon(),
+		func() {
+			app.CheckForUpdates(app.CurrentServer())
+		},
+	)
+
+	app.playButton = widget.NewButtonWithIcon(
+		"Play", theme.MediaPlayIcon(),
+		app.PressPlay,
+	)
+	app.playButton.Importance = widget.HighImportance
+
+	app.definiteProgress = widget.NewProgressBar()
+	app.definiteProgress.TextFormatter = func() string {
+		return app.progressText
+	}
+	app.definiteProgress.Hide()
+
+	app.indefiniteProgress = widget.NewProgressBarInfinite()
+	app.indefiniteProgress.Hide()
+
+	app.serverList = NewServerList(servers, app.OnServerChanged)
+	app.serverList.SetSelectedServer(app.settings.SelectedServer)
 }
 
 func (app *App) SetCurrentServerInfo(server *resource.Server) {
@@ -123,19 +154,38 @@ func (app *App) SetCurrentServerInfo(server *resource.Server) {
 	}
 }
 
-func (app *App) SetCurrentServer(server *resource.Server) {
-	app.SetCurrentServerInfo(server)
+func (app *App) BindServerInfo(server *resource.Server) {
+	if server == nil {
+		server = &resource.Server{}
+		server.Config = &luconfig.LUConfig{}
+	}
+
+	app.serverNameBinding.Set(server.Config.ServerName)
+	app.authServerBinding.Set(server.Config.AuthServerIP)
+	app.localeBinding.Set(server.Config.Locale)
+
+	app.signupBinding.Set(server.Config.SignupURL)
+	app.signinBinding.Set(server.Config.SigninURL)
+
+	if len(server.Config.PatchServerIP) > 0 {
+		app.refreshUpdatesButton.Show()
+	} else {
+		app.refreshUpdatesButton.Hide()
+	}
+}
+
+func (app *App) OnServerChanged(server *resource.Server) {
+	app.BindServerInfo(server)
 
 	if server != nil {
 		app.settings.SelectedServer = server.Id
 	} else {
 		app.settings.SelectedServer = ""
-		app.serverSelector.ClearSelected()
 	}
 
 	err := app.settings.Save()
 	if err != nil {
-		log.Printf("save settings err: %v\n", err)
+		log.Printf("save settings error: %v\n", err)
 	}
 
 	if app.IsReady() && app.settings.CheckPatchesAutomatically {
@@ -143,15 +193,35 @@ func (app *App) SetCurrentServer(server *resource.Server) {
 	}
 }
 
-func (app *App) Refresh() {
-	server := app.CurrentServer()
-	if server == nil {
-		app.SetCurrentServer(nil)
-		return
-	}
+// func (app *App) SetCurrentServer(server *resource.Server) {
+// 	app.SetCurrentServerInfo(server)
 
-	app.serverSelector.SetSelectedIndex(app.servers.Find(server.Id))
-}
+// 	if server != nil {
+// 		app.settings.SelectedServer = server.Id
+// 	} else {
+// 		app.settings.SelectedServer = ""
+// 		app.serverSelector.ClearSelected()
+// 	}
+
+// 	err := app.settings.Save()
+// 	if err != nil {
+// 		log.Printf("save settings err: %v\n", err)
+// 	}
+
+// 	if app.IsReady() && app.settings.CheckPatchesAutomatically {
+// 		app.CheckForUpdates(server)
+// 	}
+// }
+
+// func (app *App) Refresh() {
+// 	server := app.CurrentServer()
+// 	if server == nil {
+// 		app.SetCurrentServer(nil)
+// 		return
+// 	}
+
+// 	app.serverSelector.SetSelectedIndex(app.servers.Find(server.Id))
+// }
 
 func (app *App) SetPlayingState() {
 	app.HideProgress()
@@ -159,7 +229,7 @@ func (app *App) SetPlayingState() {
 	app.playButton.Disable()
 	app.playButton.SetText("Playing")
 
-	app.serverSelector.Disable()
+	app.serverList.Disable()
 }
 
 func (app *App) SetNormalState() {
@@ -172,7 +242,7 @@ func (app *App) SetNormalState() {
 	app.playButton.OnTapped = app.PressPlay
 	app.playButton.Refresh()
 
-	app.serverSelector.Enable()
+	app.serverList.Enable()
 }
 
 func (app *App) SetUpdatingState() {
@@ -225,7 +295,7 @@ func (app *App) HideProgress() {
 }
 
 func (app *App) CurrentServer() *resource.Server {
-	return app.servers.Get(app.settings.SelectedServer)
+	return app.serverList.SelectedServer()
 }
 
 func (app *App) TransferCachedClientResources() error {
@@ -364,10 +434,10 @@ func (app *App) ShowSettings() {
 	settings.SetIcon(theme.StorageIcon())
 	settings.SetOnClosed(func() {
 		app.settingsWindow = nil
-		app.serverSelector.Enable()
+		app.serverList.Enable()
 	})
 
-	app.serverSelector.Disable()
+	app.serverList.Disable()
 
 	app.LoadSettingsContent(settings)
 	app.settingsWindow = settings
@@ -408,10 +478,12 @@ func (app *App) RunUpdate(server *resource.Server, patch resource.Patch) {
 	}
 	log.Println("Update completed.")
 
-	app.Refresh()
+	// app.Refresh()
+	app.serverList.RefreshSelected()
 
 	server.CurrentPatch = patch.Version
-	app.servers.SaveInfos()
+	// app.servers.SaveInfos()
+	app.serverList.Save()
 }
 
 func (app *App) Update(server *resource.Server) {

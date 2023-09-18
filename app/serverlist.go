@@ -13,19 +13,29 @@ type ServerList struct {
 	servers resource.ServerList
 }
 
-func NewServerList(serverList resource.ServerList) *ServerList {
+func NewServerList(serverList resource.ServerList, changed func(*resource.Server)) *ServerList {
 	list := new(ServerList)
 	list.ExtendBaseWidget(list)
 
 	list.Select.PlaceHolder = "(Select server)"
 
+	list.Select.OnChanged = func(_ string) {
+		changed(list.SelectedServer())
+	}
+
 	list.servers = serverList
+	list.Refresh()
 
 	return list
 }
 
-func (list *ServerList) refreshInfo() {
+func (list *ServerList) Refresh() {
 	list.SetOptions(list.servers.Names())
+	list.Select.Refresh()
+}
+
+func (list *ServerList) RefreshSelected() {
+	list.SetSelectedIndex(list.SelectedIndex())
 }
 
 func (list *ServerList) Get(id string) *resource.Server {
@@ -46,7 +56,7 @@ func (list *ServerList) Add(server *resource.Server) error {
 		return err
 	}
 
-	list.refreshInfo()
+	list.Refresh()
 	return nil
 }
 
@@ -60,20 +70,24 @@ func (list *ServerList) Remove(server *resource.Server) error {
 		return err
 	}
 
-	list.refreshInfo()
+	list.Refresh()
 	return nil
 }
 
 func (list *ServerList) SetSelectedIndex(index int) {
 	list.Select.SetSelectedIndex(index)
-	list.refreshInfo()
+	list.Refresh()
 }
 
 func (list *ServerList) SetSelectedServer(id string) {
 	list.SetSelectedIndex(list.servers.Find(id))
-	list.refreshInfo()
+	list.Refresh()
 }
 
 func (list *ServerList) SelectedServer() *resource.Server {
 	return list.servers.GetIndex(list.SelectedIndex())
+}
+
+func (list *ServerList) Save() error {
+	return list.servers.SaveInfos()
 }
