@@ -418,6 +418,8 @@ func (app *App) ShowPatch(patch resource.Patch, onConfirmCancel func(bool)) {
 }
 
 func (app *App) RunUpdate(server *resource.Server, patch resource.Patch) {
+	defer app.serverList.RemoveAsUpdating(server)
+
 	log.Println("Starting update...")
 	err := patch.RunWithDependencies(server)
 	if err != nil {
@@ -435,6 +437,8 @@ func (app *App) RunUpdate(server *resource.Server, patch resource.Patch) {
 
 func (app *App) Update(server *resource.Server) {
 	app.SetUpdatingState()
+
+	app.serverList.MarkAsUpdating(server)
 
 	// patches, ok := app.serverPatches[server.Id]
 	patches, ok := server.ServerPatches()

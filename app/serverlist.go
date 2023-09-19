@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"fyne.io/fyne/v2/widget"
+	"github.com/I-Am-Dench/lu-launcher/app/muxset"
 	"github.com/I-Am-Dench/lu-launcher/resource"
 )
 
@@ -11,6 +12,8 @@ type ServerList struct {
 	widget.Select
 
 	servers resource.ServerList
+
+	currentlyUpdating *muxset.MuxSet[string]
 }
 
 func NewServerList(serverList resource.ServerList, changed func(*resource.Server)) *ServerList {
@@ -24,6 +27,8 @@ func NewServerList(serverList resource.ServerList, changed func(*resource.Server
 	}
 
 	list.servers = serverList
+	list.currentlyUpdating = muxset.New[string]()
+
 	list.Refresh()
 
 	return list
@@ -65,6 +70,10 @@ func (list *ServerList) Remove(server *resource.Server) error {
 		return fmt.Errorf("fatal remove server error: server is nil")
 	}
 
+	if list.currentlyUpdating.Has(server.Id) {
+		return fmt.Errorf("cannot remove server: server is currently updating")
+	}
+
 	serverIndex := list.servers.Find(server.Id)
 
 	err := list.servers.Remove(server.Id)
@@ -90,6 +99,22 @@ func (list *ServerList) SetSelectedServer(id string) {
 
 func (list *ServerList) SelectedServer() *resource.Server {
 	return list.servers.GetIndex(list.SelectedIndex())
+}
+
+func (list *ServerList) MarkAsUpdating(server *resource.Server) {
+	if server == nil {
+		return
+	}
+
+	list.currentlyUpdating.Add(server.Id)
+}
+
+func (list *ServerList) RemoveAsUpdating(server *resource.Server) {
+	if server == nil {
+		return
+	}
+
+	list.currentlyUpdating.Delete(server.Id)
 }
 
 func (list *ServerList) Save() error {
