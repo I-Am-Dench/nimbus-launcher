@@ -65,9 +65,15 @@ func (list *ServerList) Remove(server *resource.Server) error {
 		return fmt.Errorf("fatal remove server error: server is nil")
 	}
 
+	serverIndex := list.servers.Find(server.Id)
+
 	err := list.servers.Remove(server.Id)
 	if err != nil {
 		return err
+	}
+
+	if serverIndex == list.SelectedIndex() {
+		list.ClearSelected()
 	}
 
 	list.Refresh()
