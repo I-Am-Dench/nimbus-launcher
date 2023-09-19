@@ -23,6 +23,10 @@ func NewServerList(serverList resource.ServerList, changed func(*resource.Server
 	list.Select.PlaceHolder = "(Select server)"
 
 	list.Select.OnChanged = func(_ string) {
+		if list.Select.Disabled() {
+			return
+		}
+
 		changed(list.SelectedServer())
 	}
 
