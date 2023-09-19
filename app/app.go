@@ -134,25 +134,25 @@ func (app *App) InitializeGlobalWidgets(servers resource.ServerList) {
 	app.serverList.SetSelectedServer(app.settings.SelectedServer)
 }
 
-func (app *App) SetCurrentServerInfo(server *resource.Server) {
-	if server == nil {
-		server = &resource.Server{}
-		server.Config = &luconfig.LUConfig{}
-	}
+// func (app *App) SetCurrentServerInfo(server *resource.Server) {
+// 	if server == nil {
+// 		server = &resource.Server{}
+// 		server.Config = &luconfig.LUConfig{}
+// 	}
 
-	app.serverNameBinding.Set(server.Config.ServerName)
-	app.authServerBinding.Set(server.Config.AuthServerIP)
-	app.localeBinding.Set(server.Config.Locale)
+// 	app.serverNameBinding.Set(server.Config.ServerName)
+// 	app.authServerBinding.Set(server.Config.AuthServerIP)
+// 	app.localeBinding.Set(server.Config.Locale)
 
-	app.signupBinding.Set(server.Config.SignupURL)
-	app.signinBinding.Set(server.Config.SigninURL)
+// 	app.signupBinding.Set(server.Config.SignupURL)
+// 	app.signinBinding.Set(server.Config.SigninURL)
 
-	if len(server.Config.PatchServerIP) > 0 {
-		app.refreshUpdatesButton.Show()
-	} else {
-		app.refreshUpdatesButton.Hide()
-	}
-}
+// 	if len(server.Config.PatchServerIP) > 0 {
+// 		app.refreshUpdatesButton.Show()
+// 	} else {
+// 		app.refreshUpdatesButton.Hide()
+// 	}
+// }
 
 func (app *App) BindServerInfo(server *resource.Server) {
 	if server == nil {
