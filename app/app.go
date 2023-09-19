@@ -57,7 +57,6 @@ func New(settings *resource.Settings, servers resource.ServerList) App {
 	a.App = app.New()
 
 	a.settings = settings
-	// a.servers = servers
 
 	cache, err := resource.ClientCache()
 	if err != nil {
@@ -134,26 +133,6 @@ func (app *App) InitializeGlobalWidgets(servers resource.ServerList) {
 	app.serverList.SetSelectedServer(app.settings.SelectedServer)
 }
 
-// func (app *App) SetCurrentServerInfo(server *resource.Server) {
-// 	if server == nil {
-// 		server = &resource.Server{}
-// 		server.Config = &luconfig.LUConfig{}
-// 	}
-
-// 	app.serverNameBinding.Set(server.Config.ServerName)
-// 	app.authServerBinding.Set(server.Config.AuthServerIP)
-// 	app.localeBinding.Set(server.Config.Locale)
-
-// 	app.signupBinding.Set(server.Config.SignupURL)
-// 	app.signinBinding.Set(server.Config.SigninURL)
-
-// 	if len(server.Config.PatchServerIP) > 0 {
-// 		app.refreshUpdatesButton.Show()
-// 	} else {
-// 		app.refreshUpdatesButton.Hide()
-// 	}
-// }
-
 func (app *App) BindServerInfo(server *resource.Server) {
 	if server == nil {
 		server = &resource.Server{}
@@ -192,36 +171,6 @@ func (app *App) OnServerChanged(server *resource.Server) {
 		app.CheckForUpdates(server)
 	}
 }
-
-// func (app *App) SetCurrentServer(server *resource.Server) {
-// 	app.SetCurrentServerInfo(server)
-
-// 	if server != nil {
-// 		app.settings.SelectedServer = server.Id
-// 	} else {
-// 		app.settings.SelectedServer = ""
-// 		app.serverSelector.ClearSelected()
-// 	}
-
-// 	err := app.settings.Save()
-// 	if err != nil {
-// 		log.Printf("save settings err: %v\n", err)
-// 	}
-
-// 	if app.IsReady() && app.settings.CheckPatchesAutomatically {
-// 		app.CheckForUpdates(server)
-// 	}
-// }
-
-// func (app *App) Refresh() {
-// 	server := app.CurrentServer()
-// 	if server == nil {
-// 		app.SetCurrentServer(nil)
-// 		return
-// 	}
-
-// 	app.serverSelector.SetSelectedIndex(app.servers.Find(server.Id))
-// }
 
 func (app *App) SetPlayingState() {
 	app.HideProgress()
@@ -478,11 +427,9 @@ func (app *App) RunUpdate(server *resource.Server, patch resource.Patch) {
 	}
 	log.Println("Update completed.")
 
-	// app.Refresh()
 	app.serverList.Refresh()
 
 	server.CurrentPatch = patch.Version
-	// app.servers.SaveInfos()
 	app.serverList.Save()
 }
 

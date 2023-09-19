@@ -19,28 +19,6 @@ func (app *App) LoadContent() {
 	heading := canvas.NewText("Launch Lego Universe", color.White)
 	heading.TextSize = 24
 
-	// app.refreshUpdatesButton = widget.NewButtonWithIcon(
-	// 	"Check For Updates", theme.ViewRefreshIcon(),
-	// 	func() {
-	// 		app.CheckForUpdates(app.CurrentServer())
-	// 	},
-	// )
-
-	// app.serverSelector = widget.NewSelect(
-	// 	app.servers.Names(),
-	// 	func(s string) {
-	// 		index := app.serverSelector.SelectedIndex()
-	// 		if index < 0 {
-	// 			return
-	// 		}
-
-	// 		server := app.servers.GetIndex(index)
-	// 		app.SetCurrentServer(server)
-	// 	},
-	// )
-	// app.serverSelector.PlaceHolder = "(Select Server)"
-	// app.serverSelector.SetSelectedIndex(app.servers.Find(app.settings.SelectedServer))
-
 	addServerButton := widget.NewButtonWithIcon(
 		"", theme.SettingsIcon(), app.ShowSettings,
 	)
@@ -97,13 +75,6 @@ func (app *App) LoadContent() {
 }
 
 func (app *App) Footer() *fyne.Container {
-	// app.playButton = widget.NewButtonWithIcon(
-	// 	"Play",
-	// 	theme.MediaPlayIcon(),
-	// 	app.PressPlay,
-	// )
-	// app.playButton.Importance = widget.HighImportance
-
 	clientLabel := widget.NewLabelWithStyle(
 		app.settings.ClientPath(),
 		fyne.TextAlignLeading,
@@ -112,15 +83,6 @@ func (app *App) Footer() *fyne.Container {
 		},
 	)
 	clientLabel.Truncation = fyne.TextTruncateEllipsis
-
-	// app.definiteProgress = widget.NewProgressBar()
-	// app.definiteProgress.TextFormatter = func() string {
-	// 	return app.progressText
-	// }
-	// app.definiteProgress.Hide()
-
-	// app.indefiniteProgress = widget.NewProgressBarInfinite()
-	// app.indefiniteProgress.Hide()
 
 	prepareProgressBar := container.NewStack(
 		app.definiteProgress,
