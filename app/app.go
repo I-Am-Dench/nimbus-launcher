@@ -23,7 +23,7 @@ import (
 type App struct {
 	fyne.App
 	settings *resource.Settings
-	// servers     resource.ServerList
+
 	clientCache clientcache.ClientCache
 
 	main           fyne.Window
@@ -32,7 +32,6 @@ type App struct {
 
 	serverList *ServerList
 
-	// serverSelector       *widget.Select
 	playButton           *widget.Button
 	refreshUpdatesButton *widget.Button
 	definiteProgress     *widget.ProgressBar
@@ -46,8 +45,6 @@ type App struct {
 
 	signupBinding binding.String
 	signinBinding binding.String
-
-	// serverPatches map[string]resource.ServerPatches
 
 	clientErrorIcon *widget.Icon
 }
@@ -93,8 +90,6 @@ func New(settings *resource.Settings, servers resource.ServerList) App {
 
 	a.signupBinding = binding.NewString()
 	a.signinBinding = binding.NewString()
-
-	// a.serverPatches = make(map[string]resource.ServerPatches)
 
 	a.InitializeGlobalWidgets(servers)
 
@@ -440,7 +435,6 @@ func (app *App) Update(server *resource.Server) {
 
 	app.serverList.MarkAsUpdating(server)
 
-	// patches, ok := app.serverPatches[server.Id]
 	patches, ok := server.ServerPatches()
 	if !ok {
 		log.Printf("Patches missing for \"%s\"\n", server.Name)
@@ -505,7 +499,6 @@ func (app *App) CheckForUpdates(server *resource.Server) {
 			}
 
 			if err != resource.ErrPatchesUnauthorized {
-				// app.serverPatches[server.Id] = resource.ServerPatches{}
 				server.SetServerPatches(resource.ServerPatches{})
 			}
 
@@ -515,7 +508,6 @@ func (app *App) CheckForUpdates(server *resource.Server) {
 
 		if server.CurrentPatch == patches.CurrentVersion {
 			log.Println("Server is already latest version.")
-			// app.serverPatches[server.Id] = patches
 			server.SetServerPatches(patches)
 			app.SetNormalState()
 			return
@@ -523,7 +515,6 @@ func (app *App) CheckForUpdates(server *resource.Server) {
 
 		log.Printf("Patch version \"%s\" is available\n", patches.CurrentVersion)
 
-		// app.serverPatches[server.Id] = patches
 		server.SetServerPatches(patches)
 		app.SetUpdateState()
 	}(server)
