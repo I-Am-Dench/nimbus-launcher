@@ -479,7 +479,7 @@ func (app *App) RunUpdate(server *resource.Server, patch resource.Patch) {
 	log.Println("Update completed.")
 
 	// app.Refresh()
-	app.serverList.RefreshSelected()
+	app.serverList.Refresh()
 
 	server.CurrentPatch = patch.Version
 	// app.servers.SaveInfos()

@@ -30,12 +30,12 @@ func NewServerList(serverList resource.ServerList, changed func(*resource.Server
 }
 
 func (list *ServerList) Refresh() {
+	// SetOptions resets the index to -1, so we get the current index to refresh the current selection after
+	selectedIndex := list.SelectedIndex()
 	list.SetOptions(list.servers.Names())
-	list.Select.Refresh()
-}
+	list.SetSelectedIndex(selectedIndex)
 
-func (list *ServerList) RefreshSelected() {
-	list.SetSelectedIndex(list.SelectedIndex())
+	list.Select.Refresh()
 }
 
 func (list *ServerList) Get(id string) *resource.Server {
@@ -76,12 +76,10 @@ func (list *ServerList) Remove(server *resource.Server) error {
 
 func (list *ServerList) SetSelectedIndex(index int) {
 	list.Select.SetSelectedIndex(index)
-	list.Refresh()
 }
 
 func (list *ServerList) SetSelectedServer(id string) {
 	list.SetSelectedIndex(list.servers.Find(id))
-	list.Refresh()
 }
 
 func (list *ServerList) SelectedServer() *resource.Server {

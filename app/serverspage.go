@@ -189,6 +189,9 @@ func (page *ServersPage) editServerPage(form *forms.ServerForm, window fyne.Wind
 
 			page.serverList.SetOptions(list.Options)
 			page.serverList.SetSelectedIndex(page.serverList.SelectedIndex())
+
+			list.Refresh()
+
 			dialog.ShowInformation("Servers Saved", fmt.Sprintf("Server '%s' saved successfully!", server.Name), window)
 		},
 	)
