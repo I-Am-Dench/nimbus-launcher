@@ -47,7 +47,7 @@ type App struct {
 	signupBinding binding.String
 	signinBinding binding.String
 
-	serverPatches map[string]resource.ServerPatches
+	// serverPatches map[string]resource.ServerPatches
 
 	clientErrorIcon *widget.Icon
 }
@@ -94,7 +94,7 @@ func New(settings *resource.Settings, servers resource.ServerList) App {
 	a.signupBinding = binding.NewString()
 	a.signinBinding = binding.NewString()
 
-	a.serverPatches = make(map[string]resource.ServerPatches)
+	// a.serverPatches = make(map[string]resource.ServerPatches)
 
 	a.InitializeGlobalWidgets(servers)
 
@@ -436,7 +436,8 @@ func (app *App) RunUpdate(server *resource.Server, patch resource.Patch) {
 func (app *App) Update(server *resource.Server) {
 	app.SetUpdatingState()
 
-	patches, ok := app.serverPatches[server.Id]
+	// patches, ok := app.serverPatches[server.Id]
+	patches, ok := server.ServerPatches()
 	if !ok {
 		log.Printf("Patches missing for \"%s\"\n", server.Name)
 		return
@@ -484,7 +485,7 @@ func (app *App) CheckForUpdates(server *resource.Server) {
 		return
 	}
 
-	if _, ok := app.serverPatches[server.Id]; ok {
+	if _, ok := server.ServerPatches(); ok {
 		log.Printf("Patches for \"%s\" already received", server.Name)
 		return
 	}
@@ -500,7 +501,8 @@ func (app *App) CheckForUpdates(server *resource.Server) {
 			}
 
 			if err != resource.ErrPatchesUnauthorized {
-				app.serverPatches[server.Id] = resource.ServerPatches{}
+				// app.serverPatches[server.Id] = resource.ServerPatches{}
+				server.SetServerPatches(resource.ServerPatches{})
 			}
 
 			app.SetNormalState()
@@ -509,14 +511,16 @@ func (app *App) CheckForUpdates(server *resource.Server) {
 
 		if server.CurrentPatch == patches.CurrentVersion {
 			log.Println("Server is already latest version.")
-			app.serverPatches[server.Id] = patches
+			// app.serverPatches[server.Id] = patches
+			server.SetServerPatches(patches)
 			app.SetNormalState()
 			return
 		}
 
 		log.Printf("Patch version \"%s\" is available\n", patches.CurrentVersion)
 
-		app.serverPatches[server.Id] = patches
+		// app.serverPatches[server.Id] = patches
+		server.SetServerPatches(patches)
 		app.SetUpdateState()
 	}(server)
 }
