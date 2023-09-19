@@ -164,6 +164,12 @@ func (app *App) OnServerChanged(server *resource.Server) {
 
 	if app.IsReady() && app.settings.CheckPatchesAutomatically {
 		app.CheckForUpdates(server)
+	} else if server != nil {
+		if server.PendingUpdate() {
+			app.SetUpdateState()
+		} else {
+			app.SetNormalState()
+		}
 	}
 }
 
@@ -442,7 +448,9 @@ func (app *App) Update(server *resource.Server) {
 	}
 
 	go func(version string, server *resource.Server) {
+		defer server.SetPendingUpdate(false)
 		log.Printf("Getting patch \"%s\" for %s\n", version, server.Name)
+
 		patch, err := resource.GetPatch(version, server)
 		if err != nil {
 			log.Printf("Patch error: %v\n", err)
@@ -516,6 +524,7 @@ func (app *App) CheckForUpdates(server *resource.Server) {
 		log.Printf("Patch version \"%s\" is available\n", patches.CurrentVersion)
 
 		server.SetServerPatches(patches)
+		server.SetPendingUpdate(true)
 		app.SetUpdateState()
 	}(server)
 }
