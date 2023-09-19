@@ -22,15 +22,16 @@ import (
 
 type App struct {
 	fyne.App
-	settings    *resource.Settings
-	servers     resource.ServerList
+	settings *resource.Settings
+
 	clientCache clientcache.ClientCache
 
 	main           fyne.Window
 	settingsWindow fyne.Window
 	patchWindow    fyne.Window
 
-	serverSelector       *widget.Select
+	serverList *ServerList
+
 	playButton           *widget.Button
 	refreshUpdatesButton *widget.Button
 	definiteProgress     *widget.ProgressBar
@@ -45,8 +46,6 @@ type App struct {
 	signupBinding binding.String
 	signinBinding binding.String
 
-	serverPatches map[string]resource.ServerPatches
-
 	clientErrorIcon *widget.Icon
 }
 
@@ -55,7 +54,6 @@ func New(settings *resource.Settings, servers resource.ServerList) App {
 	a.App = app.New()
 
 	a.settings = settings
-	a.servers = servers
 
 	cache, err := resource.ClientCache()
 	if err != nil {
@@ -77,9 +75,6 @@ func New(settings *resource.Settings, servers resource.ServerList) App {
 		log.Println(fmt.Errorf("unable to load icon: %v", err))
 	}
 
-	a.clientErrorIcon = widget.NewIcon(theme.NewErrorThemedResource(theme.ErrorIcon()))
-	a.clientErrorIcon.Hide()
-
 	// log.Printf("Using \"%s\" as client directory\n", a.settings.Client.Directory)
 
 	// _, err = os.Stat(a.settings.ClientPath())
@@ -96,14 +91,44 @@ func New(settings *resource.Settings, servers resource.ServerList) App {
 	a.signupBinding = binding.NewString()
 	a.signinBinding = binding.NewString()
 
-	a.serverPatches = make(map[string]resource.ServerPatches)
+	a.InitializeGlobalWidgets(servers)
 
 	a.LoadContent()
 
 	return a
 }
 
-func (app *App) SetCurrentServerInfo(server *resource.Server) {
+func (app *App) InitializeGlobalWidgets(servers resource.ServerList) {
+	app.clientErrorIcon = widget.NewIcon(theme.NewErrorThemedResource(theme.ErrorIcon()))
+	app.clientErrorIcon.Hide()
+
+	app.refreshUpdatesButton = widget.NewButtonWithIcon(
+		"Check For Updates", theme.ViewRefreshIcon(),
+		func() {
+			app.CheckForUpdates(app.CurrentServer())
+		},
+	)
+
+	app.playButton = widget.NewButtonWithIcon(
+		"Play", theme.MediaPlayIcon(),
+		app.PressPlay,
+	)
+	app.playButton.Importance = widget.HighImportance
+
+	app.definiteProgress = widget.NewProgressBar()
+	app.definiteProgress.TextFormatter = func() string {
+		return app.progressText
+	}
+	app.definiteProgress.Hide()
+
+	app.indefiniteProgress = widget.NewProgressBarInfinite()
+	app.indefiniteProgress.Hide()
+
+	app.serverList = NewServerList(servers, app.OnServerChanged)
+	app.serverList.SetSelectedServer(app.settings.SelectedServer)
+}
+
+func (app *App) BindServerInfo(server *resource.Server) {
 	if server == nil {
 		server = &resource.Server{}
 		server.Config = &luconfig.LUConfig{}
@@ -123,34 +148,29 @@ func (app *App) SetCurrentServerInfo(server *resource.Server) {
 	}
 }
 
-func (app *App) SetCurrentServer(server *resource.Server) {
-	app.SetCurrentServerInfo(server)
+func (app *App) OnServerChanged(server *resource.Server) {
+	app.BindServerInfo(server)
 
 	if server != nil {
 		app.settings.SelectedServer = server.Id
 	} else {
 		app.settings.SelectedServer = ""
-		app.serverSelector.ClearSelected()
 	}
 
 	err := app.settings.Save()
 	if err != nil {
-		log.Printf("save settings err: %v\n", err)
+		log.Printf("save settings error: %v\n", err)
 	}
 
 	if app.IsReady() && app.settings.CheckPatchesAutomatically {
 		app.CheckForUpdates(server)
+	} else if server != nil {
+		if server.PendingUpdate() {
+			app.SetUpdateState()
+		} else {
+			app.SetNormalState()
+		}
 	}
-}
-
-func (app *App) Refresh() {
-	server := app.CurrentServer()
-	if server == nil {
-		app.SetCurrentServer(nil)
-		return
-	}
-
-	app.serverSelector.SetSelectedIndex(app.servers.Find(server.Id))
 }
 
 func (app *App) SetPlayingState() {
@@ -159,7 +179,7 @@ func (app *App) SetPlayingState() {
 	app.playButton.Disable()
 	app.playButton.SetText("Playing")
 
-	app.serverSelector.Disable()
+	app.serverList.Disable()
 }
 
 func (app *App) SetNormalState() {
@@ -172,7 +192,7 @@ func (app *App) SetNormalState() {
 	app.playButton.OnTapped = app.PressPlay
 	app.playButton.Refresh()
 
-	app.serverSelector.Enable()
+	app.serverList.Enable()
 }
 
 func (app *App) SetUpdatingState() {
@@ -225,7 +245,7 @@ func (app *App) HideProgress() {
 }
 
 func (app *App) CurrentServer() *resource.Server {
-	return app.servers.Get(app.settings.SelectedServer)
+	return app.serverList.SelectedServer()
 }
 
 func (app *App) TransferCachedClientResources() error {
@@ -364,10 +384,10 @@ func (app *App) ShowSettings() {
 	settings.SetIcon(theme.StorageIcon())
 	settings.SetOnClosed(func() {
 		app.settingsWindow = nil
-		app.serverSelector.Enable()
+		app.serverList.Enable()
 	})
 
-	app.serverSelector.Disable()
+	app.serverList.Disable()
 
 	app.LoadSettingsContent(settings)
 	app.settingsWindow = settings
@@ -399,6 +419,8 @@ func (app *App) ShowPatch(patch resource.Patch, onConfirmCancel func(bool)) {
 }
 
 func (app *App) RunUpdate(server *resource.Server, patch resource.Patch) {
+	defer app.serverList.RemoveAsUpdating(server)
+
 	log.Println("Starting update...")
 	err := patch.RunWithDependencies(server)
 	if err != nil {
@@ -408,23 +430,27 @@ func (app *App) RunUpdate(server *resource.Server, patch resource.Patch) {
 	}
 	log.Println("Update completed.")
 
-	app.Refresh()
+	app.serverList.Refresh()
 
 	server.CurrentPatch = patch.Version
-	app.servers.SaveInfos()
+	app.serverList.Save()
 }
 
 func (app *App) Update(server *resource.Server) {
 	app.SetUpdatingState()
 
-	patches, ok := app.serverPatches[server.Id]
+	app.serverList.MarkAsUpdating(server)
+
+	patches, ok := server.ServerPatches()
 	if !ok {
 		log.Printf("Patches missing for \"%s\"\n", server.Name)
 		return
 	}
 
 	go func(version string, server *resource.Server) {
+		defer server.SetPendingUpdate(false)
 		log.Printf("Getting patch \"%s\" for %s\n", version, server.Name)
+
 		patch, err := resource.GetPatch(version, server)
 		if err != nil {
 			log.Printf("Patch error: %v\n", err)
@@ -465,7 +491,7 @@ func (app *App) CheckForUpdates(server *resource.Server) {
 		return
 	}
 
-	if _, ok := app.serverPatches[server.Id]; ok {
+	if _, ok := server.ServerPatches(); ok {
 		log.Printf("Patches for \"%s\" already received", server.Name)
 		return
 	}
@@ -481,7 +507,7 @@ func (app *App) CheckForUpdates(server *resource.Server) {
 			}
 
 			if err != resource.ErrPatchesUnauthorized {
-				app.serverPatches[server.Id] = resource.ServerPatches{}
+				server.SetServerPatches(resource.ServerPatches{})
 			}
 
 			app.SetNormalState()
@@ -490,14 +516,15 @@ func (app *App) CheckForUpdates(server *resource.Server) {
 
 		if server.CurrentPatch == patches.CurrentVersion {
 			log.Println("Server is already latest version.")
-			app.serverPatches[server.Id] = patches
+			server.SetServerPatches(patches)
 			app.SetNormalState()
 			return
 		}
 
 		log.Printf("Patch version \"%s\" is available\n", patches.CurrentVersion)
 
-		app.serverPatches[server.Id] = patches
+		server.SetServerPatches(patches)
+		server.SetPendingUpdate(true)
 		app.SetUpdateState()
 	}(server)
 }

@@ -13,7 +13,6 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/I-Am-Dench/lu-launcher/app/forms"
-	"github.com/I-Am-Dench/lu-launcher/resource"
 )
 
 const (
@@ -39,11 +38,11 @@ type ServersPage struct {
 	editServers *fyne.Container
 }
 
-func NewServersPage(window fyne.Window, list resource.ServerListContainer) *ServersPage {
+func NewServersPage(window fyne.Window, list *ServerList) *ServersPage {
 	page := new(ServersPage)
 
 	page.serverList = widget.NewSelect(
-		list.ServerNames(), func(s string) {},
+		list.Options, func(s string) {},
 	)
 	page.serverList.SetSelectedIndex(0)
 
@@ -68,7 +67,7 @@ func NewServersPage(window fyne.Window, list resource.ServerListContainer) *Serv
 	editServerTab := widget.NewButtonWithIcon(
 		"", theme.DocumentCreateIcon(),
 		func() {
-			server := list.GetServer(page.serverList.SelectedIndex())
+			server := list.GetIndex(page.serverList.SelectedIndex())
 			editServerForm.UpdateWith(server)
 
 			page.buttons.Hide()
@@ -79,7 +78,7 @@ func NewServersPage(window fyne.Window, list resource.ServerListContainer) *Serv
 	removeServerButton := widget.NewButtonWithIcon(
 		"Remove Server", theme.ContentRemoveIcon(),
 		func() {
-			server := list.GetServer(page.serverList.SelectedIndex())
+			server := list.GetIndex(page.serverList.SelectedIndex())
 			if server == nil {
 				dialog.ShowError(fmt.Errorf("fatal remove error: server is nil"), window)
 				return
@@ -92,13 +91,13 @@ func NewServersPage(window fyne.Window, list resource.ServerListContainer) *Serv
 						return
 					}
 
-					err := list.RemoveServer(server)
+					err := list.Remove(server)
 					if err != nil {
 						dialog.ShowError(err, window)
 						return
 					}
 
-					page.serverList.SetOptions(list.ServerNames())
+					page.serverList.SetOptions(list.Options)
 					page.serverList.SetSelectedIndex(0)
 					dialog.ShowInformation("Remove Server", fmt.Sprintf("Server '%s' removed successfully!", server.Name), window)
 				},
@@ -130,7 +129,7 @@ func NewServersPage(window fyne.Window, list resource.ServerListContainer) *Serv
 	return page
 }
 
-func (page *ServersPage) addServerPage(form *forms.ServerForm, window fyne.Window, list resource.ServerListContainer) *fyne.Container {
+func (page *ServersPage) addServerPage(form *forms.ServerForm, window fyne.Window, list *ServerList) *fyne.Container {
 	addButton := widget.NewButton("Add Server", func() {
 		server, err := form.CreateServer()
 		if err != nil {
@@ -138,13 +137,13 @@ func (page *ServersPage) addServerPage(form *forms.ServerForm, window fyne.Windo
 			return
 		}
 
-		err = list.AddServer(server)
+		err = list.Add(server)
 		if err != nil {
 			dialog.ShowError(err, window)
 			return
 		}
 
-		page.serverList.SetOptions(list.ServerNames())
+		page.serverList.SetOptions(list.Options)
 		page.serverList.SetSelectedIndex(page.serverList.SelectedIndex())
 		dialog.ShowInformation("Server Added", fmt.Sprintf("Added '%s' to server list!", server.Name), window)
 	})
@@ -163,10 +162,10 @@ func (page *ServersPage) addServerPage(form *forms.ServerForm, window fyne.Windo
 	)
 }
 
-func (page *ServersPage) editServerPage(form *forms.ServerForm, window fyne.Window, list resource.ServerListContainer) *fyne.Container {
+func (page *ServersPage) editServerPage(form *forms.ServerForm, window fyne.Window, list *ServerList) *fyne.Container {
 	saveButton := widget.NewButton(
 		"Save", func() {
-			server := list.GetServer(page.serverList.SelectedIndex())
+			server := list.GetIndex(page.serverList.SelectedIndex())
 			if server == nil {
 				dialog.ShowError(fmt.Errorf("fatal save error: server is nil"), window)
 				return
@@ -182,14 +181,17 @@ func (page *ServersPage) editServerPage(form *forms.ServerForm, window fyne.Wind
 				return
 			}
 
-			err = list.SaveServers()
+			err = list.Save()
 			if err != nil {
 				dialog.ShowError(err, window)
 				return
 			}
 
-			page.serverList.SetOptions(list.ServerNames())
+			page.serverList.SetOptions(list.Options)
 			page.serverList.SetSelectedIndex(page.serverList.SelectedIndex())
+
+			list.Refresh()
+
 			dialog.ShowInformation("Servers Saved", fmt.Sprintf("Server '%s' saved successfully!", server.Name), window)
 		},
 	)
@@ -208,7 +210,7 @@ func (page *ServersPage) editServerPage(form *forms.ServerForm, window fyne.Wind
 					return
 				}
 
-				server := list.GetServer(page.serverList.SelectedIndex())
+				server := list.GetIndex(page.serverList.SelectedIndex())
 				if server == nil {
 					dialog.ShowError(fmt.Errorf("fatal export server error: server is nil"), window)
 					return

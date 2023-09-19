@@ -7,16 +7,6 @@ import (
 	"os"
 )
 
-type ServerListContainer interface {
-	ServerNames() []string
-	GetServer(int) *Server
-
-	AddServer(*Server) error
-	RemoveServer(*Server) error
-
-	SaveServers() error
-}
-
 type ServerList struct {
 	list []*Server
 }
