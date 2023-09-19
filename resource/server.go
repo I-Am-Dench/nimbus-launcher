@@ -26,6 +26,8 @@ type Server struct {
 
 	hasPatchesList bool          `json:"-"`
 	patchesList    ServerPatches `json:"-"`
+
+	pendingUpdate bool `json:"-"`
 }
 
 func NewServer(name, patchToken string, config *luconfig.LUConfig) *Server {
@@ -138,4 +140,12 @@ func (server *Server) ServerPatches() (ServerPatches, bool) {
 func (server *Server) SetServerPatches(patches ServerPatches) {
 	server.patchesList = patches
 	server.hasPatchesList = true
+}
+
+func (server *Server) PendingUpdate() bool {
+	return server.pendingUpdate
+}
+
+func (server *Server) SetPendingUpdate(isPending bool) {
+	server.pendingUpdate = isPending
 }
