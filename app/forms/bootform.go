@@ -1,8 +1,13 @@
 package forms
 
 import (
+	"io"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/storage"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/I-Am-Dench/lu-launcher/luconfig"
 	"github.com/I-Am-Dench/lu-launcher/luwidgets"
@@ -39,8 +44,46 @@ type BootForm struct {
 	trackDiskUsage *widget.Check
 }
 
-func NewBootForm() *BootForm {
+func NewBootForm(window fyne.Window) *BootForm {
 	form := new(BootForm)
+
+	bootFile := widget.NewLabel("")
+	bootFile.Truncation = fyne.TextTruncateEllipsis
+
+	bootFileOpen := widget.NewButtonWithIcon(
+		"", theme.FileIcon(),
+		func() {
+			dialog := dialog.NewFileOpen(func(uc fyne.URIReadCloser, err error) {
+				if err != nil {
+					dialog.ShowError(err, window)
+					return
+				}
+
+				if uc == nil || uc.URI() == nil {
+					return
+				}
+				bootFile.SetText(uc.URI().Path())
+
+				data, err := io.ReadAll(uc)
+				if err != nil {
+					dialog.ShowError(err, window)
+					return
+				}
+
+				bootConfig := luconfig.LUConfig{}
+				err = luconfig.Unmarshal(data, &bootConfig)
+				if err != nil {
+					dialog.ShowError(err, window)
+					return
+				}
+
+				form.UpdateWith(&bootConfig)
+			}, window)
+			dialog.SetFilter(storage.NewExtensionFileFilter([]string{".cfg"}))
+
+			dialog.Show()
+		},
+	)
 
 	form.serverName = widget.NewEntry()
 	form.serverName.PlaceHolder = "Overbuild Universe (US)"
@@ -81,6 +124,7 @@ func NewBootForm() *BootForm {
 
 	form.container = container.NewVBox(
 		widget.NewForm(
+			widget.NewFormItem("Boot File", container.NewBorder(nil, nil, bootFileOpen, nil, bootFile)),
 			widget.NewFormItem("Server Name", form.serverName),
 			widget.NewFormItem("Auth Server IP", form.authServerIP),
 			widget.NewFormItem("UGC Use 3D Services", form.ugcUse3DServices),

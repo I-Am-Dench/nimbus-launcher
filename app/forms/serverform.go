@@ -48,7 +48,7 @@ func NewServerForm(window fyne.Window) *ServerForm {
 
 	form.patchToken = widget.NewPasswordEntry()
 
-	form.bootForm = NewBootForm()
+	form.bootForm = NewBootForm(window)
 
 	serverXMLOpen := widget.NewButtonWithIcon(
 		"", theme.FileIcon(),
