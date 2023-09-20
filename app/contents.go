@@ -16,6 +16,14 @@ import (
 	"github.com/I-Am-Dench/lu-launcher/resource"
 )
 
+type PatchAcceptState uint32
+
+const (
+	PatchAccept = PatchAcceptState(iota)
+	PatchCancel
+	PatchReject
+)
+
 func (app *App) LoadContent() {
 	heading := canvas.NewText("Launch Lego Universe", color.White)
 	heading.TextSize = 24
@@ -219,14 +227,22 @@ func (app *App) LauncherSettings(window fyne.Window) *fyne.Container {
 	)
 }
 
-func (app *App) LoadPatchContent(window fyne.Window, patch resource.Patch, onConfirmCancel func(bool)) {
+func (app *App) LoadPatchContent(window fyne.Window, patch resource.Patch, onConfirmCancel func(PatchAcceptState)) {
 	heading := canvas.NewText(fmt.Sprintf("Received patch.json (%s):", patch.Version), color.White)
 	heading.TextSize = 16
+
+	reject := widget.NewButton(
+		"Reject", func() {
+			window.Close()
+			onConfirmCancel(PatchReject)
+		},
+	)
+	reject.Importance = widget.DangerImportance
 
 	confirm := widget.NewButton(
 		"Continue", func() {
 			window.Close()
-			onConfirmCancel(true)
+			onConfirmCancel(PatchAccept)
 		},
 	)
 	confirm.Importance = widget.HighImportance
@@ -234,20 +250,19 @@ func (app *App) LoadPatchContent(window fyne.Window, patch resource.Patch, onCon
 	cancel := widget.NewButton(
 		"Cancel", func() {
 			window.Close()
-			onConfirmCancel(false)
+			onConfirmCancel(PatchCancel)
 		},
 	)
 
 	footer := container.NewBorder(
-		nil, nil, nil,
-		container.NewHBox(cancel, confirm),
 		widget.NewLabelWithStyle(
 			"Continue with update?",
 			fyne.TextAlignLeading,
 			fyne.TextStyle{
 				Bold: true,
 			},
-		),
+		), nil,
+		reject, container.NewHBox(cancel, confirm),
 	)
 
 	data, _ := json.MarshalIndent(patch, "", "    ")
