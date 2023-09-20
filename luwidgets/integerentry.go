@@ -8,6 +8,8 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
+// Modified from: https://developer.fyne.io/extend/numerical-entry
+
 type IntegerEntry struct {
 	widget.Entry
 }
