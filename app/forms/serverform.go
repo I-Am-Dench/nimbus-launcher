@@ -34,6 +34,7 @@ func NewServerForm(window fyne.Window) *ServerForm {
 	bootHeading.TextSize = 16
 
 	serverXML := widget.NewLabel("")
+	serverXML.Truncation = fyne.TextTruncateEllipsis
 
 	form.title = widget.NewEntry()
 	form.title.PlaceHolder = "My Server"
@@ -90,7 +91,7 @@ func NewServerForm(window fyne.Window) *ServerForm {
 	form.container = container.NewVBox(
 		infoHeading,
 		widget.NewForm(
-			widget.NewFormItem("Server XML", container.NewHBox(serverXMLOpen, serverXML)),
+			widget.NewFormItem("Server XML", container.NewBorder(nil, nil, serverXMLOpen, nil, serverXML)),
 			widget.NewFormItem("Name", form.title),
 			widget.NewFormItem("Patch Token", form.patchToken),
 		),
