@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 
 	"fyne.io/fyne/v2"
 	"github.com/I-Am-Dench/lu-launcher/clientcache"
@@ -22,6 +23,8 @@ const (
 const (
 	DEFAULT_DIR_CLIENT = "LEGO Software/Lego Universe"
 )
+
+var versionPattern = regexp.MustCompile(`^v?[0-9]+\.[0-9]+\.[0-9]+([0-9a-zA-Z_.-]+)?$`)
 
 func Of(elem ...string) string {
 	return filepath.Join(elem...)
@@ -114,4 +117,11 @@ func PatchRejections() (RejectedPatches, error) {
 func Exists(name string) bool {
 	_, err := os.Stat(Of(settingsDir, name))
 	return !errors.Is(err, os.ErrNotExist)
+}
+
+func ValidateVersionName(version string) error {
+	if !versionPattern.MatchString(version) {
+		return fmt.Errorf("invalid version name \"%s\": version name must match `^v?[0-9]+\\.[0-9]+\\.[0-9]+([0-9a-zA-Z_.-]+)?$`", version)
+	}
+	return nil
 }
