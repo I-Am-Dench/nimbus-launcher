@@ -390,7 +390,7 @@ func (app *App) ShowSettings() {
 	settings.Show()
 }
 
-func (app *App) ShowPatch(patch resource.Patch, onConfirmCancel func(bool)) {
+func (app *App) ShowPatch(patch resource.Patch, onConfirmCancel func(PatchAcceptState)) {
 	if app.patchWindow != nil {
 		app.patchWindow.RequestFocus()
 		return
@@ -402,7 +402,7 @@ func (app *App) ShowPatch(patch resource.Patch, onConfirmCancel func(bool)) {
 	window.SetIcon(theme.QuestionIcon())
 	window.SetOnClosed(func() {
 		app.patchWindow = nil
-		onConfirmCancel(false)
+		onConfirmCancel(PatchCancel)
 	})
 
 	app.LoadPatchContent(window, patch, onConfirmCancel)
@@ -464,10 +464,20 @@ func (app *App) Update(server *resource.Server) {
 			return
 		}
 
-		app.ShowPatch(patch, func(confirmed bool) {
+		app.ShowPatch(patch, func(state PatchAcceptState) {
 			defer app.SetNormalState()
 
-			if !confirmed {
+			if state == PatchCancel {
+				return
+			}
+
+			if state == PatchReject {
+				err := app.rejectedPatches.Add(server, patch.Version)
+				if err == nil {
+					log.Printf("Rejected patch version \"%s\"\n", patch.Version)
+				} else {
+					dialog.ShowError(fmt.Errorf("failed to reject patch: %v", err), app.main)
+				}
 				return
 			}
 
@@ -516,6 +526,12 @@ func (app *App) CheckForUpdates(server *resource.Server) {
 		}
 
 		log.Printf("Patch version \"%s\" is available\n", patches.CurrentVersion)
+
+		if app.rejectedPatches.IsRejected(server, patches.CurrentVersion) {
+			log.Printf("Patch version \"%s\" is rejected; Aborting update sequence.\n", patches.CurrentVersion)
+			app.SetNormalState()
+			return
+		}
 
 		server.SetServerPatches(patches)
 		server.SetPendingUpdate(true)

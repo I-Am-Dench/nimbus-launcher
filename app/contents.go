@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"image/color"
-	"log"
 	"path/filepath"
 
 	"fyne.io/fyne/v2"
@@ -15,6 +14,14 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"github.com/I-Am-Dench/lu-launcher/luwidgets"
 	"github.com/I-Am-Dench/lu-launcher/resource"
+)
+
+type PatchAcceptState uint32
+
+const (
+	PatchAccept = PatchAcceptState(iota)
+	PatchCancel
+	PatchReject
 )
 
 func (app *App) LoadContent() {
@@ -220,15 +227,14 @@ func (app *App) LauncherSettings(window fyne.Window) *fyne.Container {
 	)
 }
 
-func (app *App) LoadPatchContent(window fyne.Window, patch resource.Patch, onConfirmCancel func(bool)) {
+func (app *App) LoadPatchContent(window fyne.Window, patch resource.Patch, onConfirmCancel func(PatchAcceptState)) {
 	heading := canvas.NewText(fmt.Sprintf("Received patch.json (%s):", patch.Version), color.White)
 	heading.TextSize = 16
 
 	reject := widget.NewButton(
 		"Reject", func() {
-			log.Printf("Rejected patch version \"%s\"\n", patch.Version)
 			window.Close()
-			onConfirmCancel(false)
+			onConfirmCancel(PatchReject)
 		},
 	)
 	reject.Importance = widget.DangerImportance
@@ -236,7 +242,7 @@ func (app *App) LoadPatchContent(window fyne.Window, patch resource.Patch, onCon
 	confirm := widget.NewButton(
 		"Continue", func() {
 			window.Close()
-			onConfirmCancel(true)
+			onConfirmCancel(PatchAccept)
 		},
 	)
 	confirm.Importance = widget.HighImportance
@@ -244,7 +250,7 @@ func (app *App) LoadPatchContent(window fyne.Window, patch resource.Patch, onCon
 	cancel := widget.NewButton(
 		"Cancel", func() {
 			window.Close()
-			onConfirmCancel(false)
+			onConfirmCancel(PatchCancel)
 		},
 	)
 
