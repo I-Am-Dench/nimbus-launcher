@@ -50,15 +50,13 @@ func NewServersPage(window fyne.Window, list *luwidgets.ServerList) *ServersPage
 	heading := canvas.NewText("Servers", color.White)
 	heading.TextSize = 16
 
-	addServerTab := widget.NewButtonWithIcon("Add Server", theme.ContentAddIcon(), func() {
+	addServerTab := widget.NewButtonWithIcon("", theme.ContentAddIcon(), func() {
 		page.buttons.Hide()
 		page.addServers.Show()
 	})
-	addServerTab.Importance = widget.LowImportance
-	addServerTab.Alignment = widget.ButtonAlignLeading
 
 	editServerTab := widget.NewButtonWithIcon(
-		"", theme.DocumentCreateIcon(),
+		"Edit Server", theme.DocumentCreateIcon(),
 		func() {
 			server := list.GetIndex(page.serverList.SelectedIndex())
 			editServerForm.UpdateWith(server)
@@ -67,6 +65,7 @@ func NewServersPage(window fyne.Window, list *luwidgets.ServerList) *ServersPage
 			page.editServers.Show()
 		},
 	)
+	editServerTab.Importance = widget.LowImportance
 
 	removeServerButton := widget.NewButtonWithIcon(
 		"Remove Server", theme.ContentRemoveIcon(),
@@ -104,13 +103,12 @@ func NewServersPage(window fyne.Window, list *luwidgets.ServerList) *ServersPage
 
 	page.buttons = container.NewVBox(
 		heading,
-		container.NewBorder(nil, nil, addServerTab, nil),
-		container.NewBorder(
-			nil, nil, nil,
-			editServerTab,
-			page.serverList,
+		container.NewPadded(
+			container.NewVBox(
+				container.NewBorder(nil, nil, nil, addServerTab, page.serverList),
+				container.NewBorder(nil, nil, editServerTab, removeServerButton),
+			),
 		),
-		container.NewBorder(nil, nil, removeServerButton, nil),
 	)
 
 	page.container = container.NewStack(
