@@ -37,6 +37,7 @@ func (entry *IntegerEntry) TypedShortcut(shortcut fyne.Shortcut) {
 	paste, ok := shortcut.(*fyne.ShortcutPaste)
 	if !ok {
 		entry.Entry.TypedShortcut(shortcut)
+		return
 	}
 
 	content := paste.Clipboard.Content()
