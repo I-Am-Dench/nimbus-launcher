@@ -1,4 +1,4 @@
-package forms
+package luwidgets
 
 import (
 	"fmt"
@@ -7,6 +7,8 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/widget"
 )
+
+// Modified from: https://developer.fyne.io/extend/numerical-entry
 
 type IntegerEntry struct {
 	widget.Entry
@@ -35,6 +37,7 @@ func (entry *IntegerEntry) TypedShortcut(shortcut fyne.Shortcut) {
 	paste, ok := shortcut.(*fyne.ShortcutPaste)
 	if !ok {
 		entry.Entry.TypedShortcut(shortcut)
+		return
 	}
 
 	content := paste.Clipboard.Content()

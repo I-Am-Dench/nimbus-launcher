@@ -1,10 +1,10 @@
-package app
+package luwidgets
 
 import (
 	"fmt"
 
 	"fyne.io/fyne/v2/widget"
-	"github.com/I-Am-Dench/lu-launcher/app/muxset"
+	"github.com/I-Am-Dench/lu-launcher/luwidgets/muxset"
 	"github.com/I-Am-Dench/lu-launcher/resource"
 )
 
@@ -13,6 +13,7 @@ type ServerList struct {
 
 	servers resource.ServerList
 
+	isDisabled        bool
 	currentlyUpdating *muxset.MuxSet[string]
 }
 
@@ -23,15 +24,18 @@ func NewServerList(serverList resource.ServerList, changed func(*resource.Server
 	list.Select.PlaceHolder = "(Select server)"
 
 	list.Select.OnChanged = func(_ string) {
-		if list.Select.Disabled() {
-			return
+		// If isDisabled and Select.Disabled() are different, then OnChanged is being called through either Disable() or Enable().
+		// We only want changed() to be called when an OPTION has been selected or updated.
+		if list.isDisabled == list.Select.Disabled() {
+			changed(list.SelectedServer())
 		}
 
-		changed(list.SelectedServer())
+		list.isDisabled = list.Select.Disabled()
 	}
 
 	list.servers = serverList
 	list.currentlyUpdating = muxset.New[string]()
+	list.isDisabled = false
 
 	list.Refresh()
 

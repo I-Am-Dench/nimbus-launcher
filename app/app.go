@@ -17,6 +17,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"github.com/I-Am-Dench/lu-launcher/clientcache"
 	"github.com/I-Am-Dench/lu-launcher/luconfig"
+	"github.com/I-Am-Dench/lu-launcher/luwidgets"
 	"github.com/I-Am-Dench/lu-launcher/resource"
 )
 
@@ -30,7 +31,7 @@ type App struct {
 	settingsWindow fyne.Window
 	patchWindow    fyne.Window
 
-	serverList *ServerList
+	serverList *luwidgets.ServerList
 
 	playButton           *widget.Button
 	refreshUpdatesButton *widget.Button
@@ -124,7 +125,7 @@ func (app *App) InitializeGlobalWidgets(servers resource.ServerList) {
 	app.indefiniteProgress = widget.NewProgressBarInfinite()
 	app.indefiniteProgress.Hide()
 
-	app.serverList = NewServerList(servers, app.OnServerChanged)
+	app.serverList = luwidgets.NewServerList(servers, app.OnServerChanged)
 	app.serverList.SetSelectedServer(app.settings.SelectedServer)
 }
 
