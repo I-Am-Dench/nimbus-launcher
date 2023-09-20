@@ -25,6 +25,12 @@ func main() {
 	}
 	log.Printf("Loaded %d server configuration(s)\n", servers.Size())
 
-	app := app.New(&settings, servers)
+	rejectedPatches, err := resource.PatchRejections()
+	if err != nil {
+		log.Println(err)
+	}
+	log.Printf("Loaded %d patch rejection(s)\n", rejectedPatches.Amount())
+
+	app := app.New(&settings, servers, rejectedPatches)
 	app.Start()
 }

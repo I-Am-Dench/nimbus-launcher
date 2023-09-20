@@ -105,6 +105,12 @@ func ClientCache() (clientcache.ClientCache, error) {
 	return clientcache.NewSqlite(settingsDir)
 }
 
+func PatchRejections() (RejectedPatches, error) {
+	rejections := NewRejectedPatches()
+	err := rejections.Load()
+	return rejections, err
+}
+
 func Exists(name string) bool {
 	_, err := os.Stat(Of(settingsDir, name))
 	return !errors.Is(err, os.ErrNotExist)

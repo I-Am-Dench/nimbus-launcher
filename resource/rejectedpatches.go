@@ -45,6 +45,20 @@ func (rejected *RejectedPatches) Save() error {
 	return nil
 }
 
+func (rejected *RejectedPatches) Amount() int {
+	sum := 0
+
+	for _, versions := range rejected.rejections {
+		if versions == nil {
+			continue
+		}
+
+		sum += len(versions)
+	}
+
+	return sum
+}
+
 func (rejected *RejectedPatches) Add(server *Server, version string) error {
 	if server == nil || len(server.Id) <= 0 || len(version) <= 0 {
 		return nil
