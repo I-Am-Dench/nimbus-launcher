@@ -525,6 +525,13 @@ func (app *App) CheckForUpdates(server *resource.Server) {
 			return
 		}
 
+		if err := resource.ValidateVersionName(patches.CurrentVersion); err != nil {
+			log.Println(err)
+			server.SetServerPatches(patches)
+			app.SetNormalState()
+			return
+		}
+
 		log.Printf("Patch version \"%s\" is available\n", patches.CurrentVersion)
 
 		if app.rejectedPatches.IsRejected(server, patches.CurrentVersion) {

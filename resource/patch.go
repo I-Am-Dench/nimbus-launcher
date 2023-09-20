@@ -236,6 +236,10 @@ func (patch *Patch) getDependencies(server *Server, recurse ...bool) ([]Patch, e
 }
 
 func (patch *Patch) Run(server *Server) error {
+	if err := ValidateVersionName(patch.Version); err != nil {
+		return fmt.Errorf("run patch: %v", err)
+	}
+
 	return errors.Join(
 		patch.downloadFiles(server),
 		patch.updateFiles(server),
