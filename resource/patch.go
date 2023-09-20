@@ -135,6 +135,10 @@ func (patch *Patch) downloadFiles(server *Server) error {
 	os.MkdirAll(path, 0755)
 
 	for _, download := range patch.Downloads {
+		if !filepath.IsLocal(download.Name) {
+			return fmt.Errorf("invalid download name \"%s\": name is a nonlocal path", download.Name)
+		}
+
 		response, err := server.PatchServerRequest(download.Path)
 		if err != nil {
 			return fmt.Errorf("could not GET download URL: %v", err)
