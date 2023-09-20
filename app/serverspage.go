@@ -170,8 +170,10 @@ func (page *ServersPage) editServerPage(form *forms.ServerForm, window fyne.Wind
 			}
 
 			id := server.Id
+			version := server.CurrentPatch
 			*server = *form.Get()
 			server.Id = id
+			server.CurrentPatch = version
 
 			err := server.SaveConfig()
 			if err != nil {
