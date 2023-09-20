@@ -13,6 +13,7 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/I-Am-Dench/lu-launcher/app/forms"
+	"github.com/I-Am-Dench/lu-launcher/luwidgets"
 )
 
 const (
@@ -38,7 +39,7 @@ type ServersPage struct {
 	editServers *fyne.Container
 }
 
-func NewServersPage(window fyne.Window, list *ServerList) *ServersPage {
+func NewServersPage(window fyne.Window, list *luwidgets.ServerList) *ServersPage {
 	page := new(ServersPage)
 
 	page.serverList = widget.NewSelect(
@@ -129,7 +130,7 @@ func NewServersPage(window fyne.Window, list *ServerList) *ServersPage {
 	return page
 }
 
-func (page *ServersPage) addServerPage(form *forms.ServerForm, window fyne.Window, list *ServerList) *fyne.Container {
+func (page *ServersPage) addServerPage(form *forms.ServerForm, window fyne.Window, list *luwidgets.ServerList) *fyne.Container {
 	addButton := widget.NewButton("Add Server", func() {
 		server, err := form.CreateServer()
 		if err != nil {
@@ -162,7 +163,7 @@ func (page *ServersPage) addServerPage(form *forms.ServerForm, window fyne.Windo
 	)
 }
 
-func (page *ServersPage) editServerPage(form *forms.ServerForm, window fyne.Window, list *ServerList) *fyne.Container {
+func (page *ServersPage) editServerPage(form *forms.ServerForm, window fyne.Window, list *luwidgets.ServerList) *fyne.Container {
 	saveButton := widget.NewButton(
 		"Save", func() {
 			server := list.GetIndex(page.serverList.SelectedIndex())

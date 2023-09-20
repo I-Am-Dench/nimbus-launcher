@@ -12,6 +12,7 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"github.com/I-Am-Dench/lu-launcher/luwidgets"
 	"github.com/I-Am-Dench/lu-launcher/resource"
 )
 
@@ -339,7 +340,7 @@ func (app *App) LoadPatchContent(window fyne.Window, patch resource.Patch, onCon
 	)
 
 	data, _ := json.MarshalIndent(patch, "", "    ")
-	patchContent := NewCodeBox()
+	patchContent := luwidgets.NewCodeBox()
 	patchContent.SetText(string(data))
 
 	window.SetContent(

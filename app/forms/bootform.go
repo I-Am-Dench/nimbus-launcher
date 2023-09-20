@@ -5,6 +5,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 	"github.com/I-Am-Dench/lu-launcher/luconfig"
+	"github.com/I-Am-Dench/lu-launcher/luwidgets"
 )
 
 type BootForm struct {
@@ -17,11 +18,11 @@ type BootForm struct {
 	locale           *widget.Select
 
 	patchServerIP   *widget.Entry
-	patchServerPort *IntegerEntry
+	patchServerPort *luwidgets.IntegerEntry
 
-	logging      *IntegerEntry
-	dataCenterID *IntegerEntry
-	cpCode       *IntegerEntry
+	logging      *luwidgets.IntegerEntry
+	dataCenterID *luwidgets.IntegerEntry
+	cpCode       *luwidgets.IntegerEntry
 
 	akamaiDLM *widget.Check
 
@@ -57,12 +58,12 @@ func NewBootForm() *BootForm {
 	form.patchServerIP = widget.NewEntry()
 	form.patchServerIP.PlaceHolder = "127.0.0.1"
 
-	form.patchServerPort = NewIntegerEntry()
+	form.patchServerPort = luwidgets.NewIntegerEntry()
 	form.patchServerPort.PlaceHolder = "80"
 
-	form.logging = NewIntegerEntry()
-	form.dataCenterID = NewIntegerEntry()
-	form.cpCode = NewIntegerEntry()
+	form.logging = luwidgets.NewIntegerEntry()
+	form.dataCenterID = luwidgets.NewIntegerEntry()
+	form.cpCode = luwidgets.NewIntegerEntry()
 
 	form.akamaiDLM = widget.NewCheck("", func(b bool) {})
 	form.patchServerDir = widget.NewEntry()
