@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"image/color"
+	"log"
 	"path/filepath"
 
 	"fyne.io/fyne/v2"
@@ -223,6 +224,15 @@ func (app *App) LoadPatchContent(window fyne.Window, patch resource.Patch, onCon
 	heading := canvas.NewText(fmt.Sprintf("Received patch.json (%s):", patch.Version), color.White)
 	heading.TextSize = 16
 
+	reject := widget.NewButton(
+		"Reject", func() {
+			log.Printf("Rejected patch version \"%s\"\n", patch.Version)
+			window.Close()
+			onConfirmCancel(false)
+		},
+	)
+	reject.Importance = widget.DangerImportance
+
 	confirm := widget.NewButton(
 		"Continue", func() {
 			window.Close()
@@ -239,15 +249,14 @@ func (app *App) LoadPatchContent(window fyne.Window, patch resource.Patch, onCon
 	)
 
 	footer := container.NewBorder(
-		nil, nil, nil,
-		container.NewHBox(cancel, confirm),
 		widget.NewLabelWithStyle(
 			"Continue with update?",
 			fyne.TextAlignLeading,
 			fyne.TextStyle{
 				Bold: true,
 			},
-		),
+		), nil,
+		reject, container.NewHBox(cancel, confirm),
 	)
 
 	data, _ := json.MarshalIndent(patch, "", "    ")
