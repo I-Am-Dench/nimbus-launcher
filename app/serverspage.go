@@ -20,14 +20,6 @@ const (
 	EXPORT_HEADER = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n\n"
 )
 
-// type serverList interface {
-// 	ServerNames() []string
-// 	GetServer(int) *resource.Server
-// 	SetServer(int, *resource.Server)
-// 	SaveServers() error
-// 	AddServer(*resource.Server) error
-// }
-
 type ServersPage struct {
 	container *fyne.Container
 

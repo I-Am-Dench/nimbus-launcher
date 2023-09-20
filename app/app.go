@@ -76,15 +76,6 @@ func New(settings *resource.Settings, servers resource.ServerList) App {
 		log.Println(fmt.Errorf("unable to load icon: %v", err))
 	}
 
-	// log.Printf("Using \"%s\" as client directory\n", a.settings.Client.Directory)
-
-	// _, err = os.Stat(a.settings.ClientPath())
-	// if a.FoundClient = !errors.Is(err, os.ErrNotExist); a.FoundClient {
-	// 	log.Printf("Found valid client \"%s\"\n", a.settings.Client.Name)
-	// } else {
-	// 	log.Printf("Cannot find valid executable \"%s\" in client directory: %v", a.settings.Client.Name, err)
-	// }
-
 	a.serverNameBinding = binding.NewString()
 	a.authServerBinding = binding.NewString()
 	a.localeBinding = binding.NewString()

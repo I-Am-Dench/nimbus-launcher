@@ -8,8 +8,6 @@ import (
 	"log"
 	"net/http"
 
-	// "net/http"
-
 	"os"
 	"path/filepath"
 	"strings"
