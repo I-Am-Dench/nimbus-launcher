@@ -38,6 +38,14 @@ func NewServerForm(window fyne.Window) *ServerForm {
 	form.title = widget.NewEntry()
 	form.title.PlaceHolder = "My Server"
 
+	form.title.Validator = func(s string) error {
+		if len(s) <= 0 {
+			return fmt.Errorf("name cannot be empty")
+		}
+
+		return nil
+	}
+
 	form.patchToken = widget.NewPasswordEntry()
 
 	form.bootForm = NewBootForm()
@@ -95,6 +103,11 @@ func NewServerForm(window fyne.Window) *ServerForm {
 }
 
 func (form *ServerForm) CreateServer() (*resource.Server, error) {
+	err := form.title.Validate()
+	if err != nil {
+		return nil, err
+	}
+
 	return resource.CreateServer(form.title.Text, form.patchToken.Text, form.bootForm.GetConfig())
 }
 
@@ -111,6 +124,10 @@ func (form *ServerForm) UpdateWith(server *resource.Server) {
 
 func (form *ServerForm) Get() *resource.Server {
 	return resource.NewServer(form.title.Text, form.patchToken.Text, form.bootForm.GetConfig())
+}
+
+func (form *ServerForm) Validate() error {
+	return form.title.Validate()
 }
 
 func (form *ServerForm) Container() *fyne.Container {

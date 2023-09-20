@@ -172,6 +172,11 @@ func (page *ServersPage) editServerPage(form *forms.ServerForm, window fyne.Wind
 				return
 			}
 
+			if err := form.Validate(); err != nil {
+				dialog.ShowError(err, window)
+				return
+			}
+
 			id := server.Id
 			*server = *form.Get()
 			server.Id = id
