@@ -36,8 +36,10 @@ type App struct {
 
 	playButton           *widget.Button
 	refreshUpdatesButton *widget.Button
-	definiteProgress     *widget.ProgressBar
-	indefiniteProgress   *widget.ProgressBarInfinite
+	progressBar          *luwidgets.BinaryProgressBar
+
+	// definiteProgress     *widget.ProgressBar
+	// indefiniteProgress   *widget.ProgressBarInfinite
 
 	progressText string
 
@@ -109,14 +111,16 @@ func (app *App) InitializeGlobalWidgets(servers resource.ServerList) {
 	)
 	app.playButton.Importance = widget.HighImportance
 
-	app.definiteProgress = widget.NewProgressBar()
-	app.definiteProgress.TextFormatter = func() string {
-		return app.progressText
-	}
-	app.definiteProgress.Hide()
+	app.progressBar = luwidgets.NewBinaryProgressBar()
 
-	app.indefiniteProgress = widget.NewProgressBarInfinite()
-	app.indefiniteProgress.Hide()
+	// app.definiteProgress = widget.NewProgressBar()
+	// app.definiteProgress.TextFormatter = func() string {
+	// 	return app.progressText
+	// }
+	// app.definiteProgress.Hide()
+
+	// app.indefiniteProgress = widget.NewProgressBarInfinite()
+	// app.indefiniteProgress.Hide()
 
 	app.serverList = luwidgets.NewServerList(servers, app.OnServerChanged)
 	app.serverList.SetSelectedServer(app.settings.SelectedServer)
@@ -168,7 +172,8 @@ func (app *App) OnServerChanged(server *resource.Server) {
 }
 
 func (app *App) SetPlayingState() {
-	app.HideProgress()
+	// app.HideProgress()
+	app.progressBar.Hide()
 
 	app.playButton.Disable()
 	app.playButton.SetText("Playing")
@@ -177,7 +182,8 @@ func (app *App) SetPlayingState() {
 }
 
 func (app *App) SetNormalState() {
-	app.HideProgress()
+	// app.HideProgress()
+	app.progressBar.Hide()
 
 	app.playButton.Enable()
 	app.playButton.SetText("Play")
@@ -190,14 +196,16 @@ func (app *App) SetNormalState() {
 }
 
 func (app *App) SetUpdatingState() {
-	app.ShowIndefiniteProgress()
+	// app.ShowIndefiniteProgress()
+	app.progressBar.ShowIndefinite()
 
 	app.playButton.Disable()
 	app.playButton.SetText("Updating")
 }
 
 func (app *App) SetUpdateState() {
-	app.HideProgress()
+	// app.HideProgress()
+	app.progressBar.Hide()
 
 	app.playButton.Enable()
 	app.playButton.SetText("Update")
@@ -208,7 +216,8 @@ func (app *App) SetUpdateState() {
 }
 
 func (app *App) SetCheckingUpdatesState() {
-	app.ShowIndefiniteProgress()
+	// app.ShowIndefiniteProgress()
+	app.progressBar.ShowIndefinite()
 
 	app.playButton.Disable()
 	app.playButton.SetText("Checking updates")
@@ -216,27 +225,27 @@ func (app *App) SetCheckingUpdatesState() {
 	app.playButton.Refresh()
 }
 
-func (app *App) ShowIndefiniteProgress() {
-	app.definiteProgress.Hide()
-	app.indefiniteProgress.Show()
-}
+// func (app *App) ShowIndefiniteProgress() {
+// 	app.definiteProgress.Hide()
+// 	app.indefiniteProgress.Show()
+// }
 
-func (app *App) ShowProgress(value float64, format string) {
-	app.definiteProgress.SetValue(value)
-	app.progressText = format
+// func (app *App) ShowProgress(value float64, format string) {
+// 	app.definiteProgress.SetValue(value)
+// 	app.progressText = format
 
-	app.indefiniteProgress.Hide()
-	app.definiteProgress.Show()
-}
+// 	app.indefiniteProgress.Hide()
+// 	app.definiteProgress.Show()
+// }
 
-func (app *App) SetProgress(value float64) {
-	app.ShowProgress(value, app.progressText)
-}
+// func (app *App) SetProgress(value float64) {
+// 	app.ShowProgress(value, app.progressText)
+// }
 
-func (app *App) HideProgress() {
-	app.definiteProgress.Hide()
-	app.indefiniteProgress.Hide()
-}
+// func (app *App) HideProgress() {
+// 	app.definiteProgress.Hide()
+// 	app.indefiniteProgress.Hide()
+// }
 
 func (app *App) CurrentServer() *resource.Server {
 	return app.serverList.SelectedServer()
@@ -251,15 +260,20 @@ func (app *App) TransferCachedClientResources() error {
 	}
 	log.Printf("Queried %d cached resources.", len(resources))
 
-	app.ShowProgress(0, "Transferring resources: %f%%")
-	defer app.HideProgress()
+	app.progressBar.SetFormat("Transferring resources")
+	app.progressBar.SetValue(0)
+	app.progressBar.ShowDefinite()
+	// app.ShowProgress(0, "Transferring resources: %f%%")
+	// defer app.HideProgress()
+	defer app.progressBar.Hide()
 	for i, resource := range resources {
 		log.Printf("Transferring cached resource: %s\n", resource.Path)
 		err := clientcache.WriteResource(app.settings.Client.Directory, resource)
 		if err != nil {
 			return fmt.Errorf("could not transfer cached resource")
 		}
-		app.SetProgress(float64((i + 1) / len(resources)))
+		// app.SetProgress(float64((i + 1) / len(resources)))
+		app.progressBar.SetValue(float64((i + 1) / len(resources)))
 	}
 
 	log.Println("Completed transfer(s)!")
