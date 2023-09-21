@@ -24,10 +24,10 @@ type ServerForm struct {
 	bootForm *BootForm
 }
 
-func NewServerForm(window fyne.Window) *ServerForm {
+func NewServerForm(window fyne.Window, heading string) *ServerForm {
 	form := new(ServerForm)
 
-	infoHeading := canvas.NewText("Server Info", color.White)
+	infoHeading := canvas.NewText(heading, color.White)
 	infoHeading.TextSize = 16
 
 	bootHeading := canvas.NewText("boot.cfg", color.White)

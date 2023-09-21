@@ -39,11 +39,11 @@ func NewServersPage(window fyne.Window, list *luwidgets.ServerList) *ServersPage
 	)
 	page.serverList.SetSelectedIndex(0)
 
-	addServerForm := forms.NewServerForm(window)
+	addServerForm := forms.NewServerForm(window, "Add Server")
 	page.addServers = page.addServerPage(addServerForm, window, list)
 	page.addServers.Hide()
 
-	editServerForm := forms.NewServerForm(window)
+	editServerForm := forms.NewServerForm(window, "Edit Server")
 	page.editServers = page.editServerPage(editServerForm, window, list)
 	page.editServers.Hide()
 
@@ -55,62 +55,71 @@ func NewServersPage(window fyne.Window, list *luwidgets.ServerList) *ServersPage
 		page.addServers.Show()
 	})
 	addServerTab.Importance = widget.LowImportance
-	addServerTab.Alignment = widget.ButtonAlignLeading
 
-	editServerTab := widget.NewButtonWithIcon(
-		"", theme.DocumentCreateIcon(),
-		func() {
-			server := list.GetIndex(page.serverList.SelectedIndex())
-			editServerForm.UpdateWith(server)
+	menuEdit := fyne.NewMenuItem("Edit", func() {
+		server := list.GetIndex(page.serverList.SelectedIndex())
+		editServerForm.UpdateWith(server)
 
-			page.buttons.Hide()
-			page.editServers.Show()
-		},
+		page.buttons.Hide()
+		page.editServers.Show()
+	})
+	menuEdit.Icon = theme.DocumentCreateIcon()
+
+	menuRemove := fyne.NewMenuItem("Remove", func() {
+		server := list.GetIndex(page.serverList.SelectedIndex())
+		if server == nil {
+			dialog.ShowError(fmt.Errorf("fatal remove error: server is nil"), window)
+			return
+		}
+
+		confirm := dialog.NewCustomConfirm(
+			"Remove Server", "Remove", "Cancel", widget.NewLabel(fmt.Sprintf("Remove server configuration '%s'?", server.Name)),
+			func(ok bool) {
+				if !ok {
+					return
+				}
+
+				err := list.Remove(server)
+				if err != nil {
+					dialog.ShowError(err, window)
+					return
+				}
+
+				page.serverList.SetOptions(list.Options)
+				page.serverList.SetSelectedIndex(0)
+				dialog.ShowInformation("Remove Server", fmt.Sprintf("Server '%s' removed successfully!", server.Name), window)
+			},
+			window,
+		)
+
+		confirm.Show()
+	})
+	menuRemove.Icon = theme.ContentRemoveIcon()
+
+	menu := widget.NewPopUpMenu(
+		fyne.NewMenu("", menuEdit, menuRemove),
+		window.Canvas(),
 	)
 
-	removeServerButton := widget.NewButtonWithIcon(
-		"Remove Server", theme.ContentRemoveIcon(),
-		func() {
-			server := list.GetIndex(page.serverList.SelectedIndex())
-			if server == nil {
-				dialog.ShowError(fmt.Errorf("fatal remove error: server is nil"), window)
-				return
-			}
+	menuButton := widget.NewButtonWithIcon("", theme.MoreHorizontalIcon(), func() {})
+	listContainer := container.NewBorder(nil, nil, nil, menuButton, page.serverList)
 
-			confirm := dialog.NewCustomConfirm(
-				"Remove Server", "Remove", "Cancel", widget.NewLabel(fmt.Sprintf("Remove server configuration '%s'?", server.Name)),
-				func(ok bool) {
-					if !ok {
-						return
-					}
+	menuButton.OnTapped = func() {
+		menuSize := menu.Size()
+		buttonSize := menuButton.Size()
 
-					err := list.Remove(server)
-					if err != nil {
-						dialog.ShowError(err, window)
-						return
-					}
-
-					page.serverList.SetOptions(list.Options)
-					page.serverList.SetSelectedIndex(0)
-					dialog.ShowInformation("Remove Server", fmt.Sprintf("Server '%s' removed successfully!", server.Name), window)
-				},
-				window,
-			)
-
-			confirm.Show()
-		},
-	)
-	removeServerButton.Importance = widget.LowImportance
+		position := fyne.NewPos(-(menuSize.Width - buttonSize.Width), buttonSize.Height+5)
+		menu.ShowAtRelativePosition(position, menuButton)
+	}
 
 	page.buttons = container.NewVBox(
 		heading,
-		container.NewBorder(nil, nil, addServerTab, nil),
-		container.NewBorder(
-			nil, nil, nil,
-			editServerTab,
-			page.serverList,
+		container.NewPadded(
+			container.NewVBox(
+				container.NewBorder(nil, nil, addServerTab, nil),
+				listContainer,
+			),
 		),
-		container.NewBorder(nil, nil, removeServerButton, nil),
 	)
 
 	page.container = container.NewStack(
