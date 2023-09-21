@@ -39,11 +39,11 @@ func NewServersPage(window fyne.Window, list *luwidgets.ServerList) *ServersPage
 	)
 	page.serverList.SetSelectedIndex(0)
 
-	addServerForm := forms.NewServerForm(window)
+	addServerForm := forms.NewServerForm(window, "Add Server")
 	page.addServers = page.addServerPage(addServerForm, window, list)
 	page.addServers.Hide()
 
-	editServerForm := forms.NewServerForm(window)
+	editServerForm := forms.NewServerForm(window, "Edit Server")
 	page.editServers = page.editServerPage(editServerForm, window, list)
 	page.editServers.Hide()
 
