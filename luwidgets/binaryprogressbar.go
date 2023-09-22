@@ -47,6 +47,10 @@ func (progress *BinaryProgressBar) ShowIndefinite() {
 	progress.definiteProgress.Hide()
 }
 
+func (progress *BinaryProgressBar) SetMax(max float64) {
+	progress.definiteProgress.Max = max
+}
+
 func (progress *BinaryProgressBar) SetValue(value float64) {
 	progress.definiteProgress.SetValue(value)
 }
