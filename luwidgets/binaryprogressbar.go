@@ -26,6 +26,11 @@ func NewBinaryProgressBar() *BinaryProgressBar {
 	return progress
 }
 
+// The text formatted returned by ProgressBar.TextFormatter
+//
+// $VALUE gets replaced with int(ProgressBar.Value)
+//
+// $MAX gets replaced with int(ProgressBar.Max)
 func (progress *BinaryProgressBar) SetFormat(format string) {
 	progress.textFormat = format
 }
