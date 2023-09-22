@@ -41,7 +41,7 @@ type App struct {
 	// definiteProgress     *widget.ProgressBar
 	// indefiniteProgress   *widget.ProgressBarInfinite
 
-	progressText string
+	// progressText string
 
 	serverNameBinding binding.String
 	authServerBinding binding.String
@@ -260,10 +260,9 @@ func (app *App) TransferCachedClientResources() error {
 	}
 	log.Printf("Queried %d cached resources.", len(resources))
 
-	app.progressBar.SetFormat("Transferring resources")
-	app.progressBar.SetValue(0)
-	app.progressBar.ShowDefinite()
 	// app.ShowProgress(0, "Transferring resources: %f%%")
+	app.progressBar.SetMax(float64(len(resources)))
+	app.progressBar.ShowValue(0, "Transferring resources: $VALUE/$MAX")
 	// defer app.HideProgress()
 	defer app.progressBar.Hide()
 	for i, resource := range resources {
@@ -273,9 +272,11 @@ func (app *App) TransferCachedClientResources() error {
 			return fmt.Errorf("could not transfer cached resource")
 		}
 		// app.SetProgress(float64((i + 1) / len(resources)))
-		app.progressBar.SetValue(float64((i + 1) / len(resources)))
+		// app.progressBar.SetValue(float64((i + 1) / len(resources)))
+		app.progressBar.SetValue(float64(i + 1))
 	}
 
+	app.progressBar.ShowFormat("Completed transfer(s)!")
 	log.Println("Completed transfer(s)!")
 	return nil
 }
@@ -287,11 +288,13 @@ func (app *App) TransferPatchResources(server *resource.Server) error {
 		return err
 	}
 
+	app.progressBar.ShowIndefinite()
 	err = patch.TransferResources(app.settings.Client.Directory, app.clientCache, server)
 	if err != nil {
 		return err
 	}
 
+	app.progressBar.ShowFormat("Completed transfer(s)!")
 	log.Println("Completed transfer(s)!")
 	return nil
 }
@@ -355,6 +358,7 @@ func (app *App) PressPlay() {
 		return
 	}
 
+	app.progressBar.Hide()
 	go func(cmd *exec.Cmd) {
 		cmd.Wait()
 		app.SetNormalState()
