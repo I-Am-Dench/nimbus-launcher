@@ -1,6 +1,8 @@
 package luwidgets
 
 import (
+	"fmt"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
@@ -28,7 +30,7 @@ func (progress *BinaryProgressBar) SetFormat(format string) {
 }
 
 func (progress *BinaryProgressBar) GetFormat() string {
-	return progress.textFormat
+	return fmt.Sprintf(progress.textFormat, int(progress.Value()), int(progress.definiteProgress.Max))
 }
 
 func (progress *BinaryProgressBar) ShowDefinite() {
