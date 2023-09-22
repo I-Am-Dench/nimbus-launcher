@@ -1,7 +1,8 @@
 package luwidgets
 
 import (
-	"fmt"
+	"strconv"
+	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -30,7 +31,9 @@ func (progress *BinaryProgressBar) SetFormat(format string) {
 }
 
 func (progress *BinaryProgressBar) GetFormat() string {
-	return fmt.Sprintf(progress.textFormat, int(progress.Value()), int(progress.definiteProgress.Max))
+	withValue := strings.ReplaceAll(progress.textFormat, "$VALUE", strconv.Itoa(int(progress.Value())))
+	withMax := strings.ReplaceAll(withValue, "$MAX", strconv.Itoa(int(progress.definiteProgress.Max)))
+	return withMax
 }
 
 func (progress *BinaryProgressBar) ShowDefinite() {
@@ -40,6 +43,11 @@ func (progress *BinaryProgressBar) ShowDefinite() {
 
 func (progress *BinaryProgressBar) ShowValue(value float64, format string) {
 	progress.definiteProgress.SetValue(value)
+	progress.textFormat = format
+	progress.ShowDefinite()
+}
+
+func (progress *BinaryProgressBar) ShowFormat(format string) {
 	progress.textFormat = format
 	progress.ShowDefinite()
 }
