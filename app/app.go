@@ -38,11 +38,6 @@ type App struct {
 	refreshUpdatesButton *widget.Button
 	progressBar          *luwidgets.BinaryProgressBar
 
-	// definiteProgress     *widget.ProgressBar
-	// indefiniteProgress   *widget.ProgressBarInfinite
-
-	// progressText string
-
 	serverNameBinding binding.String
 	authServerBinding binding.String
 	localeBinding     binding.String
@@ -113,15 +108,6 @@ func (app *App) InitializeGlobalWidgets(servers resource.ServerList) {
 
 	app.progressBar = luwidgets.NewBinaryProgressBar()
 
-	// app.definiteProgress = widget.NewProgressBar()
-	// app.definiteProgress.TextFormatter = func() string {
-	// 	return app.progressText
-	// }
-	// app.definiteProgress.Hide()
-
-	// app.indefiniteProgress = widget.NewProgressBarInfinite()
-	// app.indefiniteProgress.Hide()
-
 	app.serverList = luwidgets.NewServerList(servers, app.OnServerChanged)
 	app.serverList.SetSelectedServer(app.settings.SelectedServer)
 }
@@ -172,7 +158,6 @@ func (app *App) OnServerChanged(server *resource.Server) {
 }
 
 func (app *App) SetPlayingState() {
-	// app.HideProgress()
 	app.progressBar.Hide()
 
 	app.playButton.Disable()
@@ -182,7 +167,6 @@ func (app *App) SetPlayingState() {
 }
 
 func (app *App) SetNormalState() {
-	// app.HideProgress()
 	app.progressBar.Hide()
 
 	app.playButton.Enable()
@@ -196,7 +180,6 @@ func (app *App) SetNormalState() {
 }
 
 func (app *App) SetUpdatingState() {
-	// app.ShowIndefiniteProgress()
 	app.progressBar.ShowIndefinite()
 
 	app.playButton.Disable()
@@ -204,7 +187,6 @@ func (app *App) SetUpdatingState() {
 }
 
 func (app *App) SetUpdateState() {
-	// app.HideProgress()
 	app.progressBar.Hide()
 
 	app.playButton.Enable()
@@ -216,7 +198,6 @@ func (app *App) SetUpdateState() {
 }
 
 func (app *App) SetCheckingUpdatesState() {
-	// app.ShowIndefiniteProgress()
 	app.progressBar.ShowIndefinite()
 
 	app.playButton.Disable()
@@ -224,28 +205,6 @@ func (app *App) SetCheckingUpdatesState() {
 	app.playButton.SetIcon(nil)
 	app.playButton.Refresh()
 }
-
-// func (app *App) ShowIndefiniteProgress() {
-// 	app.definiteProgress.Hide()
-// 	app.indefiniteProgress.Show()
-// }
-
-// func (app *App) ShowProgress(value float64, format string) {
-// 	app.definiteProgress.SetValue(value)
-// 	app.progressText = format
-
-// 	app.indefiniteProgress.Hide()
-// 	app.definiteProgress.Show()
-// }
-
-// func (app *App) SetProgress(value float64) {
-// 	app.ShowProgress(value, app.progressText)
-// }
-
-// func (app *App) HideProgress() {
-// 	app.definiteProgress.Hide()
-// 	app.indefiniteProgress.Hide()
-// }
 
 func (app *App) CurrentServer() *resource.Server {
 	return app.serverList.SelectedServer()
@@ -260,10 +219,8 @@ func (app *App) TransferCachedClientResources() error {
 	}
 	log.Printf("Queried %d cached resources.", len(resources))
 
-	// app.ShowProgress(0, "Transferring resources: %f%%")
 	app.progressBar.SetMax(float64(len(resources)))
 	app.progressBar.ShowValue(0, "Transferring resources: $VALUE/$MAX")
-	// defer app.HideProgress()
 	defer app.progressBar.Hide()
 	for i, resource := range resources {
 		log.Printf("Transferring cached resource: %s\n", resource.Path)
@@ -271,8 +228,7 @@ func (app *App) TransferCachedClientResources() error {
 		if err != nil {
 			return fmt.Errorf("could not transfer cached resource")
 		}
-		// app.SetProgress(float64((i + 1) / len(resources)))
-		// app.progressBar.SetValue(float64((i + 1) / len(resources)))
+
 		app.progressBar.SetValue(float64(i + 1))
 	}
 

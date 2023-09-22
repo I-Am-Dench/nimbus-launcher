@@ -93,13 +93,6 @@ func (app *App) Footer() *fyne.Container {
 	)
 	clientLabel.Truncation = fyne.TextTruncateEllipsis
 
-	// progress := widget.NewProgressBar()
-
-	// prepareProgressBar := container.NewStack(
-	// 	app.definiteProgress,
-	// 	app.indefiniteProgress,
-	// )
-
 	return container.NewBorder(
 		app.progressBar.Container(),
 		nil,
