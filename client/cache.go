@@ -1,4 +1,4 @@
-package clientcache
+package client
 
 import (
 	"fmt"
@@ -18,7 +18,7 @@ func (resource ClientResource) Time() time.Time {
 	return time.Unix(resource.ModTime, 0)
 }
 
-type ClientCache interface {
+type Cache interface {
 	Add(resource ClientResource) error
 	Get(path string) (ClientResource, error)
 	GetResources() ([]ClientResource, error)

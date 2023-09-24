@@ -1,4 +1,4 @@
-package clientcache
+package client
 
 import (
 	"context"
@@ -33,7 +33,7 @@ func (cache *sqliteCache) QueryRow(query string, args ...any) *sql.Row {
 	return cache.db.QueryRow(query, args...)
 }
 
-func NewSqlite(directory string) (ClientCache, error) {
+func NewSqlite(directory string) (Cache, error) {
 	cache := new(sqliteCache)
 
 	dsn := fmt.Sprintf("file:%s", filepath.Join(directory, "client_cache.sqlite"))

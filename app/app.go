@@ -14,7 +14,6 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/I-Am-Dench/lu-launcher/client"
-	"github.com/I-Am-Dench/lu-launcher/clientcache"
 	"github.com/I-Am-Dench/lu-launcher/luconfig"
 	"github.com/I-Am-Dench/lu-launcher/luwidgets"
 	"github.com/I-Am-Dench/lu-launcher/resource"
@@ -27,7 +26,7 @@ type App struct {
 
 	client client.Client
 
-	clientCache clientcache.ClientCache
+	clientCache client.Cache
 
 	main           fyne.Window
 	settingsWindow fyne.Window
@@ -178,7 +177,7 @@ func (app *App) TransferCachedClientResources() error {
 	defer app.progressBar.Hide()
 	for i, resource := range resources {
 		log.Printf("Transferring cached resource: %s\n", resource.Path)
-		err := clientcache.WriteResource(app.settings.Client.Directory, resource)
+		err := client.WriteResource(app.settings.Client.Directory, resource)
 		if err != nil {
 			return fmt.Errorf("could not transfer cached resource")
 		}
