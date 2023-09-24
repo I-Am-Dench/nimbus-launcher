@@ -12,7 +12,6 @@ func (app *App) SetPlayingState() {
 	app.playButton.SetText("Playing")
 
 	app.serverList.Disable()
-
 }
 
 func (app *App) SetNormalState() {
@@ -25,6 +24,8 @@ func (app *App) SetNormalState() {
 	app.playButton.OnTapped = app.PressPlay
 	app.playButton.Refresh()
 
+	app.refreshUpdatesButton.Enable()
+
 	app.serverList.Enable()
 }
 
@@ -33,6 +34,8 @@ func (app *App) SetUpdatingState() {
 
 	app.playButton.Disable()
 	app.playButton.SetText("Updating")
+
+	app.refreshUpdatesButton.Disable()
 }
 
 func (app *App) SetUpdateState() {
@@ -44,6 +47,8 @@ func (app *App) SetUpdateState() {
 	app.playButton.Importance = widget.SuccessImportance
 	app.playButton.OnTapped = app.PressUpdate
 	app.playButton.Refresh()
+
+	app.refreshUpdatesButton.Enable()
 }
 
 func (app *App) SetCheckingUpdatesState() {
@@ -53,4 +58,6 @@ func (app *App) SetCheckingUpdatesState() {
 	app.playButton.SetText("Checking updates")
 	app.playButton.SetIcon(nil)
 	app.playButton.Refresh()
+
+	app.refreshUpdatesButton.Disable()
 }
