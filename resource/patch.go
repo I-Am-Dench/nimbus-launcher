@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/I-Am-Dench/lu-launcher/clientcache"
+	"github.com/I-Am-Dench/lu-launcher/client"
 	"github.com/I-Am-Dench/lu-launcher/luconfig"
 )
 
@@ -262,7 +262,7 @@ func (patch *Patch) RunWithDependencies(server *Server) error {
 	return patch.Run(server)
 }
 
-func (patch *Patch) TransferResources(clientDirectory string, cache clientcache.ClientCache, server *Server) error {
+func (patch *Patch) TransferResources(clientDirectory string, cache client.Cache, server *Server) error {
 	for source, destination := range patch.Transfers {
 		if !filepath.IsLocal(source) {
 			return fmt.Errorf("invalid source resource \"%s\": file is nonlocal", source)
@@ -276,7 +276,7 @@ func (patch *Patch) TransferResources(clientDirectory string, cache clientcache.
 
 		resourceName := filepath.Clean(destination)
 		if !cache.ResourceExists(resourceName) {
-			resource, err := clientcache.ReadResource(clientDirectory, resourceName)
+			resource, err := client.ReadResource(clientDirectory, resourceName)
 			if err != nil {
 				return fmt.Errorf("could not read patch destination: %v", err)
 			}

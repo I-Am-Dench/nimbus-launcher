@@ -10,7 +10,7 @@ import (
 	"regexp"
 
 	"fyne.io/fyne/v2"
-	"github.com/I-Am-Dench/lu-launcher/clientcache"
+	"github.com/I-Am-Dench/lu-launcher/client"
 	"github.com/I-Am-Dench/lu-launcher/luconfig"
 )
 
@@ -104,8 +104,8 @@ func Servers() (ServerList, error) {
 	return servers, err
 }
 
-func ClientCache() (clientcache.ClientCache, error) {
-	return clientcache.NewSqlite(settingsDir)
+func ClientCache() (client.Cache, error) {
+	return client.NewSqliteCache(settingsDir)
 }
 
 func PatchRejections() (RejectedPatches, error) {

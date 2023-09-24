@@ -1,13 +1,11 @@
 package app
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -15,7 +13,7 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"github.com/I-Am-Dench/lu-launcher/clientcache"
+	"github.com/I-Am-Dench/lu-launcher/client"
 	"github.com/I-Am-Dench/lu-launcher/luconfig"
 	"github.com/I-Am-Dench/lu-launcher/luwidgets"
 	"github.com/I-Am-Dench/lu-launcher/resource"
@@ -26,7 +24,9 @@ type App struct {
 	settings        *resource.Settings
 	rejectedPatches resource.RejectedPatches
 
-	clientCache clientcache.ClientCache
+	client client.Client
+
+	clientCache client.Cache
 
 	main           fyne.Window
 	settingsWindow fyne.Window
@@ -54,6 +54,8 @@ func New(settings *resource.Settings, servers resource.ServerList, rejectedPatch
 
 	a.settings = settings
 	a.rejectedPatches = rejectedPatches
+
+	a.client = client.NewStandardClient()
 
 	cache, err := resource.ClientCache()
 	if err != nil {
@@ -157,55 +159,6 @@ func (app *App) OnServerChanged(server *resource.Server) {
 	}
 }
 
-func (app *App) SetPlayingState() {
-	app.progressBar.Hide()
-
-	app.playButton.Disable()
-	app.playButton.SetText("Playing")
-
-	app.serverList.Disable()
-}
-
-func (app *App) SetNormalState() {
-	app.progressBar.Hide()
-
-	app.playButton.Enable()
-	app.playButton.SetText("Play")
-	app.playButton.SetIcon(theme.MediaPlayIcon())
-	app.playButton.Importance = widget.HighImportance
-	app.playButton.OnTapped = app.PressPlay
-	app.playButton.Refresh()
-
-	app.serverList.Enable()
-}
-
-func (app *App) SetUpdatingState() {
-	app.progressBar.ShowIndefinite()
-
-	app.playButton.Disable()
-	app.playButton.SetText("Updating")
-}
-
-func (app *App) SetUpdateState() {
-	app.progressBar.Hide()
-
-	app.playButton.Enable()
-	app.playButton.SetText("Update")
-	app.playButton.SetIcon(theme.DownloadIcon())
-	app.playButton.Importance = widget.SuccessImportance
-	app.playButton.OnTapped = app.PressUpdate
-	app.playButton.Refresh()
-}
-
-func (app *App) SetCheckingUpdatesState() {
-	app.progressBar.ShowIndefinite()
-
-	app.playButton.Disable()
-	app.playButton.SetText("Checking updates")
-	app.playButton.SetIcon(nil)
-	app.playButton.Refresh()
-}
-
 func (app *App) CurrentServer() *resource.Server {
 	return app.serverList.SelectedServer()
 }
@@ -224,7 +177,7 @@ func (app *App) TransferCachedClientResources() error {
 	defer app.progressBar.Hide()
 	for i, resource := range resources {
 		log.Printf("Transferring cached resource: %s\n", resource.Path)
-		err := clientcache.WriteResource(app.settings.Client.Directory, resource)
+		err := client.WriteResource(app.settings.Client.Directory, resource)
 		if err != nil {
 			return fmt.Errorf("could not transfer cached resource")
 		}
@@ -308,11 +261,24 @@ func (app *App) PressPlay() {
 	log.Println("Launching Lego Universe...")
 	log.Printf("Close launcher when played: %v\n", app.settings.CloseOnPlay)
 
-	cmd := app.StartClient()
+	cmd, err := app.client.Start()
+	if err != nil {
+		log.Println(err)
+		dialog.ShowError(err, app.main)
+		app.SetNormalState()
+		return
+	}
+
 	if app.settings.CloseOnPlay {
 		app.main.Close()
 		return
 	}
+
+	// cmd := app.StartClient()
+	// if app.settings.CloseOnPlay {
+	// 	app.main.Close()
+	// 	return
+	// }
 
 	app.progressBar.Hide()
 	go func(cmd *exec.Cmd) {
@@ -325,17 +291,17 @@ func (app *App) PressUpdate() {
 	app.Update(app.CurrentServer())
 }
 
-func (app *App) StartClient() *exec.Cmd {
-	cmd := exec.Command(app.settings.ClientPath())
-	if len(strings.TrimSpace(app.settings.Client.RunCommand)) > 0 {
-		cmd = exec.Command(app.settings.Client.RunCommand, app.settings.ClientPath())
-	}
+// func (app *App) StartClient() *exec.Cmd {
+// 	cmd := exec.Command(app.settings.ClientPath())
+// 	if len(strings.TrimSpace(app.settings.Client.RunCommand)) > 0 {
+// 		cmd = exec.Command(app.settings.Client.RunCommand, app.settings.ClientPath())
+// 	}
 
-	cmd.Dir = app.settings.Client.Directory
-	cmd.Env = strings.Split(app.settings.Client.EnvironmentVariables, ";")
-	cmd.Start()
-	return cmd
-}
+// 	cmd.Dir = app.settings.Client.Directory
+// 	cmd.Env = strings.Split(app.settings.Client.EnvironmentVariables, ";")
+// 	cmd.Start()
+// 	return cmd
+// }
 
 func (app *App) ShowSettings() {
 	if app.settingsWindow != nil {
@@ -352,7 +318,10 @@ func (app *App) ShowSettings() {
 	settings.SetIcon(theme.StorageIcon())
 	settings.SetOnClosed(func() {
 		app.settingsWindow = nil
-		app.serverList.Enable()
+
+		if app.client.IsValid() {
+			app.serverList.Enable()
+		}
 	})
 
 	app.serverList.Disable()
@@ -525,24 +494,41 @@ func (app *App) IsReady() bool {
 }
 
 // This functionality can be expanded upon later
-func (app *App) IsValidClient(path string) (bool, error) {
-	stats, err := os.Stat(path)
-	return !errors.Is(err, os.ErrNotExist) && !stats.IsDir(), err
-}
+// func (app *App) IsValidClient(path string) (bool, error) {
+// 	stats, err := os.Stat(path)
+// 	return !errors.Is(err, os.ErrNotExist) && !stats.IsDir(), err
+// }
 
 func (app *App) CheckClient() {
 	log.Printf("Using \"%s\" as client directory\n", app.settings.Client.Directory)
 
-	if ok, err := app.IsValidClient(app.settings.ClientPath()); ok {
+	err := app.client.SetPath(app.settings.ClientPath())
+	if err != nil {
+		log.Printf("Cannot find executable \"%s\" in client directory: %v", app.settings.Client.Name, err)
+		app.playButton.Disable()
+		app.serverList.Disable()
+		app.clientErrorIcon.Show()
+	} else {
 		log.Printf("Found valid client \"%s\"\n", app.settings.Client.Name)
 		app.clientErrorIcon.Hide()
+		app.serverList.Enable()
 		app.SetNormalState()
-	} else {
-		log.Printf("Cannot find valid executable \"%s\" in client directory: %v", app.settings.Client.Name, err)
-		app.playButton.Disable()
-		app.clientErrorIcon.Show()
 	}
 }
+
+// func (app *App) CheckClient() {
+// 	log.Printf("Using \"%s\" as client directory\n", app.settings.Client.Directory)
+
+// 	if ok, err := app.IsValidClient(app.settings.ClientPath()); ok {
+// 		log.Printf("Found valid client \"%s\"\n", app.settings.Client.Name)
+// 		app.clientErrorIcon.Hide()
+// 		app.SetNormalState()
+// 	} else {
+// 		log.Printf("Cannot find valid executable \"%s\" in client directory: %v", app.settings.Client.Name, err)
+// 		app.playButton.Disable()
+// 		app.clientErrorIcon.Show()
+// 	}
+// }
 
 func (app *App) Start() {
 	app.CheckClient()
