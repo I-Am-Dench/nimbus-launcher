@@ -169,11 +169,11 @@ func (app *App) LauncherSettings(window fyne.Window) *fyne.Container {
 	clientName.PlaceHolder = ".exe"
 	clientName.SetText(app.settings.Client.Name)
 
-	runCommand := widget.NewEntry()
-	runCommand.PlaceHolder = "wine or wine64"
+	// runCommand := widget.NewEntry()
+	// runCommand.PlaceHolder = "wine or wine64"
 
-	environmentVariables := widget.NewEntry()
-	environmentVariables.PlaceHolder = "Separated by ;"
+	// environmentVariables := widget.NewEntry()
+	// environmentVariables.PlaceHolder = "Separated by ;"
 
 	saveButton := widget.NewButton("Save", func() {
 		app.settings.CloseOnPlay = closeOnPlay.Checked
@@ -182,8 +182,8 @@ func (app *App) LauncherSettings(window fyne.Window) *fyne.Container {
 
 		app.settings.Client.Directory = clientDirectory.Text
 		app.settings.Client.Name = clientName.Text
-		app.settings.Client.RunCommand = runCommand.Text
-		app.settings.Client.EnvironmentVariables = environmentVariables.Text
+		// app.settings.Client.RunCommand = runCommand.Text
+		// app.settings.Client.EnvironmentVariables = environmentVariables.Text
 
 		err := app.settings.Save()
 		if err != nil {
@@ -213,8 +213,8 @@ func (app *App) LauncherSettings(window fyne.Window) *fyne.Container {
 					widget.NewForm(
 						widget.NewFormItem("Directory", clientDirectory),
 						widget.NewFormItem("Name", clientName),
-						widget.NewFormItem("Run Command", runCommand),
-						widget.NewFormItem("EnvironmentVariables", environmentVariables),
+						// widget.NewFormItem("Run Command", runCommand),
+						// widget.NewFormItem("EnvironmentVariables", environmentVariables),
 					),
 				),
 			),
