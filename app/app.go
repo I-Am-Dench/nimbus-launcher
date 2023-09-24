@@ -13,6 +13,7 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"github.com/I-Am-Dench/lu-launcher/app/windows"
 	"github.com/I-Am-Dench/lu-launcher/client"
 	"github.com/I-Am-Dench/lu-launcher/luconfig"
 	"github.com/I-Am-Dench/lu-launcher/luwidgets"
@@ -315,23 +316,29 @@ func (app *App) ShowSettings() {
 	settings.Show()
 }
 
-func (app *App) ShowPatch(patch resource.Patch, onConfirmCancel func(PatchAcceptState)) {
+func (app *App) ShowPatch(patch resource.Patch, onConfirmCancel func(windows.PatchAcceptState)) {
 	if app.patchWindow != nil {
 		app.patchWindow.RequestFocus()
 		return
 	}
 
-	window := app.NewWindow("Review Patch")
-	window.SetFixedSize(true)
-	window.Resize(fyne.NewSize(800, 600))
-	window.SetIcon(theme.QuestionIcon())
-	window.SetOnClosed(func() {
+	app.patchWindow = windows.NewPatchReviewWindow(app, patch, onConfirmCancel)
+	app.patchWindow.SetOnClosed(func() {
 		app.patchWindow = nil
-		onConfirmCancel(PatchCancel)
+		onConfirmCancel(windows.PatchCancel)
 	})
 
-	app.LoadPatchContent(window, patch, onConfirmCancel)
-	app.patchWindow = window
+	// window := app.NewWindow("Review Patch")
+	// window.SetFixedSize(true)
+	// window.Resize(fyne.NewSize(800, 600))
+	// window.SetIcon(theme.QuestionIcon())
+	// window.SetOnClosed(func() {
+	// 	app.patchWindow = nil
+	// 	onConfirmCancel(PatchCancel)
+	// })
+
+	// app.LoadPatchContent(window, patch, onConfirmCancel)
+	// app.patchWindow = window
 
 	app.patchWindow.CenterOnScreen()
 	app.patchWindow.Show()
@@ -389,14 +396,14 @@ func (app *App) Update(server *resource.Server) {
 			return
 		}
 
-		app.ShowPatch(patch, func(state PatchAcceptState) {
+		app.ShowPatch(patch, func(state windows.PatchAcceptState) {
 			defer app.SetNormalState()
 
-			if state == PatchCancel {
+			if state == windows.PatchCancel {
 				return
 			}
 
-			if state == PatchReject {
+			if state == windows.PatchReject {
 				err := app.rejectedPatches.Add(server, patch.Version)
 				if err == nil {
 					log.Printf("Rejected patch version \"%s\"\n", patch.Version)
