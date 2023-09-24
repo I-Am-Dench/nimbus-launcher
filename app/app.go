@@ -43,6 +43,8 @@ type App struct {
 	authServerBinding binding.String
 	localeBinding     binding.String
 
+	clientPathBinding binding.String
+
 	signupBinding binding.String
 	signinBinding binding.String
 
@@ -81,6 +83,8 @@ func New(settings *resource.Settings, servers resource.ServerList, rejectedPatch
 	a.serverNameBinding = binding.NewString()
 	a.authServerBinding = binding.NewString()
 	a.localeBinding = binding.NewString()
+
+	a.clientPathBinding = binding.NewString()
 
 	a.signupBinding = binding.NewString()
 	a.signinBinding = binding.NewString()
@@ -472,6 +476,7 @@ func (app *App) IsReady() bool {
 
 func (app *App) CheckClient() {
 	log.Printf("Using \"%s\" as client directory\n", app.settings.Client.Directory)
+	app.clientPathBinding.Set(app.settings.ClientPath())
 
 	err := app.client.SetPath(app.settings.ClientPath())
 	if err != nil {

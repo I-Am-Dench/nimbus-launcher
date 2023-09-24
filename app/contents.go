@@ -72,13 +72,11 @@ func (app *App) LoadContent() {
 }
 
 func (app *App) Footer() *fyne.Container {
-	clientLabel := widget.NewLabelWithStyle(
-		app.settings.ClientPath(),
-		fyne.TextAlignLeading,
-		fyne.TextStyle{
-			Bold: true,
-		},
-	)
+	clientLabel := widget.NewLabelWithData(app.clientPathBinding)
+	clientLabel.Alignment = fyne.TextAlignLeading
+	clientLabel.TextStyle = fyne.TextStyle{
+		Bold: true,
+	}
 	clientLabel.Truncation = fyne.TextTruncateEllipsis
 
 	return container.NewBorder(
