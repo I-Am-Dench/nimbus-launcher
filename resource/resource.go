@@ -105,7 +105,7 @@ func Servers() (ServerList, error) {
 }
 
 func ClientCache() (client.Cache, error) {
-	return client.NewSqlite(settingsDir)
+	return client.NewSqliteCache(settingsDir)
 }
 
 func PatchRejections() (RejectedPatches, error) {
