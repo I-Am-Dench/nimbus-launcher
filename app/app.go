@@ -328,18 +328,6 @@ func (app *App) ShowPatch(patch resource.Patch, onConfirmCancel func(luwindows.P
 		onConfirmCancel(luwindows.PatchCancel)
 	})
 
-	// window := app.NewWindow("Review Patch")
-	// window.SetFixedSize(true)
-	// window.Resize(fyne.NewSize(800, 600))
-	// window.SetIcon(theme.QuestionIcon())
-	// window.SetOnClosed(func() {
-	// 	app.patchWindow = nil
-	// 	onConfirmCancel(PatchCancel)
-	// })
-
-	// app.LoadPatchContent(window, patch, onConfirmCancel)
-	// app.patchWindow = window
-
 	app.patchWindow.CenterOnScreen()
 	app.patchWindow.Show()
 }

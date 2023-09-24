@@ -12,14 +12,6 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-// type PatchAcceptState uint32
-
-// const (
-// 	PatchAccept = PatchAcceptState(iota)
-// 	PatchCancel
-// 	PatchReject
-// )
-
 func (app *App) LoadContent() {
 	heading := canvas.NewText("Launch Lego Universe", color.White)
 	heading.TextSize = 24
@@ -217,58 +209,3 @@ func (app *App) LauncherSettings(window fyne.Window) *fyne.Container {
 		),
 	)
 }
-
-// func (app *App) LoadPatchContent(window fyne.Window, patch resource.Patch, onConfirmCancel func(PatchAcceptState)) {
-// 	heading := canvas.NewText(fmt.Sprintf("Received patch.json (%s):", patch.Version), color.White)
-// 	heading.TextSize = 16
-
-// 	reject := widget.NewButton(
-// 		"Reject", func() {
-// 			window.Close()
-// 			onConfirmCancel(PatchReject)
-// 		},
-// 	)
-// 	reject.Importance = widget.DangerImportance
-
-// 	confirm := widget.NewButton(
-// 		"Continue", func() {
-// 			window.Close()
-// 			onConfirmCancel(PatchAccept)
-// 		},
-// 	)
-// 	confirm.Importance = widget.HighImportance
-
-// 	cancel := widget.NewButton(
-// 		"Cancel", func() {
-// 			window.Close()
-// 			onConfirmCancel(PatchCancel)
-// 		},
-// 	)
-
-// 	footer := container.NewBorder(
-// 		widget.NewLabelWithStyle(
-// 			"Continue with update?",
-// 			fyne.TextAlignLeading,
-// 			fyne.TextStyle{
-// 				Bold: true,
-// 			},
-// 		), nil,
-// 		reject, container.NewHBox(cancel, confirm),
-// 	)
-
-// 	data, _ := json.MarshalIndent(patch, "", "    ")
-// 	patchContent := luwidgets.NewCodeBox()
-// 	patchContent.SetText(string(data))
-
-// 	window.SetContent(
-// 		container.NewPadded(
-// 			container.NewBorder(
-// 				heading, footer,
-// 				nil, nil,
-// 				container.NewVScroll(
-// 					patchContent,
-// 				),
-// 			),
-// 		),
-// 	)
-// }
