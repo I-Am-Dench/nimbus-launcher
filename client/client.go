@@ -5,9 +5,9 @@ import (
 )
 
 type Client interface {
-	Run() (*exec.Cmd, error)
 	Path() string
 	SetPath(path string) error
+	Start() (*exec.Cmd, error)
 }
 
 func NewStandardClient() Client {

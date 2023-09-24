@@ -5,6 +5,6 @@ package client
 
 import "os/exec"
 
-func (client standardClient) Run() (*exec.Cmd, error) {
+func (client standardClient) Start() (*exec.Cmd, error) {
 	return nil, nil
 }
