@@ -368,7 +368,10 @@ func (app *App) ShowSettings() {
 	settings.SetIcon(theme.StorageIcon())
 	settings.SetOnClosed(func() {
 		app.settingsWindow = nil
-		app.serverList.Enable()
+
+		if app.client.IsValid() {
+			app.serverList.Enable()
+		}
 	})
 
 	app.serverList.Disable()
@@ -553,10 +556,12 @@ func (app *App) CheckClient() {
 	if err != nil {
 		log.Printf("Cannot find executable \"%s\" in client directory: %v", app.settings.Client.Name, err)
 		app.playButton.Disable()
+		app.serverList.Disable()
 		app.clientErrorIcon.Show()
 	} else {
 		log.Printf("Found valid client \"%s\"\n", app.settings.Client.Name)
 		app.clientErrorIcon.Hide()
+		app.serverList.Enable()
 		app.SetNormalState()
 	}
 }
