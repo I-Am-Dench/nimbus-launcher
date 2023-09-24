@@ -3,8 +3,13 @@
 
 package client
 
-import "os/exec"
+import (
+	"os/exec"
+	"path/filepath"
+)
 
 func (client standardClient) Start() (*exec.Cmd, error) {
-	return nil, nil
+	cmd := exec.Command(client.path)
+	cmd.Dir = filepath.Dir(client.path)
+	return cmd, cmd.Start()
 }
