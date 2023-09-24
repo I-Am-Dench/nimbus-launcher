@@ -7,6 +7,7 @@ import (
 
 type standardClient struct {
 	path string
+	err  error
 }
 
 func (client standardClient) Path() string {
@@ -29,5 +30,10 @@ func (client standardClient) Verify() error {
 
 func (client *standardClient) SetPath(path string) error {
 	client.path = path
-	return client.Verify()
+	client.err = client.Verify()
+	return client.err
+}
+
+func (client *standardClient) IsValid() bool {
+	return client.err == nil
 }

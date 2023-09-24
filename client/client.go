@@ -7,6 +7,7 @@ import (
 type Client interface {
 	Path() string
 	SetPath(path string) error
+	IsValid() bool
 	Start() (*exec.Cmd, error)
 }
 
