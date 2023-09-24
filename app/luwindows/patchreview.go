@@ -1,4 +1,4 @@
-package windows
+package luwindows
 
 import (
 	"encoding/json"

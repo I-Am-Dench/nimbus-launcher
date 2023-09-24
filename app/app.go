@@ -13,7 +13,7 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"github.com/I-Am-Dench/lu-launcher/app/windows"
+	"github.com/I-Am-Dench/lu-launcher/app/luwindows"
 	"github.com/I-Am-Dench/lu-launcher/client"
 	"github.com/I-Am-Dench/lu-launcher/luconfig"
 	"github.com/I-Am-Dench/lu-launcher/luwidgets"
@@ -316,16 +316,16 @@ func (app *App) ShowSettings() {
 	settings.Show()
 }
 
-func (app *App) ShowPatch(patch resource.Patch, onConfirmCancel func(windows.PatchAcceptState)) {
+func (app *App) ShowPatch(patch resource.Patch, onConfirmCancel func(luwindows.PatchAcceptState)) {
 	if app.patchWindow != nil {
 		app.patchWindow.RequestFocus()
 		return
 	}
 
-	app.patchWindow = windows.NewPatchReviewWindow(app, patch, onConfirmCancel)
+	app.patchWindow = luwindows.NewPatchReviewWindow(app, patch, onConfirmCancel)
 	app.patchWindow.SetOnClosed(func() {
 		app.patchWindow = nil
-		onConfirmCancel(windows.PatchCancel)
+		onConfirmCancel(luwindows.PatchCancel)
 	})
 
 	// window := app.NewWindow("Review Patch")
@@ -396,14 +396,14 @@ func (app *App) Update(server *resource.Server) {
 			return
 		}
 
-		app.ShowPatch(patch, func(state windows.PatchAcceptState) {
+		app.ShowPatch(patch, func(state luwindows.PatchAcceptState) {
 			defer app.SetNormalState()
 
-			if state == windows.PatchCancel {
+			if state == luwindows.PatchCancel {
 				return
 			}
 
-			if state == windows.PatchReject {
+			if state == luwindows.PatchReject {
 				err := app.rejectedPatches.Add(server, patch.Version)
 				if err == nil {
 					log.Printf("Rejected patch version \"%s\"\n", patch.Version)
