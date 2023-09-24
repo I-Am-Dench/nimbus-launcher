@@ -274,12 +274,6 @@ func (app *App) PressPlay() {
 		return
 	}
 
-	// cmd := app.StartClient()
-	// if app.settings.CloseOnPlay {
-	// 	app.main.Close()
-	// 	return
-	// }
-
 	app.progressBar.Hide()
 	go func(cmd *exec.Cmd) {
 		cmd.Wait()
@@ -290,18 +284,6 @@ func (app *App) PressPlay() {
 func (app *App) PressUpdate() {
 	app.Update(app.CurrentServer())
 }
-
-// func (app *App) StartClient() *exec.Cmd {
-// 	cmd := exec.Command(app.settings.ClientPath())
-// 	if len(strings.TrimSpace(app.settings.Client.RunCommand)) > 0 {
-// 		cmd = exec.Command(app.settings.Client.RunCommand, app.settings.ClientPath())
-// 	}
-
-// 	cmd.Dir = app.settings.Client.Directory
-// 	cmd.Env = strings.Split(app.settings.Client.EnvironmentVariables, ";")
-// 	cmd.Start()
-// 	return cmd
-// }
 
 func (app *App) ShowSettings() {
 	if app.settingsWindow != nil {
@@ -493,12 +475,6 @@ func (app *App) IsReady() bool {
 	return app.playButton != nil
 }
 
-// This functionality can be expanded upon later
-// func (app *App) IsValidClient(path string) (bool, error) {
-// 	stats, err := os.Stat(path)
-// 	return !errors.Is(err, os.ErrNotExist) && !stats.IsDir(), err
-// }
-
 func (app *App) CheckClient() {
 	log.Printf("Using \"%s\" as client directory\n", app.settings.Client.Directory)
 
@@ -515,20 +491,6 @@ func (app *App) CheckClient() {
 		app.SetNormalState()
 	}
 }
-
-// func (app *App) CheckClient() {
-// 	log.Printf("Using \"%s\" as client directory\n", app.settings.Client.Directory)
-
-// 	if ok, err := app.IsValidClient(app.settings.ClientPath()); ok {
-// 		log.Printf("Found valid client \"%s\"\n", app.settings.Client.Name)
-// 		app.clientErrorIcon.Hide()
-// 		app.SetNormalState()
-// 	} else {
-// 		log.Printf("Cannot find valid executable \"%s\" in client directory: %v", app.settings.Client.Name, err)
-// 		app.playButton.Disable()
-// 		app.clientErrorIcon.Show()
-// 	}
-// }
 
 func (app *App) Start() {
 	app.CheckClient()
