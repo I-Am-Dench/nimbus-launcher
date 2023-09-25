@@ -86,4 +86,4 @@ Two main phases occur when you press the `Play` button:
 #### Linux
 
 - This features has not been fully implemented.
-- I have been able to get the client running through `wine`, however, I have not been able to get it running through the launcher. If you are able to get this working, please create a pull request.
+- I *have* been able to get the client running through `wine`, however, I have not been able to get it running through the launcher. If you are able to get this working, please create a pull request.
