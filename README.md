@@ -26,13 +26,11 @@ go install github.com/I-Am-Dench/lu-launcher@latest
 
 If you would like to build or run the launcher from the source code, you will need both `go` and `gcc` installed on your system. While this program does not directly use `gcc`, its dependency, [fyne.io](https://github.com/fyne-io/fyne), uses it for compiling OpenGL. After these tools have been set up, you can use either the `go run` or `go build` commands to run or compile the launcher.
 
-Running:
-
 ```bash
 go run .
 ```
 
-Building:
+Or:
 
 ```bash
 go build .
