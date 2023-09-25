@@ -1,3 +1,3 @@
 #!/bin/bash
 
-CGO_CFLAGS="-DNS_FORMAT_ARGUMENT(A)=" go run main.go
+CGO_CFLAGS="-DNS_FORMAT_ARGUMENT(A)=" go run .
