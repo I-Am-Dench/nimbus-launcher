@@ -26,10 +26,6 @@ const (
 
 var versionPattern = regexp.MustCompile(`^v?[0-9]+\.[0-9]+\.[0-9]+([0-9a-zA-Z_.-]+)?$`)
 
-// func Of(elem ...string) string {
-// 	return filepath.Join(elem...)
-// }
-
 func Asset(name string) (*fyne.StaticResource, error) {
 	bytes, err := os.ReadFile(filepath.Join(assetsDir, name))
 	if err != nil {
