@@ -39,19 +39,19 @@ go build .
 
 ### Building or Running for MacOSX
 
-If you build or run the launcher from source on MacOSX, you may run into a compiler issues along the lines of:
+If you build or run the launcher from source on MacOSX, you may run into a compiler issue along the lines of:
 
 ```bash
 error: function does not return NSString
 ```
 
-If this is the case, you can use the `mac_run_fix.sh` and `mac_build_fix.sh` scripts instead of the `go run` or `go build` commands, respectively.
+If this is the case, you can use the `mac_run_fix.sh` or `mac_build_fix.sh` scripts instead of the `go run` or `go build` commands, respectively.
 
 ## Setup
 
-When you first run the launcher, ensure that your client configurations are properly set. Open up the settings window and click on `Launcher`. Make sure your Client Directory is configured your the folder your client exists in (which folder contains the `exe` and the `res/` directory), and your Client Name is configured to the name of your client executable (this will most likely be `legouniverse.exe` and will probably never change).
+When you first run the launcher, ensure that your client configurations are properly set. Open up the settings window and click on `Launcher`. Make sure your Client Directory is configured to your client's folder (the folder that contains the `res/` directory and the `exe` file), and your Client Name is configured to the name of the client executable (this will most likely be `legouniverse.exe` and will probably never change).
 
-When you close the settings window, ensure that the `Play` button is enable. This means your client is properly configured.
+When you close the settings window, ensure that the `Play` button is enabled. If it is, the launcher is properly configured.
 
 You can then open the settings window again, and click on the `Servers` tab (this should be selected by default). Add or edit any server configurations that you need and then close settings window.
 
@@ -66,7 +66,7 @@ Two main phases occur when you press the `Play` button:
 
 ### 1. Client Preparation
 
-- Any cached client resources (original client resources that were replaced through patches) are copied over to their original locations. The copying happens for each resource stored in the `settings/client_cache.sqlite` database, regardless if the replaced resources is original or not.
+- Any cached client resources (original client resources that were replaced through patches) are copied over to their original locations. The copying happens for each resource stored in the `settings/client_cache.sqlite` database, regardless if the replaced resources are original or not.
 - If the currently selected server is not the same as the previously run server, the `boot.cfg` file for the currently selected server is copied over into the client directory.
 - Any resources that are a part of the current patch for the selected server are copied over into the client, caching the resources already there, ONLY IF the resource does not yet exist in the `settings/client_cache.sqlite` database.
 
@@ -74,7 +74,7 @@ Two main phases occur when you press the `Play` button:
 
 #### Windows
 
-- The client is simply run as `./legouniverse.exe` where the current directory is the configured `Client Directory`.
+- The client is run as `./legouniverse.exe` where the current directory is the configured `Client Directory`.
 
 #### MacOSX
 
