@@ -26,12 +26,12 @@ const (
 
 var versionPattern = regexp.MustCompile(`^v?[0-9]+\.[0-9]+\.[0-9]+([0-9a-zA-Z_.-]+)?$`)
 
-func Of(elem ...string) string {
-	return filepath.Join(elem...)
-}
+// func Of(elem ...string) string {
+// 	return filepath.Join(elem...)
+// }
 
 func Asset(name string) (*fyne.StaticResource, error) {
-	bytes, err := os.ReadFile(Of(assetsDir, name))
+	bytes, err := os.ReadFile(filepath.Join(assetsDir, name))
 	if err != nil {
 		return nil, fmt.Errorf("assert read error: %v", err)
 	}
@@ -49,7 +49,7 @@ func InitializeSettings() error {
 
 	log.Println("Initializing settings directories...")
 
-	err = os.MkdirAll(Of(settingsDir, serversDir), 0755)
+	err = os.MkdirAll(filepath.Join(settingsDir, serversDir), 0755)
 	if err != nil {
 		return err
 	}
@@ -84,7 +84,7 @@ func InitializeSettings() error {
 }
 
 func LauncherSettings() (Settings, error) {
-	data, err := os.ReadFile(Of(settingsDir, "launcher.json"))
+	data, err := os.ReadFile(filepath.Join(settingsDir, "launcher.json"))
 	if err != nil {
 		return Settings{}, fmt.Errorf("launcher settings read: %v", err)
 	}
@@ -115,7 +115,7 @@ func PatchRejections() (RejectedPatches, error) {
 }
 
 func Exists(name string) bool {
-	_, err := os.Stat(Of(settingsDir, name))
+	_, err := os.Stat(filepath.Join(settingsDir, name))
 	return !errors.Is(err, os.ErrNotExist)
 }
 

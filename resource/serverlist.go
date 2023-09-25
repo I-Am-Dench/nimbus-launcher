@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 )
 
 type ServerList struct {
@@ -17,7 +18,7 @@ func (servers *ServerList) SaveInfos() error {
 		return fmt.Errorf("cannot save server infos: %v", err)
 	}
 
-	err = os.WriteFile(Of(settingsDir, "servers.json"), data, 0755)
+	err = os.WriteFile(filepath.Join(settingsDir, "servers.json"), data, 0755)
 	if err != nil {
 		return fmt.Errorf("cannot save server infos: %v", err)
 	}
@@ -26,7 +27,7 @@ func (servers *ServerList) SaveInfos() error {
 }
 
 func (servers *ServerList) Load() error {
-	data, err := os.ReadFile(Of(settingsDir, "servers.json"))
+	data, err := os.ReadFile(filepath.Join(settingsDir, "servers.json"))
 	if err != nil {
 		return fmt.Errorf("cannot read servers.json: %v", err)
 	}

@@ -50,7 +50,7 @@ func (settings *Settings) Save() error {
 		return fmt.Errorf("marshal settings: %v", err)
 	}
 
-	err = os.WriteFile(Of(settingsDir, "launcher.json"), data, 0755)
+	err = os.WriteFile(filepath.Join(settingsDir, "launcher.json"), data, 0755)
 	if err != nil {
 		return fmt.Errorf("write settings: %v", err)
 	}

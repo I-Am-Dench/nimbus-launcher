@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/I-Am-Dench/lu-launcher/luconfig"
@@ -56,7 +57,7 @@ func (server *Server) SaveConfig() error {
 		return fmt.Errorf("cannot marshal boot.cfg: %v", err)
 	}
 
-	err = os.WriteFile(Of(settingsDir, serversDir, bootName), data, 0755)
+	err = os.WriteFile(filepath.Join(settingsDir, serversDir, bootName), data, 0755)
 	if err != nil {
 		return fmt.Errorf("cannot save boot.cfg: %v", err)
 	}
@@ -71,7 +72,7 @@ func (server *Server) LoadConfig() error {
 		return nil
 	}
 
-	data, err := os.ReadFile(Of(settingsDir, serversDir, server.Boot))
+	data, err := os.ReadFile(filepath.Join(settingsDir, serversDir, server.Boot))
 	if err != nil {
 		return fmt.Errorf("cannot load boot.cfg: %v", err)
 	}
@@ -89,7 +90,7 @@ func (server *Server) DeleteConfig() error {
 }
 
 func (server *Server) BootPath() string {
-	return Of(settingsDir, serversDir, server.Boot)
+	return filepath.Join(settingsDir, serversDir, server.Boot)
 }
 
 func (server *Server) PatchServerHost() string {
