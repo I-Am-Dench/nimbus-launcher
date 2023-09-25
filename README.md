@@ -1,6 +1,6 @@
-# LEGO® Universe Launcher
+# Nimbus Launcher
 
-The LEGO® Universe Launcher helps players to quickly add, swap, and run variable server configurations.
+The Nimbus Launcher helps players to quickly add, swap, and run variable server configurations for the game LEGO® Universe, which was discontinued as of January 2012.
 
 This program DOES NOT include a LEGO® Universe client and/or its contents. Players must already have a client located on their system and configure the launcher to point to the client's directory.
 

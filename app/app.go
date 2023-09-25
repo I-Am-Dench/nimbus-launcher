@@ -67,7 +67,7 @@ func New(settings *resource.Settings, servers resource.ServerList, rejectedPatch
 	}
 	a.clientCache = cache
 
-	a.main = a.NewWindow("Lego Universe")
+	a.main = a.NewWindow("Nimbus Launcher")
 	a.main.SetFixedSize(true)
 	a.main.Resize(fyne.NewSize(800, 300))
 	a.main.SetMaster()
