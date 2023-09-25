@@ -16,6 +16,11 @@ func (app *App) LoadContent() {
 	heading := canvas.NewText("Launch Lego Universe", color.White)
 	heading.TextSize = 24
 
+	infoButton := widget.NewButtonWithIcon(
+		"", theme.InfoIcon(), app.ShowInfo,
+	)
+	infoButton.Importance = widget.LowImportance
+
 	addServerButton := widget.NewButtonWithIcon(
 		"", theme.SettingsIcon(), app.ShowSettings,
 	)
@@ -62,7 +67,7 @@ func (app *App) LoadContent() {
 	app.main.SetContent(
 		container.NewPadded(
 			container.NewBorder(
-				heading,
+				container.NewHBox(heading, infoButton),
 				app.Footer(),
 				nil, nil,
 				innerContent,
