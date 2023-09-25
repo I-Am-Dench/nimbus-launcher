@@ -8,7 +8,7 @@ Due to the LEGO Group's wishes, LEGO® Universe servers ARE NOT (and should not)
 
 ## Installation
 
-Binaries for the current version of the launcher will be available in the [Releases]() section of this repo. Releases will be labeled with the current launcher version followed by the target platform (i.e. `v1.0.0-win.zip`). The `zip` file will include an `assets` folder and a copy of the compiled executable. The `assets` folder and executable should be siblings withing the same directory.
+Binaries for the current version of the launcher will be available in the [Releases]() section of this repo. Releases will be labeled with the current launcher version followed by the target platform (i.e. `v1.0.0-win.zip`). The `zip` file will include an `assets` folder and a copy of the compiled executable. The structure of the `zip` file's contents should be as follows:
 
 ```
 launcher/
