@@ -32,6 +32,7 @@ type App struct {
 	main           fyne.Window
 	settingsWindow fyne.Window
 	patchWindow    fyne.Window
+	infoWindow     fyne.Window
 
 	serverList *luwidgets.ServerList
 
@@ -334,6 +335,21 @@ func (app *App) ShowPatch(patch resource.Patch, onConfirmCancel func(luwindows.P
 
 	app.patchWindow.CenterOnScreen()
 	app.patchWindow.Show()
+}
+
+func (app *App) ShowInfo() {
+	if app.infoWindow != nil {
+		app.infoWindow.RequestFocus()
+		return
+	}
+
+	app.infoWindow = luwindows.NewInfoWindow(app)
+	app.infoWindow.SetOnClosed(func() {
+		app.infoWindow = nil
+	})
+
+	app.infoWindow.CenterOnScreen()
+	app.infoWindow.Show()
 }
 
 func (app *App) RunUpdate(server *resource.Server, patch resource.Patch) {
