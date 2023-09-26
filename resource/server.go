@@ -96,7 +96,7 @@ func (server *Server) BootPath() string {
 }
 
 func (server *Server) PatchServerHost() string {
-	return fmt.Sprint(server.Config.PatchServerIP, ":", server.Config.PatchServerPort)
+	return fmt.Sprint(server.PatchProtocol, "://", server.Config.PatchServerIP, ":", server.Config.PatchServerPort)
 }
 
 func (server *Server) PatchServerUrl(elem ...string) (string, error) {
