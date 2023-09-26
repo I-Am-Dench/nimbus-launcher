@@ -51,9 +51,13 @@ func NewServerForm(window fyne.Window, heading string) *ServerForm {
 	form.patchToken = widget.NewPasswordEntry()
 
 	form.patchProtocol = widget.NewSelect(
-		[]string{"http", "https"}, func(s string) {},
+		[]string{"(None)", "http", "https"}, func(s string) {
+			if s == "(None)" {
+				form.patchProtocol.ClearSelected()
+			}
+		},
 	)
-	form.patchProtocol.PlaceHolder = "(Select protocol)"
+	form.patchProtocol.PlaceHolder = "(None)"
 
 	form.bootForm = NewBootForm(window)
 
