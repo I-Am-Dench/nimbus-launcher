@@ -105,7 +105,7 @@ Configuring the launcher to point to a patch server is done through the `boot.cf
 
 ### Patch Server Setup
 
-To set up a patch server, you need an HTTP/HTTPS server. Whenever the launcher searches for updates, it makes a request to the patch server for a `pathes.json` file. This file contains the server's current patch version and a list of available versions. Currently, the list of versions is unused.
+To set up a patch server, you need an HTTP/HTTPS server. Whenever the launcher searches for updates, it makes a request to the patch server directory expecting a `json` file (referred to as `patches.json`). This file contains the server's current patch version and a list of available versions. Currently, the list of versions is unused.
 
 Example: `http://127.0.0.1:1000/patches/`
 
@@ -118,7 +118,7 @@ Example: `http://127.0.0.1:1000/patches/`
 }
 ```
 
-Once the launcher has determined that the configured server has an available patch, the launcher makes a request for a `patch.json` file.
+Once the launcher has determined that the configured server has an available patch, the launcher makes a request to the version expecting a `json` file (referred to as `patch.json`).
 
 Example: `http://127.0.0.1:1000/patches/1.0.0/`
 
