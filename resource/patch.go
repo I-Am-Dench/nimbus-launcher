@@ -235,7 +235,11 @@ func (patch *Patch) getDependencies(server *Server, recurse ...bool) ([]Patch, e
 	return patches, nil
 }
 
-func (patch *Patch) Run(server *Server) error {
+func (patch *Patch) Run(server *Server, rejected RejectedPatches) error {
+	if rejected.IsRejected(server, patch.Version) {
+		return fmt.Errorf("run patch: \"%s\" is rejected", patch.Version)
+	}
+
 	if err := ValidateVersionName(patch.Version); err != nil {
 		return fmt.Errorf("run patch: %v", err)
 	}
@@ -246,20 +250,20 @@ func (patch *Patch) Run(server *Server) error {
 	)
 }
 
-func (patch *Patch) RunWithDependencies(server *Server) error {
+func (patch *Patch) RunWithDependencies(server *Server, rejected RejectedPatches) error {
 	dependencies, err := patch.getDependencies(server)
 	if err != nil {
 		return err
 	}
 
 	for _, dependency := range dependencies {
-		err := dependency.Run(server)
+		err := dependency.Run(server, rejected)
 		if err != nil {
 			return fmt.Errorf("dependency run error: %v", err)
 		}
 	}
 
-	return patch.Run(server)
+	return patch.Run(server, rejected)
 }
 
 func (patch *Patch) TransferResources(clientDirectory string, cache client.Cache, server *Server) error {

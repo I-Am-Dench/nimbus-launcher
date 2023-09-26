@@ -356,7 +356,7 @@ func (app *App) RunUpdate(server *resource.Server, patch resource.Patch) {
 	defer app.serverList.RemoveAsUpdating(server)
 
 	log.Println("Starting update...")
-	err := patch.RunWithDependencies(server)
+	err := patch.RunWithDependencies(server, app.rejectedPatches)
 	if err != nil {
 		log.Println(err)
 		dialog.ShowError(err, app.main)
