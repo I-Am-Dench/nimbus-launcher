@@ -79,6 +79,7 @@ func NewServerForm(window fyne.Window, heading string) *ServerForm {
 
 				form.title.SetText(server.Name)
 				form.patchToken.SetText(server.PatchToken)
+				form.patchProtocol.SetSelected(server.PatchProtocol)
 
 				bootConfig := luconfig.LUConfig{}
 				err = luconfig.Unmarshal([]byte(server.Boot.Text), &bootConfig)
