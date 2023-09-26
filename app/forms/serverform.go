@@ -53,6 +53,7 @@ func NewServerForm(window fyne.Window, heading string) *ServerForm {
 	form.patchProtocol = widget.NewSelect(
 		[]string{"http", "https"}, func(s string) {},
 	)
+	form.patchProtocol.PlaceHolder = "(Select protocol)"
 
 	form.bootForm = NewBootForm(window)
 
