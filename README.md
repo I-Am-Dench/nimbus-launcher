@@ -1,6 +1,6 @@
 # Nimbus Launcher
 
-The Nimbus Launcher helps players to quickly add, swap, and run variable server configurations for the game LEGO® Universe, which was discontinued as of January 2012.
+The Nimbus Launcher helps players to quickly add, swap, and run variable server configurations for the game LEGO® Universe, which was discontinued as of January 2012. Per-server patch configurations are also available as a strictly experimental feature. More information is can be found [below](#patches).
 
 This program DOES NOT include a LEGO® Universe client and/or its contents. Players must already have a client located on their system and configure the launcher to point to the client's directory.
 
@@ -85,3 +85,95 @@ Two main phases occur when you press the `Play` button:
 
 - This features has not been fully implemented.
 - I *have* been able to get the client running through `wine`, however, I have not been able to get it running through the launcher. If you are able to get this working, please create a pull request.
+
+## Patches
+
+If, as a server owner, you decide to use the patch server capabilities, DO NOT distribute any resources that were used by, or packaged by, the LEGO® Universe client while it was in operation.
+
+Using the patch server functionality allows automatic updating of both launcher configurations and client resources on a server-configuration by server-configuration basis. For example, a local server and a friend's server can be both run with different applied client resources, i.e., having a custom grass texture on the local server and the normal texture on the friend's server. Or for instance, if the AUTHSERVERIP changes for a given server, the launcher can detect a change in patch versions, and then pull and update the `boot.cfg` file for the out of date server.
+
+For non server owners, always approach patches with EXTREME CAUTION. Never accept an update from a server you do not trust. By default, the `Review Patch Before Update` setting is enabled. While this setting is on, the contents of the fetched `patch.json` will be displayed in a window with the options to Accept the update, Cancel the update, or **Reject** the update. **If accepted**, the patch contents will be downloaded and updated as normal. **If cancelled**, the patch contents will not be downloaded nor updated, and the patch will simply be ignored until the next time the updates are refreshed. **If rejected**, the patch version will be blacklisted and will always be ignored by the launcher or if it appears as a patch dependency.
+
+### Patch Server Configuration
+
+Configuring the launcher to point to a patch server is done through the `boot.cfg` file. Update the following fields:
+
+- `PATCHSERVERIP`: Configured server IP
+- `PATCHSERVERPORT`: Configured server port
+- `PATCHSERVERDIR`: The patch server directory where patch resources are located (i.e. if the patch server host is `http://127.0.0.1:1000` and `PATCHSERVERDIR` is `patches`, the launcher will make requests to `http://127.0.0.1:1000/patches`)
+
+### Patch Server Setup
+
+To set up a patch server, you need an HTTP/HTTPS server. Whenever the launcher searches for updates, it makes a request to the patch server for a `pathes.json` file. This file contains the server's current patch version and a list of available versions. Currently, the list of versions is unused.
+
+Example: `http://127.0.0.1:1000/patches/`
+
+```json
+{
+    "currentVersion": "1.0.0",
+    "versions": [
+        "1.0.0"
+    ]
+}
+```
+
+Once the launcher has determined that the configured server has an available patch, the launcher makes a request for a `patch.json` file.
+
+Example: `http://127.0.0.1:1000/patches/1.0.0/`
+
+```json
+{
+    "downloads": [
+        {
+            "path": "/1.0.0/logo.dds",
+            "name": "logo.dds"
+        }
+    ],
+    "transfer": {
+        "logo.dds": "res/ui/ingame/passport_i90.dds"
+    }
+}
+```
+
+The above example will download `http://127.0.0.1:1000/patches/1.0.0/logo.dds` and save it to a file called `logo.dds`. During the [Client Preparation](#1-client-preparation) phase, the `logo.dds` file will replace the `res/ui/ingame/passport_i90.dds` file within the client directory.
+
+The patch server's contents may look something like this:
+
+```
+patches/
+|-- 1.0.0/
+|   |-- logo.dds
+|   |-- patch.json
+|-- patches.json
+```
+
+Let's say we need another patch. We update the `patches.json` file as such:
+
+```json
+{
+    "currentVersion": "1.1.0",
+    "versions": [
+        "1.0.0",
+        "1.1.0"
+    ]
+}
+```
+
+And then we add another `patch.json` file as such:
+
+```json
+{
+    "depend": ["1.0.0*"],
+    "downloads": [
+        {
+            "path": "/1.1.0/boot.cfg",
+            "name": "boot.cfg"
+        }
+    ],
+    "updates": {
+        "boot": "boot.cfg"
+    }
+}
+```
+
+The above patch will download `http://127.0.0.1:1000/patches/1.1.0/boot.cfg` and save it to a file called `boot.cfg`. The `updates` directive makes changes that may be more complicated than just moving resources into the client. The `boot` field says that it should update the server's `boot.cfg` file. The `depend` directive will download and run the specified versions (unless it is blacklisted), WITHOUT the versions' dependencies. If the version is appended by a `*`, then the dependency is recursive, and should download and run that version WITH dependencies.
