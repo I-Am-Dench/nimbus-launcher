@@ -61,7 +61,7 @@ func InitializeSettings() error {
 
 	if !Exists("servers.json") {
 		log.Println("\"servers.json\" does not exist; Generating default version")
-		localServer, err := CreateServer("Localhost", "", luconfig.DefaultConfig())
+		localServer, err := CreateServer("Localhost", "", "", luconfig.DefaultConfig())
 		if err != nil {
 			return err
 		}

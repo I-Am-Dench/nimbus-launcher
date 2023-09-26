@@ -18,8 +18,9 @@ import (
 type ServerForm struct {
 	container *fyne.Container
 
-	title      *widget.Entry
-	patchToken *widget.Entry
+	title         *widget.Entry
+	patchToken    *widget.Entry
+	patchProtocol *widget.Select
 
 	bootForm *BootForm
 }
@@ -48,6 +49,10 @@ func NewServerForm(window fyne.Window, heading string) *ServerForm {
 	}
 
 	form.patchToken = widget.NewPasswordEntry()
+
+	form.patchProtocol = widget.NewSelect(
+		[]string{"http", "https"}, func(s string) {},
+	)
 
 	form.bootForm = NewBootForm(window)
 
@@ -94,6 +99,7 @@ func NewServerForm(window fyne.Window, heading string) *ServerForm {
 			widget.NewFormItem("Server XML", container.NewBorder(nil, nil, serverXMLOpen, nil, serverXML)),
 			widget.NewFormItem("Name", form.title),
 			widget.NewFormItem("Patch Token", form.patchToken),
+			widget.NewFormItem("Patch Protocol", form.patchProtocol),
 		),
 		widget.NewSeparator(),
 		bootHeading,
@@ -109,7 +115,7 @@ func (form *ServerForm) CreateServer() (*resource.Server, error) {
 		return nil, err
 	}
 
-	return resource.CreateServer(form.title.Text, form.patchToken.Text, form.bootForm.GetConfig())
+	return resource.CreateServer(form.title.Text, form.patchToken.Text, form.patchProtocol.Selected, form.bootForm.GetConfig())
 }
 
 func (form *ServerForm) UpdateWith(server *resource.Server) {
@@ -119,12 +125,13 @@ func (form *ServerForm) UpdateWith(server *resource.Server) {
 
 	form.title.SetText(server.Name)
 	form.patchToken.SetText(server.PatchToken)
+	form.patchProtocol.SetSelected(server.PatchProtocol)
 
 	form.bootForm.UpdateWith(server.Config)
 }
 
 func (form *ServerForm) Get() *resource.Server {
-	return resource.NewServer(form.title.Text, form.patchToken.Text, form.bootForm.GetConfig())
+	return resource.NewServer(form.title.Text, form.patchToken.Text, form.patchProtocol.Selected, form.bootForm.GetConfig())
 }
 
 func (form *ServerForm) Validate() error {

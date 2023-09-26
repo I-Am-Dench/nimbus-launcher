@@ -17,11 +17,12 @@ const (
 )
 
 type Server struct {
-	Id           string `json:"id"`
-	Name         string `json:"name"`
-	Boot         string `json:"boot"`
-	PatchToken   string `json:"patchToken"`
-	CurrentPatch string `json:"currentPatch"`
+	Id            string `json:"id"`
+	Name          string `json:"name"`
+	Boot          string `json:"boot"`
+	PatchToken    string `json:"patchToken"`
+	PatchProtocol string `json:"patchProtocol"`
+	CurrentPatch  string `json:"currentPatch"`
 
 	Config *luconfig.LUConfig `json:"-"`
 
@@ -31,17 +32,18 @@ type Server struct {
 	pendingUpdate bool `json:"-"`
 }
 
-func NewServer(name, patchToken string, config *luconfig.LUConfig) *Server {
+func NewServer(name, patchToken, patchProtocol string, config *luconfig.LUConfig) *Server {
 	server := new(Server)
 	server.Id = fmt.Sprint(time.Now().Unix())
 	server.Name = name
 	server.PatchToken = patchToken
+	server.PatchProtocol = patchProtocol
 	server.Config = config
 	return server
 }
 
-func CreateServer(name, patchToken string, config *luconfig.LUConfig) (*Server, error) {
-	server := NewServer(name, patchToken, config)
+func CreateServer(name, patchToken, patchProtocol string, config *luconfig.LUConfig) (*Server, error) {
+	server := NewServer(name, patchToken, patchProtocol, config)
 	return server, server.SaveConfig()
 }
 
