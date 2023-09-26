@@ -177,7 +177,9 @@ And then we add another `patch.json` file as such:
 }
 ```
 
-The above patch will download `http://127.0.0.1:1000/patches/1.1.0/boot.cfg` and save it to a file called `boot.cfg`. The `updates` directive makes changes that may be more complicated than just moving resources into the client. The `boot` field says that it should update the server's `boot.cfg` file. The `depend` directive will download and run the specified versions (unless it is blacklisted), WITHOUT the versions' dependencies. If the version is appended by a `*`, then the dependency is recursive, and should download and run that version WITH dependencies.
+The above patch will download `http://127.0.0.1:1000/patches/1.1.0/boot.cfg` and save it to a file called `boot.cfg`. The `updates` directive makes changes that may be more complicated than just moving resources into the client. The `boot` field says that it should update the server's `boot.cfg` file.
+
+The `depend` directive will download and run the specified versions (unless that version is blacklisted), WITHOUT the versions' dependencies. If the version is appended by a `*`, then the dependency is recursive, and should download and run that version WITH dependencies.
 
 Our final patch server contents may be similar to the below example:
 
