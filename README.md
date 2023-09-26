@@ -193,3 +193,9 @@ patches/
 |   |-- patch.json
 |-- patches.json
 ```
+
+### Patch Server Authentication (Optional)
+
+Whenever the launcher makes a patch server request, if the `Patch Token` settings is not empty, it will include a custom header, `TPP-Token` (Theo's Patching Protocol Token), with a value of that configured token. The patch server should verify that the token is valid before sending any patch content. If the token is invalid, the server should respond with a `401 - Unauthorized` status code. However, any status code >= `300` will also work and be handled the same.
+
+The patch token should be included within the exported `server.xml` file, but still be changed by editing the server through the settings window.
