@@ -71,7 +71,8 @@ type Patch struct {
 	} `json:"downloads,omitempty"`
 
 	Updates struct {
-		Boot string `json:"boot,omitempty"`
+		Boot          string `json:"boot,omitempty"`
+		PatchProtocol string `json:"patchProtocol,omitempty"`
 	} `json:"updates,omitempty"`
 
 	Transfers map[string]string `json:"transfer,omitempty"`
@@ -190,8 +191,22 @@ func (patch *Patch) updateBoot(server *Server) error {
 	return server.SaveConfig()
 }
 
+func (patch *Patch) updatePatchProtocol(server *Server) error {
+	if len(patch.Updates.PatchProtocol) == 0 {
+		return nil
+	}
+
+	log.Printf("Updating patch server protocol to \"%s\"\n", patch.Updates.PatchProtocol)
+	server.PatchProtocol = patch.Updates.PatchProtocol
+
+	return nil
+}
+
 func (patch *Patch) updateFiles(server *Server) error {
-	return patch.updateBoot(server)
+	return errors.Join(
+		patch.updateBoot(server),
+		patch.updatePatchProtocol(server),
+	)
 }
 
 func (patch *Patch) parseDependencyVersion(version string) (string, bool) {
