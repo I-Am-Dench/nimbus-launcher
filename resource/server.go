@@ -1,6 +1,7 @@
 package resource
 
 import (
+	"encoding/xml"
 	"fmt"
 	"log"
 	"net/http"
@@ -133,8 +134,14 @@ func (server *Server) ToXML() ServerXML {
 		}{
 			Text: string(data),
 		},
-		PatchToken:    server.PatchToken,
-		PatchProtocol: server.PatchProtocol,
+		Patch: struct {
+			XMLName  xml.Name `xml:"patch"`
+			Token    string   `xml:"token"`
+			Protocol string   `xml:"protocol"`
+		}{
+			Token:    server.PatchToken,
+			Protocol: server.PatchProtocol,
+		},
 	}
 }
 

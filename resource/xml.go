@@ -7,11 +7,14 @@ import (
 )
 
 type ServerXML struct {
-	XMLName       xml.Name `xml:"server"`
-	Name          string   `xml:"name"`
-	PatchToken    string   `xml:"token"`
-	PatchProtocol string   `xml:"patchProtocol"`
-	Boot          struct {
+	XMLName xml.Name `xml:"server"`
+	Name    string   `xml:"name"`
+	Patch   struct {
+		XMLName  xml.Name `xml:"patch"`
+		Token    string   `xml:"token"`
+		Protocol string   `xml:"protocol"`
+	} `xml:"patch"`
+	Boot struct {
 		Text string `xml:",innerxml"`
 	} `xml:"boot"`
 }
