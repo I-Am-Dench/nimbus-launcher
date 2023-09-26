@@ -100,7 +100,8 @@ Configuring the launcher to point to a patch server is done through the `boot.cf
 
 - `PATCHSERVERIP`: Configured server IP
 - `PATCHSERVERPORT`: Configured server port
-- `PATCHSERVERDIR`: The patch server directory where patch resources are located (i.e. if the patch server host is `http://127.0.0.1:1000` and `PATCHSERVERDIR` is `patches`, the launcher will make requests to `http://127.0.0.1:1000/patches`)
+- `PATCHSERVERDIR`: The patch server directory where patch resources are located
+  - If the patch server host is `http://127.0.0.1:1000` and `PATCHSERVERDIR` is `patches`, the launcher will make requests to `http://127.0.0.1:1000/patches`
 
 ### Patch Server Setup
 
