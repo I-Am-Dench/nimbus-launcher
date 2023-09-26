@@ -133,7 +133,7 @@ func (app *App) BindServerInfo(server *resource.Server) {
 	app.signupBinding.Set(server.Config.SignupURL)
 	app.signinBinding.Set(server.Config.SigninURL)
 
-	if len(server.Config.PatchServerIP) > 0 {
+	if len(server.PatchProtocol) > 0 {
 		app.refreshUpdatesButton.Show()
 	} else {
 		app.refreshUpdatesButton.Hide()
