@@ -133,6 +133,8 @@ func (server *Server) ToXML() ServerXML {
 		}{
 			Text: string(data),
 		},
+		PatchToken:    server.PatchToken,
+		PatchProtocol: server.PatchProtocol,
 	}
 }
 
