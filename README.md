@@ -181,7 +181,7 @@ The above patch will download `http://127.0.0.1:1000/patches/1.1.0/boot.cfg` and
 
 The `depend` directive will download and run the specified versions (unless that version is blacklisted), WITHOUT the versions' dependencies. If the version is appended by a `*`, then the dependency is recursive, and should download and run that version WITH dependencies. In this example, the patch will download and run patch version `1.0.0`, and if it has dependencies, download and run those too.
 
-Our final patch server contents may be similar to the below example:
+Our final patch server contents may be similar to the following example:
 
 ```
 patches/
