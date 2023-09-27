@@ -24,6 +24,8 @@ If you have Go installed on your system, the launcher can be installed by using 
 go install github.com/I-Am-Dench/lu-launcher@latest
 ```
 
+While runnable on both Mac and Linux, both release targets WILL NOT be present under Releases until startup functionality as has been fully implemented and tested. If you would like to try the launcher on either platforms, you will need to build and/or run the program from the source code. 
+
 ## Building or Running from Source
 
 If you would like to build or run the launcher from the source code, you will need both `go` and `gcc` installed on your system. While this program does not directly use `gcc`, its dependency, [fyne.io](https://github.com/fyne-io/fyne), uses it for compiling OpenGL. After these tools have been set up, you can use either the `go run` or `go build` commands to run or compile the launcher.
