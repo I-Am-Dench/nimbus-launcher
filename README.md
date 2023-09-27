@@ -203,3 +203,29 @@ patches/
 Whenever the launcher makes a patch server request, if the `Patch Token` settings is not empty, it will include a custom header, `TPP-Token` (Theo's Patching Protocol Token), with a value of that configured token. The patch server should verify that the token is valid before sending any patch content. If the token is invalid, the server should respond with a `401 - Unauthorized` status code. However, any status code >= `300` will also work and be handled the same.
 
 The patch token should be included within the exported `server.xml` file, but still be changed by editing the server through the settings window.
+
+### Patch Versioning
+
+The launcher abides by a strict versioning convention. Any patch version that does not follow the versioning pattern will incure an error.
+
+Version names are matched with the following Regex pattern:
+
+```
+^v?[0-9]+\.[0-9]+\.[0-9]+([0-9a-zA-Z_.-]+)?$
+```
+
+This pattern enforces the use of 3 version parts: MAJOR, MINOR, and PATCH. Versions are optionally followed by any number of alphnumeric characters or a \`_\`, \`.\`, or \`-\`. An option \`v\` prefix is also allowed.
+
+#### Valid versions
+
+- `1.0.0`
+- `v1.0.0`
+- `2.5.09-alpha2`
+- `v3.0.1_experimental`
+
+#### Invalid versions
+
+- `1`
+- `v2`
+- `1.0`
+- `version-1`
