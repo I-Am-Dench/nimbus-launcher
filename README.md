@@ -16,6 +16,8 @@ launcher/
 |-- launcher.exe
 ```
 
+When you extract the contents of the `zip` file, the structure should be kept the same.
+
 If you have Go installed on your system, the launcher can be installed by using the `go install` command:
 
 ```bash
