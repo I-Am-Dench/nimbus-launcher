@@ -100,7 +100,17 @@ For non server owners, always approach patches with EXTREME CAUTION. Never accep
 
 ### Patch Server Configuration
 
-Configuring the launcher to point to a patch server is done through the `boot.cfg` file. Update the following fields:
+Configuring the launcher to point to a patch server is done through both the `boot.cfg` file and the local server configuration.
+
+When updating or creating a local server configuration within the settings window, select one of the options for the **Patch Protocol** field:
+
+- (None)
+- http
+- https
+
+The selected option will determine which protocol the launcher will make requests to patch server with. Selecting (None) will disable all patch server configurations.
+
+For the `boot.cfg` file, modify the following fields:
 
 - `PATCHSERVERIP`: Configured server IP
 - `PATCHSERVERPORT`: Configured server port
