@@ -291,7 +291,7 @@ func (patch *Patch) TransferResources(clientDirectory string, cache client.Cache
 		log.Printf("Transferring: %s -> %s\n", source, destination)
 
 		resourceName := filepath.Clean(destination)
-		if !cache.ResourceExists(resourceName) {
+		if !cache.Has(resourceName) {
 			resource, err := client.ReadResource(clientDirectory, resourceName)
 			if err != nil {
 				return fmt.Errorf("could not read patch destination: %v", err)
