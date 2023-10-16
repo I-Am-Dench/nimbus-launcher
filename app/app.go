@@ -375,7 +375,7 @@ func (app *App) Update(server *resource.Server) {
 
 	app.serverList.MarkAsUpdating(server)
 
-	patches, ok := server.ServerPatches()
+	versions, ok := server.PatchVersions()
 	if !ok {
 		log.Printf("Patches missing for \"%s\"\n", server.Name)
 		return
@@ -396,7 +396,7 @@ func (app *App) Update(server *resource.Server) {
 			return
 		}
 
-		log.Printf("Patch received with %d downloads\n", len(patch.Downloads))
+		log.Printf("Patch received with %d downloads\n", len(patch.Download))
 
 		if !app.settings.ReviewPatchBeforeUpdate {
 			app.RunUpdate(server, patch)
@@ -423,7 +423,7 @@ func (app *App) Update(server *resource.Server) {
 
 			app.RunUpdate(server, patch)
 		})
-	}(patches.CurrentVersion, server)
+	}(versions.CurrentVersion, server)
 }
 
 func (app *App) CheckForUpdates(server *resource.Server) {
@@ -435,7 +435,7 @@ func (app *App) CheckForUpdates(server *resource.Server) {
 		return
 	}
 
-	if _, ok := server.ServerPatches(); ok {
+	if _, ok := server.PatchVersions(); ok {
 		log.Printf("Patches for \"%s\" already received", server.Name)
 		return
 	}
@@ -443,7 +443,7 @@ func (app *App) CheckForUpdates(server *resource.Server) {
 	app.SetCheckingUpdatesState()
 	go func(server *resource.Server) {
 		log.Printf("Checking for updates for \"%s\"; Current version: \"%s\"\n", server.Name, server.CurrentPatch)
-		patches, err := resource.GetServerPatches(server)
+		patches, err := resource.GetPatchVersions(server)
 		if err != nil {
 			log.Printf("Patch server error: %v\n", err)
 			if err != resource.ErrPatchesUnavailable && err != resource.ErrPatchesUnsupported {
@@ -451,7 +451,7 @@ func (app *App) CheckForUpdates(server *resource.Server) {
 			}
 
 			if err != resource.ErrPatchesUnauthorized {
-				server.SetServerPatches(resource.ServerPatches{})
+				server.SetPatchVersions(resource.PatchVersions{})
 			}
 
 			app.SetNormalState()
@@ -460,14 +460,14 @@ func (app *App) CheckForUpdates(server *resource.Server) {
 
 		if server.CurrentPatch == patches.CurrentVersion {
 			log.Println("Server is already latest version.")
-			server.SetServerPatches(patches)
+			server.SetPatchVersions(patches)
 			app.SetNormalState()
 			return
 		}
 
 		if err := resource.ValidateVersionName(patches.CurrentVersion); err != nil {
 			log.Println(err)
-			server.SetServerPatches(patches)
+			server.SetPatchVersions(patches)
 			app.SetNormalState()
 			return
 		}
@@ -480,7 +480,7 @@ func (app *App) CheckForUpdates(server *resource.Server) {
 			return
 		}
 
-		server.SetServerPatches(patches)
+		server.SetPatchVersions(patches)
 		server.SetPendingUpdate(true)
 		app.SetUpdateState()
 	}(server)
