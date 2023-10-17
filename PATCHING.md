@@ -52,3 +52,38 @@ While all Patch Directives within the patch.json can be included in any order, t
         - Update the *Local Server Boot Configuration* with the specified *Patch Resource*.
     - **protocol** : a protocol name
         - Update the *Local Server Configuration*’s protocol field with the specified protocol name.
+
+## Examples
+
+### *versions.json*
+
+```json
+{
+    "currentVersion": "v1.0.0",
+    "previousVersions": [
+        "v0.1.0",
+        "v0.2.0",
+        ...
+    ]
+}
+```
+
+### *patch.json*
+
+```json
+{
+    "depend": [ "v0.5.1*", ... ],
+    "download": [
+        {
+            "path": "/v1.0.0/boot.cfg",
+            "name": "boot.cfg"
+        }
+    ],
+    "update": {
+        "boot": "boot.cfg"
+    },
+    "transfer": {
+        "logo.dds": "res/ui/ingame/passport_i90.dds"
+    }
+}
+```
