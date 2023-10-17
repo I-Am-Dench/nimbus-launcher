@@ -204,7 +204,7 @@ func (app *App) TransferPatchResources(server *resource.Server) error {
 	}
 
 	app.progressBar.ShowIndefinite()
-	err = patch.TransferResources(app.settings.Client.Directory, app.clientCache, server)
+	err = patch.TransferAllResources(app.settings.Client.Directory, app.clientCache, server)
 	if err != nil {
 		return err
 	}
