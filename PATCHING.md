@@ -32,7 +32,7 @@ While this protocol could be broken down into a singular list of steps, this lis
 
 While all Patch Directives within the patch.json can be included in any order, the Patch Runner MUST run the directives in the following sequence:
 
-1. Dependencies (depend) - *Patch* dependencies MUST NOT inherit the *Local Patch Directory* from its parent *Patch*. Dependencies MUST NOT run the **update** directive: For each of the *Patch Versions* listed as a dependency ->
+1. Dependencies (**depend**) - *Patch* dependencies MUST NOT inherit the *Local Patch Directory* from its parent *Patch*. Dependencies MUST NOT run the **update** directive: For each of the *Patch Versions* listed as a dependency ->
     1. **If the current version name** iteration is INVALID ->
         1. The protocol MUST terminate.
     2. **If the current version name** iteration is VALID and is suffixed WITH `*` ->
