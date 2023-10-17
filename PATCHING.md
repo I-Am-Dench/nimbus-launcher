@@ -30,9 +30,16 @@ While this protocol could be broken down into a singular list of steps, this lis
 
 ### Update
 
-While all Patch Directives within the patch.json can be included in any order, the Patch Runner MUST run the directives in the following sequence:
+PLEASE NOTE THE FOLLOWING WHEN IMPLEMENTING A PATCH RUNNER:
 
-1. Dependencies (**depend**) - *Patch* dependencies MUST NOT inherit the *Local Patch Directory* from its parent *Patch*. Dependencies MUST NOT run the **update** directive: For each of the *Patch Versions* listed as a dependency ->
+- *Patch* dependencies MUST NOT inherit the *Local Patch Directory* from its parent *Patch*.
+- Dependencies MUST NOT run the **update** directive.
+- *download objects* include a `path` relative to the *Version Directory* and a `name` which is relative to the *Local Patch Directory*.
+- The Nimbus Launcher runs the **transfer** directive ONLY when the play button is pushed. The protocol DOES NOT enforce this as a standard.
+
+While all *Patch Directives* within the *patch.json* can be included in any order, the Patch Runner MUST run each directive in the following sequence:
+
+1. Dependencies (**depend**) - For each of the *Patch Versions* listed as a dependency ->
     1. **If the current version name** iteration is INVALID ->
         1. The protocol MUST terminate.
     2. **If the current version name** iteration is VALID and is suffixed WITH `*` ->
@@ -41,14 +48,14 @@ While all Patch Directives within the patch.json can be included in any order, t
     3. **If the current version name** iteration is VALID and is suffixed WITHOUT `*` ->
         1. Fetch the *patch.json* for the current version name
         2. Recursively run the [Update](#update) section of the protocol WITHOUT fetching that version’s dependencies.
-2. Download (**download**) - contains a list of objects (*download objects*), with each object including a path relative to the *Version Directory*, and a name which is relative to the *Local Patch Directory*: For each of the *download objects* ->
+2. Download (**download**) - contains a list of *download objects*: For each of the *download objects* ->
     1. **Fetch the Patch Resource** from the *Version Directory* located by the path.
     2. **Save the resource** within the *Local Patch Directory* with the specified name.
-3. Transfer (**transfer**) - contains a mapping of *Patch Resource* names to a resource relative to the *Client Directory*. The Nimbus Launcher runs this directive ONLY when the play button is pushed. For each of the mapped pairs ->
+3. Transfer (**transfer**) - contains a mapping of *Patch Resource* names to a resource relative to the *Client Directory*. For each of the mapped pairs ->
     1. **If either of the resource names** are NONLOCAL (their resolved path is outside of their *Local Patch Directory* or the *Client Directory*) the protocol MUST terminate.
     2. **Copy the *Patch Resource*** to the resource relative to the *Client Directory*, ONLY IF that client resource already exists. If the client resource does not already exist, the transfer MUST be ignored and MAY terminate the protocol. This step may cache the client resources if necessary.
 4. Update (**update**) - contains a set of sub-directives, completing operations that may be more complex than a simple copy. These sub-directive can be completed in any order. For each sub-directive ->
-    - **boot** : the name of a Patch Resource
+    - **boot** : the name of a *Patch Resource*
         - Update the *Local Server Boot Configuration* with the specified *Patch Resource*.
     - **protocol** : a protocol name
         - Update the *Local Server Configuration*’s protocol field with the specified protocol name.
