@@ -49,8 +49,8 @@ While all *Patch Directives* within the *patch.json* can be included in any orde
         1. Fetch the *patch.json* for the current version name
         2. Recursively run the [Update](#update) section of the protocol WITHOUT fetching that version’s dependencies.
 2. Download (**download**) - contains a list of *download objects*: For each of the *download objects* ->
-    1. **Fetch the Patch Resource** from the *Version Directory* located by the path.
-    2. **Save the resource** within the *Local Patch Directory* with the specified name.
+    1. **Fetch the Patch Resource** from the *Version Directory* located by the `path`.
+    2. **Save the resource** within the *Local Patch Directory* with the specified `name`.
 3. Transfer (**transfer**) - contains a mapping of *Patch Resource* names to a resource relative to the *Client Directory*. For each of the mapped pairs ->
     1. **If either of the resource names** are NONLOCAL (their resolved path is outside of their *Local Patch Directory* or the *Client Directory*) the protocol MUST terminate.
     2. **Copy the *Patch Resource*** to the resource relative to the *Client Directory*, ONLY IF that client resource already exists. If the client resource does not already exist, the transfer MUST be ignored and MAY terminate the protocol. This step may cache the client resources if necessary.
