@@ -61,6 +61,12 @@ While all *Patch Directives* within the *patch.json* can be included in any orde
     - **protocol** : a protocol name
         - Update the *Local Server Configuration*’s protocol field with the specified protocol name.
 
+## Authentication
+
+If an authentication token is required to retrieve *Patch* content from a server, the token SHOULD be sent within the `TPP-Token` header. If the authentication token has been determined to be invalid, the server SHOULD respond with a `401 - Unauthorized` status code.
+
+The Nimbus Launcher treats any response status code >= `400` as an invalid response.
+
 ## Versioning
 
 The **TPP** follows a strict version naming convention. Any *Patch Version* that does not follow the standard versioning pattern MUST incure an error.
