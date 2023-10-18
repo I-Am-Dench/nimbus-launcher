@@ -28,6 +28,10 @@ While this protocol could be broken down into a singular list of steps, this lis
 2. If the current *Patch Version* listed in the *versions.json* matches the current version of the *Local Server Configuration*, the protocol should terminate. If the versions are different, the protocol should continue on to step 3.
 3. Fetch the *patch.json* from the *Version Directory*.
 
+Servers should respond to valid requests with a `200 - OK` status code.
+
+> The Nimbus Launcher treats any response status code >= `200` and \< `400` as a valid response.
+
 ### Update
 
 PLEASE NOTE THE FOLLOWING WHEN IMPLEMENTING A PATCH RUNNER:
@@ -65,7 +69,7 @@ While all *Patch Directives* within the *patch.json* can be included in any orde
 
 If an authentication token is required to retrieve *Patch* content from a server, the token SHOULD be sent within the `TPP-Token` header. If the authentication token has been determined to be invalid, the server SHOULD respond with a `401 - Unauthorized` status code.
 
-The Nimbus Launcher treats any response status code >= `400` as an invalid response.
+> The Nimbus Launcher treats any response status code >= `400` as an invalid response.
 
 ## Versioning
 
