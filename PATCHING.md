@@ -132,3 +132,17 @@ The Nimbus Launcher checks *Patch Version* names with the following regular expr
     }
 }
 ```
+
+### Server Patch Directory
+
+```
+patches/
+|-- v0.1.0/
+|   |-- ...
+|   |-- patch.json
+|-- v0.2.0/
+|   |-- ...
+|   |-- patch.json
+|-- ...
+|-- versions.json
+```
