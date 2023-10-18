@@ -117,7 +117,7 @@ For the `boot.cfg` file, modify the following fields:
 - `PATCHSERVERIP`: Configured server IP
 - `PATCHSERVERPORT`: Configured server port
 - `PATCHSERVERDIR`: The patch server directory where patch resources are located
-  - If the patch server host is `http://127.0.0.1:1000` and `PATCHSERVERDIR` is `patches`, the launcher will make requests to `http://127.0.0.1:1000/patches`
+  - If the patch server host is `http://127.0.0.1:3000` and `PATCHSERVERDIR` is `patches`, the launcher will make requests to `http://127.0.0.1:3000/patches`
 
 ### Patch Server Setup
 
