@@ -110,6 +110,8 @@ When updating or creating a local server configuration within the settings windo
 
 The selected option will determine which protocol the launcher will make requests to patch server with. Selecting (None) will disable all patch server configurations.
 
+> Both http and https follow the TPP Protocol
+
 For the `boot.cfg` file, modify the following fields:
 
 - `PATCHSERVERIP`: Configured server IP
