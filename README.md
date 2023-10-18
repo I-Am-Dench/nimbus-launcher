@@ -1,14 +1,14 @@
 # Nimbus Launcher
 
-The Nimbus Launcher helps players to quickly add, swap, and run variable server configurations for the game LEGO® Universe, which was discontinued as of January 2012. Per-server patch configurations are also available as a strictly experimental feature. More information is can be found [below](#patches).
+The Nimbus Launcher helps players to quickly add, swap, and run variable server configurations for the game LEGO® Universe, which was discontinued as of January 2012. Per-server patch configurations are also available to allow players to automatically update local server configurations. More information can be found [below](#patches).
 
 This program DOES NOT include a LEGO® Universe client and/or its contents. Players must already have a client located on their system and configure the launcher to point to the client's directory.
 
-Due to the LEGO Group's wishes, LEGO® Universe servers ARE NOT (and should not) be publicly available. The launcher is NOT a server browser. All server configurations managed by the launcher should be sent to players individually.
+Due to the LEGO Group's wishes, LEGO® Universe servers ARE NOT (and should not be) publicly available. The launcher is NOT a server browser. All server configurations managed by the launcher should be sent to players privately.
 
 ## Installation
 
-Binaries for the current version of the launcher will be available in the [Releases]() section of this repo. Releases will be labeled with the current launcher version followed by the target platform (i.e. `v1.0.0-win.zip`). The `zip` file will include an `assets` folder and a copy of the compiled executable. The structure of the `zip` file's contents should be as follows:
+Binaries for the current version of the launcher will be available under the [Releases](). Releases will be labeled with the current launcher version followed by the target platform (i.e. `v1.0.0-win.zip`). The `zip` file will include an `assets` folder and a copy of the compiled executable. The structure of the `zip` file's contents should be as follows:
 
 ```
 launcher/
@@ -24,7 +24,7 @@ If you have Go installed on your system, the launcher can be installed by using 
 go install github.com/I-Am-Dench/lu-launcher@latest
 ```
 
-While runnable on both Mac and Linux, both release targets WILL NOT be present under Releases until startup functionality as has been fully implemented and tested. If you would like to try the launcher on either platforms, you will need to build and/or run the program from the source code. 
+While runnable on both Mac and Linux, both release targets WILL NOT be present under Releases until startup functionality has been fully implemented and tested. If you would like to try the launcher on either platforms, you will need to build and/or run the program from the source code. 
 
 ## Building or Running from Source
 
@@ -108,7 +108,7 @@ When updating or creating a local server configuration within the settings windo
 - http
 - https
 
-The selected option will determine which protocol the launcher will make requests to patch server with. Selecting (None) will disable all patch server configurations.
+The selected option will determine which protocol the launcher will make requests to the patch server with. Selecting (None) will disable all patch server configurations.
 
 > Both http and https follow the TPP Protocol
 
@@ -123,10 +123,10 @@ For the `boot.cfg` file, modify the following fields:
 
 To set up a patch server, you need an HTTP/HTTPS server which complies with the custom [TPP Protocol](/PATCHING.md).
 
-If you are not integrating the TPP with your own server, a simple patch server can be found here: [nimbus-patcher](https://github.com/I-Am-Dench/nimbus-patcher).
+If you are not integrating the TPP Protocol onto your own server, a simple patch server can be found here: [nimbus-patcher](https://github.com/I-Am-Dench/nimbus-patcher).
 
 ### Patch Server Authentication (Optional)
 
-Whenever the launcher makes a patch server request, if the `Patch Token` settings is not empty, it will include a custom header which complies with the TPP Protocol. The patch server should verify that the token is valid before sending any patch content.
+Whenever the launcher makes a patch server request, if the `Patch Token` setting is not empty, it will include a custom header which complies with the TPP Protocol. The patch server should verify that the token is valid before sending any patch contents.
 
-The patch token should be included within the exported `server.xml` file, but can still be changed by editing the local server configuration through the settings window.
+The patch token should be included within the exported `server.xml` file, but it can still be changed by editing the local server configuration through the settings window.
