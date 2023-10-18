@@ -119,123 +119,12 @@ For the `boot.cfg` file, modify the following fields:
 
 ### Patch Server Setup
 
-To set up a patch server, you need an HTTP/HTTPS server. Whenever the launcher searches for updates, it makes a request to the patch server directory expecting a `json` file (referred to as `patches.json`). This file contains the server's current patch version and a list of available versions. Currently, the list of versions is unused.
+To set up a patch server, you need an HTTP/HTTPS server which complies with the custom [TPP Protocol](/PATCHING.md).
 
-Example: `http://127.0.0.1:1000/patches/`
-
-```json
-{
-    "currentVersion": "1.0.0",
-    "versions": [
-        "1.0.0"
-    ]
-}
-```
-
-Once the launcher has determined that the configured server has an available patch, the launcher makes a request to the version expecting a `json` file (referred to as `patch.json`).
-
-Example: `http://127.0.0.1:1000/patches/1.0.0/`
-
-```json
-{
-    "downloads": [
-        {
-            "path": "/1.0.0/logo.dds",
-            "name": "logo.dds"
-        }
-    ],
-    "transfer": {
-        "logo.dds": "res/ui/ingame/passport_i90.dds"
-    }
-}
-```
-
-The above example will download `http://127.0.0.1:1000/patches/1.0.0/logo.dds` and save it to a file called `logo.dds`. During the [Client Preparation](#1-client-preparation) phase, the `logo.dds` file will replace the `res/ui/ingame/passport_i90.dds` file within the client directory.
-
-The patch server's contents may look something like this:
-
-```
-patches/
-|-- 1.0.0/
-|   |-- logo.dds
-|   |-- patch.json
-|-- patches.json
-```
-
-Let's say we need another patch. We update the `patches.json` file as such:
-
-```json
-{
-    "currentVersion": "1.1.0",
-    "versions": [
-        "1.0.0",
-        "1.1.0"
-    ]
-}
-```
-
-And then we add another `patch.json` file as such:
-
-```json
-{
-    "depend": ["1.0.0*"],
-    "downloads": [
-        {
-            "path": "/1.1.0/boot.cfg",
-            "name": "boot.cfg"
-        }
-    ],
-    "updates": {
-        "boot": "boot.cfg"
-    }
-}
-```
-
-The above patch will download `http://127.0.0.1:1000/patches/1.1.0/boot.cfg` and save it to a file called `boot.cfg`. The `updates` directive makes changes that may be more complicated than just moving resources into the client. The `boot` field says that it should update the server's `boot.cfg` file.
-
-The `depend` directive will download and run the specified versions (unless that version is blacklisted), WITHOUT the versions' dependencies. If the version is appended by a `*`, then the dependency is recursive, and should download and run that version WITH dependencies. In this example, the patch will download and run patch version `1.0.0`, and if it has dependencies, download and run those too.
-
-Our final patch server contents may be similar to the following example:
-
-```
-patches/
-|-- 1.0.0/
-|   |-- logo.dds
-|   |-- patch.json
-|-- 1.1.0/
-|   |-- boot.cfg
-|   |-- patch.json
-|-- patches.json
-```
+If you are not integrating the TPP with your own server, a simple patch server can be found here: [nimbus-patcher](https://github.com/I-Am-Dench/nimbus-patcher).
 
 ### Patch Server Authentication (Optional)
 
-Whenever the launcher makes a patch server request, if the `Patch Token` settings is not empty, it will include a custom header, `TPP-Token` (Theo's Patching Protocol Token), with a value of that configured token. The patch server should verify that the token is valid before sending any patch content. If the token is invalid, the server should respond with a `401 - Unauthorized` status code. However, any status code >= `300` will also work and be handled the same.
+Whenever the launcher makes a patch server request, if the `Patch Token` settings is not empty, it will include a custom header which complies with the TPP Protocol. The patch server should verify that the token is valid before sending any patch content.
 
-The patch token should be included within the exported `server.xml` file, but still be changed by editing the server through the settings window.
-
-### Patch Versioning
-
-The launcher abides by a strict versioning convention. Any patch version that does not follow the versioning pattern will incure an error.
-
-Version names are matched with the following Regex pattern:
-
-```
-^v?[0-9]+\.[0-9]+\.[0-9]+([0-9a-zA-Z_.-]+)?$
-```
-
-This pattern enforces the use of 3 version parts: MAJOR, MINOR, and PATCH. Versions are optionally followed by any number of alphnumeric characters or a \`_\`, \`.\`, or \`-\`. An option \`v\` prefix is also allowed.
-
-#### Valid versions
-
-- `1.0.0`
-- `v1.0.0`
-- `2.5.09-alpha2`
-- `v3.0.1_experimental`
-
-#### Invalid versions
-
-- `1`
-- `v2`
-- `1.0`
-- `version-1`
+The patch token should be included within the exported `server.xml` file, but can still be changed by editing the local server configuration through the settings window.
