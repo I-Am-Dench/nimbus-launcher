@@ -36,6 +36,7 @@ PLEASE NOTE THE FOLLOWING WHEN IMPLEMENTING A PATCH RUNNER:
 - Dependencies MUST NOT run the **update** directive.
 - *download objects* include a `path` relative to the *Version Directory* and a `name` which is relative to the *Local Patch Directory*.
 - The Nimbus Launcher runs the **transfer** directive ONLY when the play button is pushed. The protocol DOES NOT enforce this as a standard.
+- ALL PATCHES MUST verify that their *Patch Version* follows the [strict versioning conventions](#versioning) and should terminate if the version name does not match.
 
 While all *Patch Directives* within the *patch.json* can be included in any order, the Patch Runner MUST run each directive in the following sequence:
 
@@ -59,6 +60,32 @@ While all *Patch Directives* within the *patch.json* can be included in any orde
         - Update the *Local Server Boot Configuration* with the specified *Patch Resource*.
     - **protocol** : a protocol name
         - Update the *Local Server Configuration*’s protocol field with the specified protocol name.
+
+## Versioning
+
+The **TPP** follows a strict version naming convention. Any *Patch Version* that does not follow the standard versioning pattern MUST incure an error.
+
+*Patch Versions* MUST use 3 numeric version components: MAJOR, MINOR, and PATCH. Optionally, versions can be followed by any number of alpha numeric characters or a '_', '.', or '-'. An optional prefix, 'v', is also permitted.
+
+The Nimbus Launcher checks *Patch Version* names with the following regular expression:
+
+```
+^(v|V)?[0-9]+\.[0-9]+\.[0-9]+([0-9a-zA-Z_.-]+)?$
+```
+
+### Valid Versions
+
+- `1.0.0`
+- `v1.0.0`
+- `2.5.09-alpha2`
+- `v3.0.1_experimental`
+
+### Invalid Versions
+
+- `1`
+- `v2`
+- `1.0`
+- `version-1`
 
 ## Examples
 
