@@ -24,9 +24,10 @@ While this protocol could be broken down into a singular list of steps, this lis
 
 ### Fetch
 
-1. Fetch the *versions.json* from the *Patch Directory*.
-2. If the current *Patch Version* listed in the *versions.json* matches the current version of the *Local Server Configuration*, the protocol should terminate. If the versions are different, the protocol should continue on to step 3.
-3. Fetch the *patch.json* from the *Version Directory*.
+1. **Fetch the *versions.json*** from the *Patch Directory*.
+2. **If the current *Patch Version*** listed in the *versions.json* matches the current version of the *Local Server Configuration*, the protocol should terminate.
+3. **If the versions are different**, the protocol should continue on to step 3.
+4. **Fetch the *patch.json*** from the *Version Directory*.
 
 Servers should respond to valid requests with a `200 - OK` status code.
 
