@@ -1,5 +1,7 @@
 # Theo's Patching Protocol (TPP)
 
+This document describes the specification for Theo's Patching Protocol (TPP). Servers that implement this protocol enable LEGO® Universe players utilizing the Nimbus Launcher to download and install updates for their clients. Servers that implement the TPP Protocol MUST NOT distribute ANY resources that were used by, or packaged by, the LEGO® Universe client while it was in operation.
+
 ## Definitions
 
 | Keyword                         | Definition                                                                              |
