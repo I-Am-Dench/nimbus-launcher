@@ -22,7 +22,7 @@ type Cache interface {
 	Add(resource ClientResource) error
 	Get(path string) (ClientResource, error)
 	GetResources() ([]ClientResource, error)
-	ResourceExists(path string) bool
+	Has(path string) bool
 }
 
 func ReadResource(clientDirectory, resource string) (ClientResource, error) {

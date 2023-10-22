@@ -28,7 +28,7 @@ type Server struct {
 	Config *luconfig.LUConfig `json:"-"`
 
 	hasPatchesList bool          `json:"-"`
-	patchesList    ServerPatches `json:"-"`
+	patchesList    PatchVersions `json:"-"`
 
 	pendingUpdate bool `json:"-"`
 }
@@ -145,12 +145,12 @@ func (server *Server) ToXML() ServerXML {
 	}
 }
 
-func (server *Server) ServerPatches() (ServerPatches, bool) {
+func (server *Server) PatchVersions() (PatchVersions, bool) {
 	return server.patchesList, server.hasPatchesList
 }
 
-func (server *Server) SetServerPatches(patches ServerPatches) {
-	server.patchesList = patches
+func (server *Server) SetPatchVersions(version PatchVersions) {
+	server.patchesList = version
 	server.hasPatchesList = true
 }
 
