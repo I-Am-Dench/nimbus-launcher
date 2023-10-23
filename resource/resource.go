@@ -16,7 +16,6 @@ import (
 )
 
 const (
-	assetsDir   = "assets"
 	settingsDir = "settings"
 	serversDir  = "servers"
 )
