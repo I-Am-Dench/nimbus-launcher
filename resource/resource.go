@@ -1,6 +1,7 @@
 package resource
 
 import (
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -24,15 +25,13 @@ const (
 	DEFAULT_DIR_CLIENT = "LEGO Software/Lego Universe"
 )
 
+//go:embed embedded/icon.png
+var iconData []byte
+
 var versionPattern = regexp.MustCompile(`^(v|V)?[0-9]+\.[0-9]+\.[0-9]+([0-9a-zA-Z_.-]+)?$`)
 
-func Asset(name string) (*fyne.StaticResource, error) {
-	bytes, err := os.ReadFile(filepath.Join(assetsDir, name))
-	if err != nil {
-		return nil, fmt.Errorf("assert read error: %v", err)
-	}
-
-	return fyne.NewStaticResource(name, bytes), nil
+func Icon() *fyne.StaticResource {
+	return fyne.NewStaticResource("icon.png", iconData)
 }
 
 func InitializeSettings() error {
