@@ -3,7 +3,6 @@ package luwindows
 import (
 	"encoding/json"
 	"fmt"
-	"image/color"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -34,7 +33,7 @@ func NewPatchReviewWindow(app fyne.App, patch resource.Patch, onConfirmCancel fu
 }
 
 func LoadPatchReviewContainer(window fyne.Window, patch resource.Patch, onConfirmCancel func(PatchAcceptState)) {
-	heading := canvas.NewText(fmt.Sprintf("Received patch.json (%s):", patch.Version), color.White)
+	heading := canvas.NewText(fmt.Sprintf("Received patch.json (%s):", patch.Version), theme.ForegroundColor())
 	heading.TextSize = 16
 
 	reject := widget.NewButton(

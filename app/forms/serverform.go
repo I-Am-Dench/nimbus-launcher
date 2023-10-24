@@ -2,7 +2,6 @@ package forms
 
 import (
 	"fmt"
-	"image/color"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -28,10 +27,10 @@ type ServerForm struct {
 func NewServerForm(window fyne.Window, heading string) *ServerForm {
 	form := new(ServerForm)
 
-	infoHeading := canvas.NewText(heading, color.White)
+	infoHeading := canvas.NewText(heading, theme.ForegroundColor())
 	infoHeading.TextSize = 16
 
-	bootHeading := canvas.NewText("boot.cfg", color.White)
+	bootHeading := canvas.NewText("boot.cfg", theme.ForegroundColor())
 	bootHeading.TextSize = 16
 
 	serverXML := widget.NewLabel("")

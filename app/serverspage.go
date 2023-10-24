@@ -3,7 +3,6 @@ package app
 import (
 	"encoding/xml"
 	"fmt"
-	"image/color"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -47,7 +46,7 @@ func NewServersPage(window fyne.Window, list *luwidgets.ServerList) *ServersPage
 	page.editServers = page.editServerPage(editServerForm, window, list)
 	page.editServers.Hide()
 
-	heading := canvas.NewText("Servers", color.White)
+	heading := canvas.NewText("Servers", theme.ForegroundColor())
 	heading.TextSize = 16
 
 	addServerTab := widget.NewButtonWithIcon("Add Server", theme.ContentAddIcon(), func() {
