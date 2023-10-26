@@ -1,7 +1,6 @@
 package app
 
 import (
-	"image/color"
 	"path/filepath"
 
 	"fyne.io/fyne/v2"
@@ -13,7 +12,7 @@ import (
 )
 
 func (app *App) LoadContent() {
-	heading := canvas.NewText("Launch Lego Universe", color.White)
+	heading := canvas.NewText("Launch Lego Universe", theme.ForegroundColor())
 	heading.TextSize = 24
 
 	infoButton := widget.NewButtonWithIcon(
@@ -94,7 +93,7 @@ func (app *App) Footer() *fyne.Container {
 }
 
 func (app *App) LoadSettingsContent(window fyne.Window) {
-	heading := canvas.NewText("Settings", color.White)
+	heading := canvas.NewText("Settings", theme.ForegroundColor())
 	heading.TextSize = 24
 
 	tabs := container.NewAppTabs(
@@ -119,10 +118,10 @@ func (app *App) ServerSettings(window fyne.Window) *fyne.Container {
 }
 
 func (app *App) LauncherSettings(window fyne.Window) *fyne.Container {
-	generalHeading := canvas.NewText("General", color.White)
+	generalHeading := canvas.NewText("General", theme.ForegroundColor())
 	generalHeading.TextSize = 16
 
-	clientHeading := canvas.NewText("Client", color.White)
+	clientHeading := canvas.NewText("Client", theme.ForegroundColor())
 	clientHeading.TextSize = 16
 
 	closeOnPlay := widget.NewCheck("", func(b bool) {})
