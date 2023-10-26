@@ -80,15 +80,14 @@ Two main phases occur when you press the `Play` button:
 
 - The client is run as `./legouniverse.exe` where the current directory is the configured `Client Directory`.
 
-#### MacOSX
+#### MacOSX (NOT IMPLEMENTED)
 
-- This features has not been fully implemented. 
-- I have been unable to get the client to run using `wine` or `wine-crossover`. If you are able to get this working, please create a pull request.
+- Intel (x86): Due to Apple dropping support for 32-bit programs, the client will NOT run through the native executable nor the windows executable through external programs such as [wine](https://www.winehq.org/). Playing the game on an Intel based Mac will require the use of an emulator or VM.
+- M1 (ARM): The client may still be able to be launched through [wine](https://www.winehq.org/). This is currently a **work in progress**.
 
-#### Linux
+#### Linux (NOT IMPLEMENTED)
 
-- This features has not been fully implemented.
-- I *have* been able to get the client running through `wine`, however, I have not been able to get it running through the launcher. If you are able to get this working, please create a pull request.
+- The client is able to run through [wine](https://www.winehq.org/), but is currently a **work in progress**. 
 
 ## Patches
 
