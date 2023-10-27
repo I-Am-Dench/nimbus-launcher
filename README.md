@@ -24,7 +24,7 @@ If you have Go installed on your system, the launcher can be installed by using 
 go install github.com/I-Am-Dench/lu-launcher@latest
 ```
 
-While runnable on both Mac and Linux, both release targets WILL NOT be present under Releases until startup functionality has been fully implemented and tested. If you would like to try the launcher on either platforms, you will need to build and/or run the program from the source code. 
+Since the [Client Startup](#2-client-startup) functionality has not yet been implemented for Mac and Linux, releases for each platform will not be available until their functions have been tested. Building and/or running the launcher from source, however, will still work as normal just with the missing functionality.
 
 ## Building or Running from Source
 
