@@ -1,5 +1,7 @@
 settings/
 patches/
-releases/
 
-Launcher
+release/launcher
+
+*.exe
+*.zip
