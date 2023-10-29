@@ -32,7 +32,7 @@ func DefaultConfig() *LUConfig {
 
 	*config = LUConfig{
 		ServerName:       "Overbuild Universe (US)",
-		PatchServerIP:    "",
+		PatchServerIP:    "localhost",
 		AuthServerIP:     "localhost",
 		PatchServerPort:  80,
 		Logging:          100,

@@ -30,7 +30,7 @@ func (cache *sqliteCache) Query(query string, args ...any) (*sql.Rows, error) {
 }
 
 func (cache *sqliteCache) QueryRow(query string, args ...any) *sql.Row {
-	return cache.db.QueryRow(query, args...)
+	return cache.db.QueryRowContext(cache.context, query, args...)
 }
 
 func NewSqliteCache(directory string) (Cache, error) {
@@ -93,4 +93,8 @@ func (cache *sqliteCache) GetResources() ([]ClientResource, error) {
 func (cache *sqliteCache) Has(path string) bool {
 	_, err := cache.Get(path)
 	return err == nil
+}
+
+func (cache *sqliteCache) Close() error {
+	return cache.db.Close()
 }

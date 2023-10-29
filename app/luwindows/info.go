@@ -1,7 +1,6 @@
 package luwindows
 
 import (
-	"image/color"
 	"net/url"
 
 	"fyne.io/fyne/v2"
@@ -24,7 +23,7 @@ func NewInfoWindow(app fyne.App) fyne.Window {
 	window.SetIcon(theme.InfoIcon())
 	window.SetFixedSize(true)
 
-	heading := canvas.NewText("Info", color.White)
+	heading := canvas.NewText("Info", theme.ForegroundColor())
 	heading.TextSize = 16
 
 	window.SetContent(

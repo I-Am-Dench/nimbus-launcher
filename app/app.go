@@ -94,6 +94,13 @@ func New(settings *resource.Settings, servers resource.ServerList, rejectedPatch
 
 	a.LoadContent()
 
+	a.main.SetOnClosed(func() {
+		err := a.clientCache.Close()
+		if err != nil {
+			log.Printf("could not properly close clientCache: %v", err)
+		}
+	})
+
 	return a
 }
 
