@@ -515,7 +515,18 @@ func (app *App) CheckClient() {
 	}
 }
 
-func (app *App) Start() {
+func (app *App) Start() (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			e, ok := r.(error)
+			if ok {
+				err = e
+			} else {
+				err = fmt.Errorf("panic: %v", r)
+			}
+		}
+	}()
+
 	app.CheckClient()
 
 	if app.settings.CheckPatchesAutomatically {
@@ -524,4 +535,6 @@ func (app *App) Start() {
 
 	app.main.CenterOnScreen()
 	app.main.ShowAndRun()
+
+	return
 }
