@@ -37,8 +37,6 @@ func WriteCrashLog(crashLog string) {
 	file.WriteString(crashLog)
 }
 
-var forceCrash = true
-
 func main() {
 	defer func() {
 		if r := recover(); r != nil {
@@ -46,10 +44,6 @@ func main() {
 			WriteCrashLog(fmt.Sprintf("%v", r))
 		}
 	}()
-
-	if forceCrash {
-		log.Panic("Test crash")
-	}
 
 	err := resource.InitializeSettings()
 	if err != nil {
