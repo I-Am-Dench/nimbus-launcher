@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"runtime"
 	"time"
 
 	"github.com/I-Am-Dench/lu-launcher/app"
@@ -30,9 +31,13 @@ func WriteCrashLog(crashLog string) {
 	}
 	defer file.Close()
 
-	file.WriteString("NIMBUS LAUNCHER CRASH\n\n")
+	file.WriteString("NIMBUS LAUNCHER CRASH\n")
 	file.WriteString("Time: ")
 	file.WriteString(now.Format(crashlogTimestampFormat))
+	file.WriteString("\n\nOS: ")
+	file.WriteString(runtime.GOOS)
+	file.WriteString("\nARCH: ")
+	file.WriteString(runtime.GOARCH)
 	file.WriteString("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n")
 	file.WriteString(crashLog)
 }
