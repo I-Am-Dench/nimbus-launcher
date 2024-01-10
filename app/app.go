@@ -522,7 +522,7 @@ func (app *App) Start() (err error) {
 			if ok {
 				err = e
 			} else {
-				err = fmt.Errorf("panic: %v", r)
+				err = fmt.Errorf("%v", r)
 			}
 		}
 	}()
