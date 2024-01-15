@@ -8,7 +8,7 @@ import (
 type Version struct {
 	Major, Minor, Patch uint
 
-	isRelease bool
+	IsRelease bool
 }
 
 var revision string
@@ -24,7 +24,7 @@ func init() {
 }
 
 func (v Version) String() string {
-	if v.isRelease {
+	if v.IsRelease {
 		return fmt.Sprintf("v%d.%d.%d", v.Major, v.Minor, v.Patch)
 	}
 
