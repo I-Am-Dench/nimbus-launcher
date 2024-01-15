@@ -5,9 +5,12 @@ import (
 
 	"github.com/I-Am-Dench/lu-launcher/app"
 	"github.com/I-Am-Dench/lu-launcher/resource"
+	"github.com/I-Am-Dench/lu-launcher/version"
 )
 
 func main() {
+	log.Printf("Starting Nimbus Launcher (%v)", version.Get())
+
 	err := resource.InitializeSettings()
 	if err != nil {
 		log.Panicf("Settings initialization error: %v", err)

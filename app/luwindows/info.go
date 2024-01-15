@@ -8,6 +8,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"github.com/I-Am-Dench/lu-launcher/version"
 )
 
 func mustParse(rawUrl string) *url.URL {
@@ -31,6 +32,8 @@ func NewInfoWindow(app fyne.App) fyne.Window {
 			container.NewVBox(
 				heading, widget.NewSeparator(),
 				widget.NewForm(
+					widget.NewFormItem("Version", widget.NewLabel(version.Get().Name())),
+					widget.NewFormItem("Revision", widget.NewLabel(version.Revision())),
 					widget.NewFormItem("Author", widget.NewLabel("Theodore Friedrich")),
 					widget.NewFormItem("Source", widget.NewHyperlink("https://github.com/I-Am-Dench/lu-launcher", mustParse("https://github.com/I-Am-Dench/lu-launcher"))),
 				),
