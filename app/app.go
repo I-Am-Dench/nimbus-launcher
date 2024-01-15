@@ -68,7 +68,7 @@ func New(settings *resource.Settings, servers resource.ServerList, rejectedPatch
 	}
 	a.clientCache = cache
 
-	a.main = a.NewWindow(fmt.Sprintf("Nimbus Launcher (%v)", version.Get()))
+	a.main = a.NewWindow(fmt.Sprintf("Nimbus Launcher (%v)", version.Get().Name()))
 	a.main.SetFixedSize(true)
 	a.main.Resize(fyne.NewSize(800, 300))
 	a.main.SetMaster()
