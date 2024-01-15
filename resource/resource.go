@@ -117,7 +117,7 @@ func Exists(name string) bool {
 
 func ValidateVersionName(version string) error {
 	if !versionPattern.MatchString(version) {
-		return fmt.Errorf("invalid version name \"%s\": version name must match `^(v|V)?[0-9]+\\.[0-9]+\\.[0-9]+([0-9a-zA-Z_.-]+)?$`", version)
+		return fmt.Errorf("invalid version name \"%s\": version name must match `%v`", version, versionPattern)
 	}
 	return nil
 }
