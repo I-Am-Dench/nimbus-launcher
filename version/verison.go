@@ -1,6 +1,9 @@
 package version
 
-import "fmt"
+import (
+	"fmt"
+	"runtime/debug"
+)
 
 type Version struct {
 	Major, Minor, Patch uint
@@ -8,14 +11,34 @@ type Version struct {
 	isRelease bool
 }
 
-func Get() Version {
-	return v
+var revision string
+
+func init() {
+	info, _ := debug.ReadBuildInfo()
+	for _, setting := range info.Settings {
+		if setting.Key == "vcs.revision" {
+			revision = setting.Value
+			return
+		}
+	}
 }
 
 func (v Version) String() string {
 	if v.isRelease {
 		return fmt.Sprintf("v%d.%d.%d", v.Major, v.Minor, v.Patch)
-	} else {
+	}
+
+	if len(revision) == 0 {
 		return "standalone"
 	}
+
+	return revision
+}
+
+func Get() Version {
+	return v
+}
+
+func GetRevision() string {
+	return revision
 }
