@@ -35,10 +35,18 @@ func (v Version) String() string {
 	return revision
 }
 
+func (v Version) Name() string {
+	if v.IsRelease {
+		return fmt.Sprintf("%d.%d.%d", v.Major, v.Minor, v.Patch)
+	} else {
+		return "Standalone"
+	}
+}
+
 func Get() Version {
 	return v
 }
 
-func GetRevision() string {
+func Revision() string {
 	return revision
 }
