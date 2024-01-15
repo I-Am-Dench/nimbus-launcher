@@ -18,6 +18,7 @@ import (
 	"github.com/I-Am-Dench/lu-launcher/luconfig"
 	"github.com/I-Am-Dench/lu-launcher/luwidgets"
 	"github.com/I-Am-Dench/lu-launcher/resource"
+	"github.com/I-Am-Dench/lu-launcher/version"
 )
 
 type App struct {
@@ -67,7 +68,7 @@ func New(settings *resource.Settings, servers resource.ServerList, rejectedPatch
 	}
 	a.clientCache = cache
 
-	a.main = a.NewWindow("Nimbus Launcher")
+	a.main = a.NewWindow(fmt.Sprintf("Nimbus Launcher (%v)", version.Get().Name()))
 	a.main.SetFixedSize(true)
 	a.main.Resize(fyne.NewSize(800, 300))
 	a.main.SetMaster()
