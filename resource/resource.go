@@ -11,7 +11,7 @@ import (
 
 	"fyne.io/fyne/v2"
 	"github.com/I-Am-Dench/lu-launcher/client"
-	"github.com/I-Am-Dench/lu-launcher/luconfig"
+	"github.com/I-Am-Dench/lu-launcher/ldf"
 )
 
 const (
@@ -61,7 +61,7 @@ func InitializeSettings() error {
 
 	if !Exists("servers.json") {
 		log.Println("\"servers.json\" does not exist; Generating default version")
-		localServer, err := CreateServer("Localhost", "", "", luconfig.DefaultConfig())
+		localServer, err := CreateServer("Localhost", "", "", ldf.DefaultBootConfig())
 		if err != nil {
 			return err
 		}

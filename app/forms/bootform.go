@@ -9,7 +9,7 @@ import (
 	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"github.com/I-Am-Dench/lu-launcher/luconfig"
+	"github.com/I-Am-Dench/lu-launcher/ldf"
 	"github.com/I-Am-Dench/lu-launcher/luwidgets"
 )
 
@@ -70,8 +70,8 @@ func NewBootForm(window fyne.Window) *BootForm {
 					return
 				}
 
-				bootConfig := luconfig.LUConfig{}
-				err = luconfig.Unmarshal(data, &bootConfig)
+				bootConfig := ldf.BootConfig{}
+				err = ldf.Unmarshal(data, &bootConfig)
 				if err != nil {
 					dialog.ShowError(err, window)
 					return
@@ -158,12 +158,12 @@ func NewBootForm(window fyne.Window) *BootForm {
 		),
 	)
 
-	form.UpdateWith(luconfig.DefaultConfig())
+	form.UpdateWith(ldf.DefaultBootConfig())
 
 	return form
 }
 
-func (form *BootForm) UpdateWith(config *luconfig.LUConfig) {
+func (form *BootForm) UpdateWith(config *ldf.BootConfig) {
 	if config == nil {
 		return
 	}
@@ -176,7 +176,7 @@ func (form *BootForm) UpdateWith(config *luconfig.LUConfig) {
 	form.patchServerIP.SetText(config.PatchServerIP)
 	form.patchServerPort.SetValue(int64(config.PatchServerPort))
 	form.logging.SetValue(int64(config.Logging))
-	form.dataCenterID.SetValue(config.DataCenterID)
+	form.dataCenterID.SetValue(int64(config.DataCenterID))
 	form.cpCode.SetValue(int64(config.CPCode))
 	form.akamaiDLM.SetChecked(config.AkamaiDLM)
 	form.patchServerDir.SetText(config.PatchServerDir)
@@ -190,16 +190,16 @@ func (form *BootForm) UpdateWith(config *luconfig.LUConfig) {
 	form.trackDiskUsage.SetChecked(config.TrackDiskUsage)
 }
 
-func (form *BootForm) GetConfig() *luconfig.LUConfig {
-	config := luconfig.New()
+func (form *BootForm) GetConfig() *ldf.BootConfig {
+	config := &ldf.BootConfig{}
 
 	config.ServerName = form.serverName.Text
 	config.PatchServerIP = form.patchServerIP.Text
 	config.AuthServerIP = form.authServerIP.Text
-	config.PatchServerPort = int32(form.patchServerPort.Value())
-	config.Logging = int32(form.logging.Value())
-	config.DataCenterID = form.dataCenterID.Value()
-	config.CPCode = int32(form.cpCode.Value())
+	config.PatchServerPort = int(form.patchServerPort.Value())
+	config.Logging = int(form.logging.Value())
+	config.DataCenterID = uint(form.dataCenterID.Value())
+	config.CPCode = int(form.cpCode.Value())
 	config.AkamaiDLM = form.akamaiDLM.Checked
 	config.PatchServerDir = form.patchServerDir.Text
 	config.UGCUse3DServices = form.ugcUse3DServices.Checked
