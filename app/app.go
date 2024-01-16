@@ -15,7 +15,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"github.com/I-Am-Dench/lu-launcher/app/luwindows"
 	"github.com/I-Am-Dench/lu-launcher/client"
-	"github.com/I-Am-Dench/lu-launcher/luconfig"
+	"github.com/I-Am-Dench/lu-launcher/ldf"
 	"github.com/I-Am-Dench/lu-launcher/luwidgets"
 	"github.com/I-Am-Dench/lu-launcher/resource"
 	"github.com/I-Am-Dench/lu-launcher/version"
@@ -131,7 +131,7 @@ func (app *App) InitializeGlobalWidgets(servers resource.ServerList) {
 func (app *App) BindServerInfo(server *resource.Server) {
 	if server == nil {
 		server = &resource.Server{}
-		server.Config = &luconfig.LUConfig{}
+		server.Config = &ldf.BootConfig{}
 	}
 
 	app.serverNameBinding.Set(server.Config.ServerName)
