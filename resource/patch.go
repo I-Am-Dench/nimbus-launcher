@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/I-Am-Dench/lu-launcher/client"
-	"github.com/I-Am-Dench/lu-launcher/luconfig"
+	"github.com/I-Am-Dench/lu-launcher/ldf"
 )
 
 var (
@@ -177,8 +177,8 @@ func (patch *Patch) updateBoot(server *Server) error {
 		return fmt.Errorf("could not read boot patch file file \"%s\": %v", patch.Update.Boot, err)
 	}
 
-	config := luconfig.New()
-	err = luconfig.Unmarshal(data, config)
+	config := &ldf.BootConfig{}
+	err = ldf.Unmarshal(data, config)
 	if err != nil {
 		return fmt.Errorf("could not unmarshal boot patch file: %v", err)
 	}

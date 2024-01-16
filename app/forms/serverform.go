@@ -10,7 +10,7 @@ import (
 	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"github.com/I-Am-Dench/lu-launcher/luconfig"
+	"github.com/I-Am-Dench/lu-launcher/ldf"
 	"github.com/I-Am-Dench/lu-launcher/resource"
 )
 
@@ -76,8 +76,8 @@ func NewServerForm(window fyne.Window, heading string) *ServerForm {
 				form.patchToken.SetText(server.Patch.Token)
 				form.patchProtocol.SetSelected(server.Patch.Protocol)
 
-				bootConfig := luconfig.LUConfig{}
-				err = luconfig.Unmarshal([]byte(server.Boot.Text), &bootConfig)
+				bootConfig := ldf.BootConfig{}
+				err = ldf.Unmarshal([]byte(server.Boot.Text), &bootConfig)
 				if err != nil {
 					dialog.ShowError(err, window)
 					return

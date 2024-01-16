@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/I-Am-Dench/lu-launcher/luconfig"
+	"github.com/I-Am-Dench/lu-launcher/ldf"
 )
 
 const (
@@ -25,7 +25,7 @@ type Server struct {
 	PatchProtocol string `json:"patchProtocol"`
 	CurrentPatch  string `json:"currentPatch"`
 
-	Config *luconfig.LUConfig `json:"-"`
+	Config *ldf.BootConfig `json:"-"`
 
 	hasPatchesList bool          `json:"-"`
 	patchesList    PatchVersions `json:"-"`
@@ -33,7 +33,7 @@ type Server struct {
 	pendingUpdate bool `json:"-"`
 }
 
-func NewServer(name, patchToken, patchProtocol string, config *luconfig.LUConfig) *Server {
+func NewServer(name, patchToken, patchProtocol string, config *ldf.BootConfig) *Server {
 	server := new(Server)
 	server.Id = fmt.Sprint(time.Now().Unix())
 	server.Name = name
@@ -43,7 +43,7 @@ func NewServer(name, patchToken, patchProtocol string, config *luconfig.LUConfig
 	return server
 }
 
-func CreateServer(name, patchToken, patchProtocol string, config *luconfig.LUConfig) (*Server, error) {
+func CreateServer(name, patchToken, patchProtocol string, config *ldf.BootConfig) (*Server, error) {
 	server := NewServer(name, patchToken, patchProtocol, config)
 	return server, server.SaveConfig()
 }
@@ -55,7 +55,7 @@ func (server *Server) SaveConfig() error {
 		server.Boot = bootName
 	}
 
-	data, err := luconfig.Marshal(server.Config)
+	data, err := ldf.MarshalLines(server.Config)
 	if err != nil {
 		return fmt.Errorf("cannot marshal boot.cfg: %v", err)
 	}
@@ -69,7 +69,7 @@ func (server *Server) SaveConfig() error {
 }
 
 func (server *Server) LoadConfig() error {
-	server.Config = luconfig.New()
+	server.Config = &ldf.BootConfig{}
 
 	if len(server.Boot) == 0 {
 		return nil
@@ -80,7 +80,7 @@ func (server *Server) LoadConfig() error {
 		return fmt.Errorf("cannot load boot.cfg: %v", err)
 	}
 
-	err = luconfig.Unmarshal(data, server.Config)
+	err = ldf.Unmarshal(data, server.Config)
 	if err != nil {
 		return fmt.Errorf("cannot unmarshal boot.cfg: %v", err)
 	}
@@ -126,7 +126,7 @@ func (server *Server) PatchServerRequest(elem ...string) (*http.Response, error)
 }
 
 func (server *Server) ToXML() ServerXML {
-	data, _ := luconfig.Marshal(server.Config)
+	data, _ := ldf.MarshalLines(server.Config)
 	return ServerXML{
 		Name: server.Name,
 		Boot: struct {
