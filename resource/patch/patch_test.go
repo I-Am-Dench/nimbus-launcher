@@ -69,10 +69,11 @@ func serverFileSystem() fileSystem {
 	fs["/patches"] = versions
 
 	fs["/patches/v1.0.0"] = readTestPatch("patch1.json")
+	fs["/patches/v2.0.0"] = readTestPatch("patch2.json")
 
-	fs["/patches/v1.0.0/a"] = []byte("Test 1")
-	fs["/patches/v1.0.0/b"] = []byte("Test 2")
-	fs["/patches/v1.0.0/c"] = []byte("Test 3")
+	fs["/patches/common/a"] = []byte("Test 1")
+	fs["/patches/common/b"] = []byte("Test 2")
+	fs["/patches/common/c"] = []byte("Test 3")
 
 	return fs
 }
@@ -83,16 +84,6 @@ func clientFileSystem() fileSystem {
 	fs["data/file1"] = []byte("default data 1")
 	fs["data/file2"] = []byte("default data 2")
 	fs["data/file3"] = []byte("default data 3")
-
-	return fs
-}
-
-func expectedClient() fileSystem {
-	fs := make(fileSystem)
-
-	fs["data/file1"] = []byte("Test 1")
-	fs["data/file2"] = []byte("Test 2")
-	fs["data/file3"] = []byte("Test 3")
 
 	return fs
 }
@@ -124,6 +115,34 @@ func checkContents(dir, path string, expected []byte) error {
 	return nil
 }
 
+func testPatchVersion(t *testing.T, env *environment, cache client.Cache, version string, clientFS fileSystem, expectedFS fileSystem) {
+	clientFS.Init(env.ClientDir(), t)
+
+	patch, err := env.ServerConfig.GetPatch(version)
+	if err != nil {
+		t.Fatalf("test patching: %s: %v", version, err)
+	}
+
+	err = patch.UpdateResources(env.ServerConfig, env.Rejections)
+	if err != nil {
+		t.Fatalf("test patching: %s: update resources: %v", version, err)
+	}
+
+	err = patch.TransferResources(env.ClientDir(), cache, env.ServerConfig)
+	if err != nil {
+		t.Fatalf("test patching: %s: transfer resource: %v", version, err)
+	}
+
+	for path, expectedData := range expectedFS {
+		err := checkContents(env.ClientDir(), path, expectedData)
+		if err != nil {
+			t.Errorf("test patching: %v", err)
+		} else {
+			t.Logf("\"%s\" is correct!", path)
+		}
+	}
+}
+
 func TestPatching(t *testing.T) {
 	serverFS := serverFileSystem()
 	clientFS := clientFileSystem()
@@ -131,9 +150,6 @@ func TestPatching(t *testing.T) {
 	env, teardown := setup(t, serverFS)
 	defer teardown()
 
-	clientDirectory := filepath.Join(env.Dir, "client")
-
-	rejections := patch.NewRejectionList(filepath.Join(env.Dir, "rejections.json"))
 	clientCache := &cache{
 		m: make(map[string]client.ClientResource),
 	}
@@ -147,31 +163,18 @@ func TestPatching(t *testing.T) {
 
 	t.Log("Started test patch server.")
 
-	clientFS.Init(clientDirectory, t)
+	testPatchVersion(t, env, clientCache, "v1.0.0", clientFS, fileSystem{
+		"data/file1": []byte("Test 1"),
+		"data/file2": []byte("Test 2"),
+		"data/file3": []byte("Test 3"),
+	})
 
-	patch, err := env.ServerConfig.GetPatch("v1.0.0")
-	if err != nil {
-		t.Fatalf("test patching: %v", err)
-	}
-
-	err = patch.UpdateResources(env.ServerConfig, rejections)
-	if err != nil {
-		t.Fatalf("test patching: update resources: %v", err)
-	}
-
-	err = patch.TransferResources(clientDirectory, clientCache, env.ServerConfig)
-	if err != nil {
-		t.Fatalf("test patching: transfer resources: %v", err)
-	}
-
-	expected := expectedClient()
-
-	for path, expectedData := range expected {
-		err := checkContents(clientDirectory, path, expectedData)
-		if err != nil {
-			t.Errorf("test patching: %v", err)
-		} else {
-			t.Logf("\"%s\" is correct!", path)
-		}
-	}
+	testPatchVersion(t, env, clientCache, "v2.0.0", clientFS, fileSystem{
+		"data/file1": []byte("default data 1"),
+		"data/file2": []byte("default data 2"),
+		"data/file3": []byte("default data 3"),
+		"data/file4": []byte("Test 1"),
+		"data/file5": []byte("Test 2"),
+		"data/file6": []byte("Test 3"),
+	})
 }

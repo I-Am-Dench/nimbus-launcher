@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/I-Am-Dench/lu-launcher/ldf"
+	"github.com/I-Am-Dench/lu-launcher/resource/patch"
 	"github.com/I-Am-Dench/lu-launcher/resource/server"
 )
 
@@ -17,6 +18,11 @@ type environment struct {
 
 	PatchServer  *http.Server
 	ServerConfig *server.Server
+	Rejections   *patch.RejectionList
+}
+
+func (env *environment) ClientDir() string {
+	return filepath.Join(env.Dir, "client")
 }
 
 type fileSystem map[string][]byte
@@ -107,6 +113,8 @@ func setup(t *testing.T, serverFS fileSystem) (*environment, func()) {
 	})
 
 	env.ServerConfig = newServerConfiguration(dir)
+
+	env.Rejections = patch.NewRejectionList(filepath.Join(dir, "rejections.json"))
 
 	return env, func() {
 		env.PatchServer.Shutdown(ctx)
