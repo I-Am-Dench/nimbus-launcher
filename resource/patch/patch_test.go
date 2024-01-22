@@ -118,7 +118,7 @@ func checkContents(dir, path string, expected []byte) error {
 	}
 
 	if !hasSameContent(expected, actual) {
-		return fmt.Errorf("expected `%v` but read `%v`", expected, actual)
+		return fmt.Errorf("\"%s\" expected `%s` but read `%s`", path, expected, actual)
 	}
 
 	return nil
