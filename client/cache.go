@@ -36,6 +36,7 @@ func ReadResource(clientDirectory, resource string) (ClientResource, error) {
 	if err != nil {
 		return ClientResource{}, &ResourceError{"client: cannot open resource", err}
 	}
+	defer file.Close()
 
 	data, _ := io.ReadAll(file)
 	stat, _ := file.Stat()
