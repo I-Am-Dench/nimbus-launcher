@@ -48,27 +48,14 @@ func (cache *cache) Close() error {
 	return nil
 }
 
-var testPatch = `{
-	"download": [
-		{
-			"path": "/v1.0.0/a",
-			"name": "a"
-		},
-		{
-			"path": "/v1.0.0/b",
-			"name": "b"
-		},
-		{
-			"path": "/v1.0.0/c",
-			"name": "c"
-		}
-	],
-	"replace": {
-		"a": "data/file1",
-		"b": "data/file2",
-		"c": "data/file3"
+func readTestPatch(name string) []byte {
+	data, err := os.ReadFile(filepath.Join("test_patches", name))
+	if err != nil {
+		panic(fmt.Errorf("read test patch: %v", err))
 	}
-}`
+
+	return data
+}
 
 var testVersions = server.PatchesSummary{
 	CurrentVersion:   "v1.0.0",
@@ -81,7 +68,7 @@ func serverFileSystem() fileSystem {
 	versions, _ := json.Marshal(testVersions)
 	fs["/patches"] = versions
 
-	fs["/patches/v1.0.0"] = []byte(testPatch)
+	fs["/patches/v1.0.0"] = readTestPatch("patch1.json")
 
 	fs["/patches/v1.0.0/a"] = []byte("Test 1")
 	fs["/patches/v1.0.0/b"] = []byte("Test 2")

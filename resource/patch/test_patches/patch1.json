@@ -1,0 +1,21 @@
+{
+    "download": [
+        {
+            "path": "/v1.0.0/a",
+            "name": "a"
+        },
+        {
+            "path": "/v1.0.0/b",
+            "name": "b"
+        },
+        {
+            "path": "/v1.0.0/c",
+            "name": "c"
+        }
+    ],
+    "replace": {
+        "a": "data/file1",
+        "b": "data/file2",
+        "c": "data/file3"
+    }
+}
