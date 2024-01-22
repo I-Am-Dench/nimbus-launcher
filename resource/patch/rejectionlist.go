@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-
-	"github.com/I-Am-Dench/lu-launcher/resource/server"
 )
 
 type RejectionList struct {
@@ -62,28 +60,44 @@ func (rejections *RejectionList) Amount() int {
 	return sum
 }
 
-func (rejections *RejectionList) Add(server *server.Server, version string) error {
-	if server == nil || len(server.Id) == 0 || len(version) == 0 {
+func (rejections *RejectionList) Add(server Server, version string) error {
+	if server == nil || len(server.Id()) == 0 || len(version) == 0 {
 		return nil
 	}
 
-	versions, ok := rejections.m[server.Id]
+	versions, ok := rejections.m[server.Id()]
 	if !ok {
 		versions = []string{}
 	}
 
 	versions = append(versions, version)
-	rejections.m[server.Id] = versions
+	rejections.m[server.Id()] = versions
 
 	return rejections.Save()
 }
 
-func (rejections *RejectionList) IsRejected(server *server.Server, version string) bool {
-	if server == nil || len(server.Id) == 0 || len(version) == 0 {
+// func (rejections *RejectionList) Add(server *server.Server, version string) error {
+// 	if server == nil || len(server.Id) == 0 || len(version) == 0 {
+// 		return nil
+// 	}
+
+// 	versions, ok := rejections.m[server.Id]
+// 	if !ok {
+// 		versions = []string{}
+// 	}
+
+// 	versions = append(versions, version)
+// 	rejections.m[server.Id] = versions
+
+// 	return rejections.Save()
+// }
+
+func (rejections *RejectionList) IsRejected(server Server, version string) bool {
+	if server == nil || len(server.Id()) == 0 || len(version) == 0 {
 		return false
 	}
 
-	versions, ok := rejections.m[server.Id]
+	versions, ok := rejections.m[server.Id()]
 	if !ok {
 		return false
 	}
@@ -96,3 +110,22 @@ func (rejections *RejectionList) IsRejected(server *server.Server, version strin
 
 	return false
 }
+
+// func (rejections *RejectionList) IsRejected(server *server.Server, version string) bool {
+// 	if server == nil || len(server.Id) == 0 || len(version) == 0 {
+// 		return false
+// 	}
+
+// 	versions, ok := rejections.m[server.Id]
+// 	if !ok {
+// 		return false
+// 	}
+
+// 	for _, v := range versions {
+// 		if v == version {
+// 			return true
+// 		}
+// 	}
+
+// 	return false
+// }

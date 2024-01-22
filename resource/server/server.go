@@ -1,8 +1,10 @@
 package server
 
 import (
+	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -11,6 +13,7 @@ import (
 	"time"
 
 	"github.com/I-Am-Dench/lu-launcher/ldf"
+	"github.com/I-Am-Dench/lu-launcher/resource/patch"
 )
 
 const (
@@ -22,10 +25,13 @@ type PatchesSummary struct {
 	PreviousVersions []string `json:"previousVersions"`
 }
 
-type Server struct {
-	dir string `json:"-"`
+var _ patch.Server = &Server{}
 
-	Id            string `json:"id"`
+type Server struct {
+	dir         string `json:"-"`
+	downloadDir string `json:"-"`
+
+	ID            string `json:"id"`
 	Name          string `json:"name"`
 	Boot          string `json:"boot"`
 	PatchToken    string `json:"patchToken"`
@@ -39,11 +45,12 @@ type Server struct {
 	pendingUpdate  bool           `json:"-"`
 }
 
-func New(dir string, name, patchToken, patchProtocol string, config *ldf.BootConfig) *Server {
+func New(dir, downloadDir string, name, patchToken, patchProtocol string, config *ldf.BootConfig) *Server {
 	return &Server{
-		dir: dir,
+		dir:         dir,
+		downloadDir: downloadDir,
 
-		Id:            fmt.Sprint(time.Now().Unix()),
+		ID:            fmt.Sprint(time.Now().Unix()),
 		Name:          name,
 		PatchToken:    patchToken,
 		PatchProtocol: patchProtocol,
@@ -52,8 +59,16 @@ func New(dir string, name, patchToken, patchProtocol string, config *ldf.BootCon
 }
 
 func Create(name, patchToken, patchProtocol string, config *ldf.BootConfig) (*Server, error) {
-	server := New("settings", name, patchToken, patchProtocol, config)
+	server := New("settings", "patches", name, patchToken, patchProtocol, config)
 	return server, server.SaveConfig()
+}
+
+func (server *Server) Id() string {
+	return server.ID
+}
+
+func (server *Server) DownloadDir() string {
+	return filepath.Join(server.downloadDir, server.ID)
 }
 
 func (server *Server) BootPath() string {
@@ -62,7 +77,7 @@ func (server *Server) BootPath() string {
 
 func (server *Server) SaveConfig() error {
 	if len(server.Boot) == 0 {
-		server.Boot = fmt.Sprintf("boot_%s.cfg", server.Id)
+		server.Boot = fmt.Sprintf("boot_%s.cfg", server.ID)
 	}
 
 	data, err := ldf.MarshalLines(server.Config)
@@ -111,6 +126,57 @@ func (server *Server) PatchServerUrl(elem ...string) (string, error) {
 	return url.JoinPath(server.PatchServerHost(), append(path, elem...)...)
 }
 
+func (server *Server) GetPatch(version string) (patch.Patch, error) {
+	patchDirectory := filepath.Join(server.DownloadDir(), version)
+	path := filepath.Join(patchDirectory, "patch.json")
+
+	data, err := os.ReadFile(path)
+	if err == nil {
+		patch := patch.NewTpp(version)
+
+		err = json.Unmarshal(data, &patch)
+		if err != nil {
+			return nil, fmt.Errorf("cannot unmarshal \"%s\": %v", path, err)
+		}
+
+		return patch, nil
+	}
+
+	response, err := server.RemoteGet(version)
+	if err != nil {
+		return nil, patch.ErrPatchesUnavailable
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode == http.StatusUnauthorized {
+		return nil, patch.ErrPatchesUnauthorized
+	}
+
+	if response.StatusCode >= 400 {
+		return nil, patch.ErrPatchesUnavailable
+	}
+
+	data, err = io.ReadAll(response.Body)
+	if err != nil {
+		return nil, fmt.Errorf("cannot read body of patch version response: %v", err)
+	}
+
+	patch := patch.NewTpp(version)
+	err = json.Unmarshal(data, &patch)
+	if err != nil {
+		return nil, fmt.Errorf("malformed response body from patch version: %v", err)
+	}
+
+	os.MkdirAll(patchDirectory, 0755)
+
+	err = os.WriteFile(path, data, 0755)
+	if err != nil {
+		log.Printf("Could not save patch.json: %v", err)
+	}
+
+	return patch, err
+}
+
 func (server *Server) RemoteGet(elem ...string) (*http.Response, error) {
 	url, err := server.PatchServerUrl(elem...)
 	if err != nil {
@@ -129,6 +195,15 @@ func (server *Server) RemoteGet(elem ...string) (*http.Response, error) {
 
 	client := http.Client{}
 	return client.Do(request)
+}
+
+func (server *Server) SetBootConfig(boot *ldf.BootConfig) error {
+	server.Config = boot
+	return server.SaveConfig()
+}
+
+func (server *Server) SetPatchProtocol(protocol string) {
+	server.PatchProtocol = protocol
 }
 
 func (server *Server) ToXML() XML {
