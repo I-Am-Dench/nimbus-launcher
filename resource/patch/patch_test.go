@@ -62,6 +62,8 @@ func serverFileSystem() fileSystem {
 	fs["/patches/v1.0.0"] = readTestPatch("patch1.json")
 	fs["/patches/v2.0.0"] = readTestPatch("patch2.json")
 	fs["/patches/v3.0.0"] = readTestPatch("patch3.json")
+	fs["/patches/v4.0.0"] = readTestPatch("patch4.json")
+	fs["/patches/v5.0.0"] = readTestPatch("patch5.json")
 
 	fs["/patches/common/a"] = []byte("Test 1")
 	fs["/patches/common/b"] = []byte("Test 2")
@@ -167,6 +169,23 @@ func testPatchVersion(t *testing.T, env *environment, cache client.Cache, versio
 	}
 }
 
+func testBadPatchVersion(t *testing.T, env *environment, cache client.Cache, version string, clientFS fileSystem) {
+	t.Log("Initializing client contents:")
+	clientFS.Init(env.ClientDir(), t)
+
+	patch, err := env.ServerConfig.GetPatch(version)
+	if err != nil {
+		t.Fatalf("test patching: bad %s: %v", version, err)
+	}
+
+	err = patch.TransferResources(env.ClientDir(), cache, env.ServerConfig)
+	if err == nil {
+		t.Fatalf("test patching: bad %s: transfer resources: did not return an error", version)
+	}
+
+	t.Logf("patch %s correctly returned an error! (%v)", version, err)
+}
+
 func TestPatching(t *testing.T) {
 	serverFS := serverFileSystem()
 	clientFS := clientFileSystem()
@@ -211,4 +230,10 @@ func TestPatching(t *testing.T) {
 		"data/file3": []byte("default data 3"),
 		"data/file4": []byte("Test 3"),
 	})
+
+	// Test adding resources that already exist
+	testBadPatchVersion(t, env, clientCache, "v4.0.0", clientFS)
+
+	// Test replacing resources that do not exist
+	testBadPatchVersion(t, env, clientCache, "v5.0.0", clientFS)
 }
