@@ -6,6 +6,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"github.com/I-Am-Dench/lu-launcher/luwidgets/muxset"
 	"github.com/I-Am-Dench/lu-launcher/resource"
+	"github.com/I-Am-Dench/lu-launcher/resource/server"
 )
 
 type ServerList struct {
@@ -17,7 +18,7 @@ type ServerList struct {
 	currentlyUpdating *muxset.MuxSet[string]
 }
 
-func NewServerList(serverList resource.ServerList, changed func(*resource.Server)) *ServerList {
+func NewServerList(serverList resource.ServerList, changed func(*server.Server)) *ServerList {
 	list := new(ServerList)
 	list.ExtendBaseWidget(list)
 
@@ -51,15 +52,15 @@ func (list *ServerList) Refresh() {
 	list.Select.Refresh()
 }
 
-func (list *ServerList) Get(id string) *resource.Server {
+func (list *ServerList) Get(id string) *server.Server {
 	return list.servers.Get(id)
 }
 
-func (list *ServerList) GetIndex(index int) *resource.Server {
+func (list *ServerList) GetIndex(index int) *server.Server {
 	return list.servers.GetIndex(index)
 }
 
-func (list *ServerList) Add(server *resource.Server) error {
+func (list *ServerList) Add(server *server.Server) error {
 	if server == nil {
 		return fmt.Errorf("fatal add server error: server is nil")
 	}
@@ -73,18 +74,18 @@ func (list *ServerList) Add(server *resource.Server) error {
 	return nil
 }
 
-func (list *ServerList) Remove(server *resource.Server) error {
+func (list *ServerList) Remove(server *server.Server) error {
 	if server == nil {
 		return fmt.Errorf("fatal remove server error: server is nil")
 	}
 
-	if list.currentlyUpdating.Has(server.Id) {
+	if list.currentlyUpdating.Has(server.ID) {
 		return fmt.Errorf("cannot remove server: server is currently updating")
 	}
 
-	serverIndex := list.servers.Find(server.Id)
+	serverIndex := list.servers.Find(server.ID)
 
-	err := list.servers.Remove(server.Id)
+	err := list.servers.Remove(server.ID)
 	if err != nil {
 		return err
 	}
@@ -105,24 +106,24 @@ func (list *ServerList) SetSelectedServer(id string) {
 	list.SetSelectedIndex(list.servers.Find(id))
 }
 
-func (list *ServerList) SelectedServer() *resource.Server {
+func (list *ServerList) SelectedServer() *server.Server {
 	return list.servers.GetIndex(list.SelectedIndex())
 }
 
-func (list *ServerList) MarkAsUpdating(server *resource.Server) {
+func (list *ServerList) MarkAsUpdating(server *server.Server) {
 	if server == nil {
 		return
 	}
 
-	list.currentlyUpdating.Add(server.Id)
+	list.currentlyUpdating.Add(server.ID)
 }
 
-func (list *ServerList) RemoveAsUpdating(server *resource.Server) {
+func (list *ServerList) RemoveAsUpdating(server *server.Server) {
 	if server == nil {
 		return
 	}
 
-	list.currentlyUpdating.Delete(server.Id)
+	list.currentlyUpdating.Delete(server.ID)
 }
 
 func (list *ServerList) Save() error {

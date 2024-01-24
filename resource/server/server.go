@@ -114,7 +114,15 @@ func (server *Server) SaveConfig() error {
 	return nil
 }
 
-func (server *Server) LoadConfig() error {
+func (server *Server) LoadConfig(dir ...string) error {
+	if len(dir) > 0 {
+		server.dir = dir[0]
+	}
+
+	if len(dir) > 1 {
+		server.downloadDir = dir[1]
+	}
+
 	server.Config = &ldf.BootConfig{}
 
 	if len(server.Boot) == 0 {
@@ -152,6 +160,7 @@ func (server *Server) GetPatch(version string) (patch.Patch, error) {
 	path := filepath.Join(patchDirectory, "patch.json")
 
 	data, err := os.ReadFile(path)
+	log.Println(err)
 	if err == nil {
 		patch := patch.NewTpp(version)
 
