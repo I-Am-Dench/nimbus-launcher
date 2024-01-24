@@ -82,7 +82,7 @@ func newPatchServer(t *testing.T, ctx context.Context, fs fileSystem) *http.Serv
 }
 
 func newServerConfiguration(dir string) *server.Server {
-	bootDir := filepath.Join(dir, "boot")
+	bootDir := dir
 	patchDir := filepath.Join(dir, "patches")
 
 	return server.New(bootDir, patchDir, "", "", "http", &ldf.BootConfig{
@@ -113,6 +113,10 @@ func setup(t *testing.T, serverFS fileSystem) (*environment, func()) {
 	})
 
 	env.ServerConfig = newServerConfiguration(dir)
+	err = os.MkdirAll(filepath.Join(dir, "servers"), 0755) // directory where servers' boot.cfgs are stored
+	if err != nil {
+		t.Fatalf("setup: %v", err)
+	}
 
 	env.Rejections = patch.NewRejectionList(filepath.Join(dir, "rejections.json"))
 

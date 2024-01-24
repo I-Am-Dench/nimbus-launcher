@@ -4,11 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/I-Am-Dench/lu-launcher/client"
+	"github.com/I-Am-Dench/lu-launcher/ldf"
 	"github.com/I-Am-Dench/lu-launcher/resource/patch"
 )
 
@@ -56,7 +58,7 @@ func readTestPatch(name string) []byte {
 	return data
 }
 
-func serverFileSystem() fileSystem {
+func serverFileSystem(updatedBoot *ldf.BootConfig) fileSystem {
 	fs := make(fileSystem)
 
 	fs["/patches/v1.0.0"] = readTestPatch("patch1.json")
@@ -64,12 +66,20 @@ func serverFileSystem() fileSystem {
 	fs["/patches/v3.0.0"] = readTestPatch("patch3.json")
 	fs["/patches/v4.0.0"] = readTestPatch("patch4.json")
 	fs["/patches/v5.0.0"] = readTestPatch("patch5.json")
+	fs["/patches/v6.0.0"] = readTestPatch("patch6.json")
 
 	fs["/patches/invalid_version"] = readTestPatch("patch1.json") // Could be any patch
+
+	data, err := ldf.Marshal(updatedBoot)
+	if err != nil {
+		panic(err)
+	}
 
 	fs["/patches/common/a"] = []byte("Test 1")
 	fs["/patches/common/b"] = []byte("Test 2")
 	fs["/patches/common/c"] = []byte("Test 3")
+
+	fs["/patches/boot.cfg"] = data
 
 	return fs
 }
@@ -189,7 +199,13 @@ func testBadPatchVersion(t *testing.T, env *environment, cache client.Cache, ver
 }
 
 func TestPatching(t *testing.T) {
-	serverFS := serverFileSystem()
+	expectedBoot := &ldf.BootConfig{
+		ServerName:      fmt.Sprintf("Server %d", rand.Uint32()),
+		PatchServerIP:   "127.0.0.1",
+		PatchServerPort: 3000,
+	}
+
+	serverFS := serverFileSystem(expectedBoot)
 	clientFS := clientFileSystem()
 
 	env, teardown := setup(t, serverFS)
@@ -241,4 +257,19 @@ func TestPatching(t *testing.T) {
 
 	// Test bad version name
 	testBadPatchVersion(t, env, clientCache, "invalid_version", clientFS)
+
+	// Test update directives
+	testPatchVersion(t, env, clientCache, "v6.0.0", clientFS, clientFS) // client should remain unchanged
+
+	if env.ServerConfig.Config.ServerName != expectedBoot.ServerName {
+		t.Fatalf("test patching: expected ServerName to be \"%s\" but got \"%s\"", env.ServerConfig.Config.ServerName, expectedBoot.ServerName)
+	}
+
+	t.Logf("Server name is correct! (\"%s\")", env.ServerConfig.Config.ServerName)
+
+	if env.ServerConfig.PatchProtocol != "proto" {
+		t.Fatalf("test patching: expected patchProtocol to be \"updated\" but got \"%s\"", env.ServerConfig.PatchProtocol)
+	}
+
+	t.Logf("Patch protocol is correct! (\"%s\")", env.ServerConfig.PatchProtocol)
 }
