@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
@@ -70,6 +71,7 @@ func serverFileSystem() fileSystem {
 
 	fs["/patches/v1.0.0"] = readTestPatch("patch1.json")
 	fs["/patches/v2.0.0"] = readTestPatch("patch2.json")
+	fs["/patches/v3.0.0"] = readTestPatch("patch3.json")
 
 	fs["/patches/common/a"] = []byte("Test 1")
 	fs["/patches/common/b"] = []byte("Test 2")
@@ -115,6 +117,28 @@ func checkContents(dir, path string, expected []byte) error {
 	return nil
 }
 
+func countDirectoryContents(dir string) (int, error) {
+	count := 0
+
+	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if !d.IsDir() {
+			count++
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
 func testPatchVersion(t *testing.T, env *environment, cache client.Cache, version string, clientFS fileSystem, expectedFS fileSystem) {
 	clientFS.Init(env.ClientDir(), t)
 
@@ -131,6 +155,15 @@ func testPatchVersion(t *testing.T, env *environment, cache client.Cache, versio
 	err = patch.TransferResources(env.ClientDir(), cache, env.ServerConfig)
 	if err != nil {
 		t.Fatalf("test patching: %s: transfer resource: %v", version, err)
+	}
+
+	numEntries, err := countDirectoryContents(env.ClientDir())
+	if err != nil {
+		t.Fatalf("test patching: %v", err)
+	}
+
+	if len(expectedFS) != numEntries {
+		t.Fatalf("test patching: expected %d client entries but got %d", len(expectedFS), numEntries)
 	}
 
 	for path, expectedData := range expectedFS {
@@ -163,12 +196,14 @@ func TestPatching(t *testing.T) {
 
 	t.Log("Started test patch server.")
 
+	// Test replace directive
 	testPatchVersion(t, env, clientCache, "v1.0.0", clientFS, fileSystem{
 		"data/file1": []byte("Test 1"),
 		"data/file2": []byte("Test 2"),
 		"data/file3": []byte("Test 3"),
 	})
 
+	// Test add directive
 	testPatchVersion(t, env, clientCache, "v2.0.0", clientFS, fileSystem{
 		"data/file1": []byte("default data 1"),
 		"data/file2": []byte("default data 2"),
@@ -176,5 +211,13 @@ func TestPatching(t *testing.T) {
 		"data/file4": []byte("Test 1"),
 		"data/file5": []byte("Test 2"),
 		"data/file6": []byte("Test 3"),
+	})
+
+	// Test replace and add directive
+	testPatchVersion(t, env, clientCache, "v3.0.0", clientFS, fileSystem{
+		"data/file1": []byte("Test 1"),
+		"data/file2": []byte("Test 2"),
+		"data/file3": []byte("default data 3"),
+		"data/file4": []byte("Test 3"),
 	})
 }
