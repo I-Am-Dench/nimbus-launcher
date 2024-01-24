@@ -1,7 +1,6 @@
 package patch_test
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -11,7 +10,6 @@ import (
 
 	"github.com/I-Am-Dench/lu-launcher/client"
 	"github.com/I-Am-Dench/lu-launcher/resource/patch"
-	"github.com/I-Am-Dench/lu-launcher/resource/server"
 )
 
 type cache struct {
@@ -58,16 +56,8 @@ func readTestPatch(name string) []byte {
 	return data
 }
 
-var testVersions = server.PatchesSummary{
-	CurrentVersion:   "v1.0.0",
-	PreviousVersions: []string{},
-}
-
 func serverFileSystem() fileSystem {
 	fs := make(fileSystem)
-
-	versions, _ := json.Marshal(testVersions)
-	fs["/patches"] = versions
 
 	fs["/patches/v1.0.0"] = readTestPatch("patch1.json")
 	fs["/patches/v2.0.0"] = readTestPatch("patch2.json")
@@ -140,6 +130,7 @@ func countDirectoryContents(dir string) (int, error) {
 }
 
 func testPatchVersion(t *testing.T, env *environment, cache client.Cache, version string, clientFS fileSystem, expectedFS fileSystem) {
+	t.Log("Initializing client contents:")
 	clientFS.Init(env.ClientDir(), t)
 
 	patch, err := env.ServerConfig.GetPatch(version)
