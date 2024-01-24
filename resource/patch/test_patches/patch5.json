@@ -13,9 +13,9 @@
             "name": "c"
         }
     ],
-    "replace": {
-        "a": "data/file4",
-        "b": "data/file5",
-        "c": "data/file6"
+    "add": {
+        "a": "data/file1",
+        "b": "data/file2",
+        "c": "data/file3"
     }
 }

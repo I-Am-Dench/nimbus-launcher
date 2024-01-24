@@ -65,6 +65,8 @@ func serverFileSystem() fileSystem {
 	fs["/patches/v4.0.0"] = readTestPatch("patch4.json")
 	fs["/patches/v5.0.0"] = readTestPatch("patch5.json")
 
+	fs["/patches/invalid_version"] = readTestPatch("patch1.json") // Could be any patch
+
 	fs["/patches/common/a"] = []byte("Test 1")
 	fs["/patches/common/b"] = []byte("Test 2")
 	fs["/patches/common/c"] = []byte("Test 3")
@@ -231,9 +233,12 @@ func TestPatching(t *testing.T) {
 		"data/file4": []byte("Test 3"),
 	})
 
-	// Test adding resources that already exist
+	// Test replacing resources that do not exist
 	testBadPatchVersion(t, env, clientCache, "v4.0.0", clientFS)
 
-	// Test replacing resources that do not exist
+	// Test adding resources that already exist
 	testBadPatchVersion(t, env, clientCache, "v5.0.0", clientFS)
+
+	// Test bad version name
+	testBadPatchVersion(t, env, clientCache, "invalid_version", clientFS)
 }
