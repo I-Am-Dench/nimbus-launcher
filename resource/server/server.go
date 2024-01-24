@@ -45,23 +45,44 @@ type Server struct {
 	pendingUpdate  bool           `json:"-"`
 }
 
-func New(dir, downloadDir string, name, patchToken, patchProtocol string, config *ldf.BootConfig) *Server {
+func New(config Config) *Server {
 	return &Server{
-		dir:         dir,
-		downloadDir: downloadDir,
+		dir:         config.SettingDir,
+		downloadDir: config.DownloadDir,
 
 		ID:            fmt.Sprint(time.Now().Unix()),
-		Name:          name,
-		PatchToken:    patchToken,
-		PatchProtocol: patchProtocol,
-		Config:        config,
+		Name:          config.Name,
+		PatchToken:    config.PatchToken,
+		PatchProtocol: config.PatchProtocol,
+		Config:        config.Config,
 	}
 }
 
-func Create(name, patchToken, patchProtocol string, config *ldf.BootConfig) (*Server, error) {
-	server := New("settings", "patches", name, patchToken, patchProtocol, config)
-	return server, server.SaveConfig()
-}
+// func New(dir, downloadDir string, name, patchToken, patchProtocol string, config *ldf.BootConfig) *Server {
+// 	return &Server{
+// 		dir:         dir,
+// 		downloadDir: downloadDir,
+
+// 		ID:            fmt.Sprint(time.Now().Unix()),
+// 		Name:          name,
+// 		PatchToken:    patchToken,
+// 		PatchProtocol: patchProtocol,
+// 		Config:        config,
+// 	}
+// }
+
+// func Create(config Config) (*Server, error) {
+// 	config.SettingDir = "settings"
+// 	config.DownloadDir = "patches"
+// 	server := New(config)
+
+// 	return server, server.SaveConfig()
+// }
+
+// func Create(name, patchToken, patchProtocol string, config *ldf.BootConfig) (*Server, error) {
+// 	server := New("settings", "patches", name, patchToken, patchProtocol, config)
+// 	return server, server.SaveConfig()
+// }
 
 func (server *Server) Id() string {
 	return server.ID
@@ -195,6 +216,35 @@ func (server *Server) RemoteGet(elem ...string) (*http.Response, error) {
 
 	client := http.Client{}
 	return client.Do(request)
+}
+
+func (server *Server) GetPatchesSummary() (PatchesSummary, error) {
+	response, err := server.RemoteGet()
+	if err != nil {
+		return PatchesSummary{}, patch.ErrPatchesUnavailable
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode == http.StatusServiceUnavailable {
+		return PatchesSummary{}, patch.ErrPatchesUnsupported
+	}
+
+	if response.StatusCode >= 400 {
+		return PatchesSummary{}, fmt.Errorf("invalid response status code from server: %d", response.StatusCode)
+	}
+
+	data, err := io.ReadAll(response.Body)
+	if err != nil {
+		return PatchesSummary{}, fmt.Errorf("cannot read boyd of patch server response: %v", err)
+	}
+
+	patches := PatchesSummary{}
+	err = json.Unmarshal(data, &patches)
+	if err != nil {
+		return PatchesSummary{}, fmt.Errorf("malformed response body from server: %v", err)
+	}
+
+	return patches, nil
 }
 
 func (server *Server) SetBootConfig(boot *ldf.BootConfig) error {

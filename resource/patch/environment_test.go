@@ -82,14 +82,22 @@ func newPatchServer(t *testing.T, ctx context.Context, fs fileSystem) *http.Serv
 }
 
 func newServerConfiguration(dir string) *server.Server {
-	bootDir := dir
-	patchDir := filepath.Join(dir, "patches")
-
-	return server.New(bootDir, patchDir, "", "", "http", &ldf.BootConfig{
-		PatchServerIP:   "127.0.0.1",
-		PatchServerPort: 3000,
-		PatchServerDir:  "patches",
+	return server.New(server.Config{
+		SettingDir:    dir,
+		DownloadDir:   filepath.Join(dir, "patches"),
+		Name:          "",
+		PatchProtocol: "http",
+		Config: &ldf.BootConfig{
+			PatchServerIP:   "127.0.0.1",
+			PatchServerPort: 3000,
+			PatchServerDir:  "patches",
+		},
 	})
+	// return server.New(bootDir, patchDir, "", "", "http", &ldf.BootConfig{
+	// 	PatchServerIP:   "127.0.0.1",
+	// 	PatchServerPort: 3000,
+	// 	PatchServerDir:  "patches",
+	// })
 }
 
 func setup(t *testing.T, serverFS fileSystem) (*environment, func()) {
