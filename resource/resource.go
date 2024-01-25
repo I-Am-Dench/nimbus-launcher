@@ -22,7 +22,7 @@ const (
 )
 
 const (
-	DEFAULT_DIR_CLIENT = "LEGO Software/Lego Universe"
+	DEFAULT_DIR_CLIENT = "LEGO Software/Lego Universe/client"
 )
 
 func Asset(name string) (*fyne.StaticResource, error) {
