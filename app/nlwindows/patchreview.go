@@ -1,4 +1,4 @@
-package luwindows
+package nlwindows
 
 import (
 	"encoding/json"
@@ -9,7 +9,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"github.com/I-Am-Dench/lu-launcher/luwidgets"
+	"github.com/I-Am-Dench/lu-launcher/nlwidgets"
 	"github.com/I-Am-Dench/lu-launcher/resource/patch"
 )
 
@@ -71,7 +71,7 @@ func LoadPatchReviewContainer(window fyne.Window, patch patch.Patch, onConfirmCa
 	)
 
 	data, _ := json.MarshalIndent(patch, "", "    ")
-	patchContent := luwidgets.NewCodeBox()
+	patchContent := nlwidgets.NewCodeBox()
 	patchContent.SetText(string(data))
 
 	window.SetContent(

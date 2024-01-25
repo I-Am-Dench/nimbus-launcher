@@ -1,10 +1,10 @@
-package luwidgets
+package nlwidgets
 
 import (
 	"fmt"
 
 	"fyne.io/fyne/v2/widget"
-	"github.com/I-Am-Dench/lu-launcher/luwidgets/muxset"
+	"github.com/I-Am-Dench/lu-launcher/nlwidgets/muxset"
 	"github.com/I-Am-Dench/lu-launcher/resource"
 	"github.com/I-Am-Dench/lu-launcher/resource/server"
 )

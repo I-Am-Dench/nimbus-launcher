@@ -14,10 +14,10 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"github.com/I-Am-Dench/lu-launcher/app/luwindows"
+	"github.com/I-Am-Dench/lu-launcher/app/nlwindows"
 	"github.com/I-Am-Dench/lu-launcher/client"
 	"github.com/I-Am-Dench/lu-launcher/ldf"
-	"github.com/I-Am-Dench/lu-launcher/luwidgets"
+	"github.com/I-Am-Dench/lu-launcher/nlwidgets"
 	"github.com/I-Am-Dench/lu-launcher/resource"
 	"github.com/I-Am-Dench/lu-launcher/resource/patch"
 	"github.com/I-Am-Dench/lu-launcher/resource/server"
@@ -38,11 +38,11 @@ type App struct {
 	patchWindow    fyne.Window
 	infoWindow     fyne.Window
 
-	serverList *luwidgets.ServerList
+	serverList *nlwidgets.ServerList
 
 	playButton           *widget.Button
 	refreshUpdatesButton *widget.Button
-	progressBar          *luwidgets.BinaryProgressBar
+	progressBar          *nlwidgets.BinaryProgressBar
 
 	serverNameBinding binding.String
 	authServerBinding binding.String
@@ -125,9 +125,9 @@ func (app *App) InitializeGlobalWidgets(servers resource.ServerList) {
 	)
 	app.playButton.Importance = widget.HighImportance
 
-	app.progressBar = luwidgets.NewBinaryProgressBar()
+	app.progressBar = nlwidgets.NewBinaryProgressBar()
 
-	app.serverList = luwidgets.NewServerList(servers, app.OnServerChanged)
+	app.serverList = nlwidgets.NewServerList(servers, app.OnServerChanged)
 	app.serverList.SetSelectedServer(app.settings.SelectedServer)
 }
 
@@ -332,16 +332,16 @@ func (app *App) ShowSettings() {
 	settings.Show()
 }
 
-func (app *App) ShowPatch(patch patch.Patch, onConfirmCancel func(luwindows.PatchAcceptState)) {
+func (app *App) ShowPatch(patch patch.Patch, onConfirmCancel func(nlwindows.PatchAcceptState)) {
 	if app.patchWindow != nil {
 		app.patchWindow.RequestFocus()
 		return
 	}
 
-	app.patchWindow = luwindows.NewPatchReviewWindow(app, patch, onConfirmCancel)
+	app.patchWindow = nlwindows.NewPatchReviewWindow(app, patch, onConfirmCancel)
 	app.patchWindow.SetOnClosed(func() {
 		app.patchWindow = nil
-		onConfirmCancel(luwindows.PatchCancel)
+		onConfirmCancel(nlwindows.PatchCancel)
 	})
 
 	app.patchWindow.CenterOnScreen()
@@ -354,7 +354,7 @@ func (app *App) ShowInfo() {
 		return
 	}
 
-	app.infoWindow = luwindows.NewInfoWindow(app)
+	app.infoWindow = nlwindows.NewInfoWindow(app)
 	app.infoWindow.SetOnClosed(func() {
 		app.infoWindow = nil
 	})
@@ -415,14 +415,14 @@ func (app *App) Update(serv *server.Server) {
 			return
 		}
 
-		app.ShowPatch(p, func(state luwindows.PatchAcceptState) {
+		app.ShowPatch(p, func(state nlwindows.PatchAcceptState) {
 			defer app.SetNormalState()
 
-			if state == luwindows.PatchCancel {
+			if state == nlwindows.PatchCancel {
 				return
 			}
 
-			if state == luwindows.PatchReject {
+			if state == nlwindows.PatchReject {
 				err := app.rejectedPatches.Add(serv, p.Version())
 				if err == nil {
 					log.Printf("Rejected patch version \"%s\"\n", p.Version())
