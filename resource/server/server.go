@@ -28,7 +28,7 @@ type PatchesSummary struct {
 var _ patch.Server = &Server{}
 
 type Server struct {
-	dir         string `json:"-"`
+	settingsDir string `json:"-"`
 	downloadDir string `json:"-"`
 
 	ID            string `json:"id"`
@@ -47,7 +47,7 @@ type Server struct {
 
 func New(config Config) *Server {
 	return &Server{
-		dir:         config.SettingDir,
+		settingsDir: config.SettingsDir,
 		downloadDir: config.DownloadDir,
 
 		ID:            fmt.Sprint(time.Now().Unix()),
@@ -67,7 +67,7 @@ func (server *Server) DownloadDir() string {
 }
 
 func (server *Server) BootPath() string {
-	return filepath.Join(server.dir, "servers", server.Boot)
+	return filepath.Join(server.settingsDir, "servers", server.Boot)
 }
 
 func (server *Server) SaveConfig() error {
@@ -90,7 +90,7 @@ func (server *Server) SaveConfig() error {
 
 func (server *Server) LoadConfig(dir ...string) error {
 	if len(dir) > 0 {
-		server.dir = dir[0]
+		server.settingsDir = dir[0]
 	}
 
 	if len(dir) > 1 {

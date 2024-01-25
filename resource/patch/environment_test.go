@@ -83,7 +83,7 @@ func newPatchServer(t *testing.T, ctx context.Context, fs fileSystem) *http.Serv
 
 func newServerConfiguration(dir string) *server.Server {
 	return server.New(server.Config{
-		SettingDir:    dir,
+		SettingsDir:   dir,
 		DownloadDir:   filepath.Join(dir, "patches"),
 		Name:          "",
 		PatchProtocol: "http",

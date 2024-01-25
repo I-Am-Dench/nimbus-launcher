@@ -3,7 +3,7 @@ package server
 import "github.com/I-Am-Dench/lu-launcher/ldf"
 
 type Config struct {
-	SettingDir  string
+	SettingsDir string
 	DownloadDir string
 
 	Name          string

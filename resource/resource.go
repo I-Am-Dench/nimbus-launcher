@@ -110,7 +110,7 @@ func ClientCache() (client.Cache, error) {
 }
 
 func NewServer(config server.Config) *server.Server {
-	config.SettingDir = settingsDir
+	config.SettingsDir = settingsDir
 	config.DownloadDir = "patches"
 	return server.New(config)
 }
