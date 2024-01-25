@@ -58,32 +58,6 @@ func New(config Config) *Server {
 	}
 }
 
-// func New(dir, downloadDir string, name, patchToken, patchProtocol string, config *ldf.BootConfig) *Server {
-// 	return &Server{
-// 		dir:         dir,
-// 		downloadDir: downloadDir,
-
-// 		ID:            fmt.Sprint(time.Now().Unix()),
-// 		Name:          name,
-// 		PatchToken:    patchToken,
-// 		PatchProtocol: patchProtocol,
-// 		Config:        config,
-// 	}
-// }
-
-// func Create(config Config) (*Server, error) {
-// 	config.SettingDir = "settings"
-// 	config.DownloadDir = "patches"
-// 	server := New(config)
-
-// 	return server, server.SaveConfig()
-// }
-
-// func Create(name, patchToken, patchProtocol string, config *ldf.BootConfig) (*Server, error) {
-// 	server := New("settings", "patches", name, patchToken, patchProtocol, config)
-// 	return server, server.SaveConfig()
-// }
-
 func (server *Server) Id() string {
 	return server.ID
 }

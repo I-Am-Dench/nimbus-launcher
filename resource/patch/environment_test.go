@@ -93,11 +93,6 @@ func newServerConfiguration(dir string) *server.Server {
 			PatchServerDir:  "patches",
 		},
 	})
-	// return server.New(bootDir, patchDir, "", "", "http", &ldf.BootConfig{
-	// 	PatchServerIP:   "127.0.0.1",
-	// 	PatchServerPort: 3000,
-	// 	PatchServerDir:  "patches",
-	// })
 }
 
 func setup(t *testing.T, serverFS fileSystem) (*environment, func()) {

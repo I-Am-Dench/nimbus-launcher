@@ -25,8 +25,6 @@ const (
 	DEFAULT_DIR_CLIENT = "LEGO Software/Lego Universe"
 )
 
-// var versionPattern = regexp.MustCompile(`^(v|V)?[0-9]+\.[0-9]+\.[0-9]+([0-9a-zA-Z_.-]+)?$`)
-
 func Asset(name string) (*fyne.StaticResource, error) {
 	bytes, err := os.ReadFile(filepath.Join(assetsDir, name))
 	if err != nil {
@@ -69,7 +67,6 @@ func InitializeSettings() error {
 			Config:        ldf.DefaultBootConfig(),
 		})
 
-		// localServer, err := CreateServer("Localhost", "", "", ldf.DefaultBootConfig())
 		if err != nil {
 			return err
 		}
