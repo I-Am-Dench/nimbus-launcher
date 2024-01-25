@@ -8,11 +8,12 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"regexp"
 
 	"fyne.io/fyne/v2"
 	"github.com/I-Am-Dench/lu-launcher/client"
 	"github.com/I-Am-Dench/lu-launcher/ldf"
+	"github.com/I-Am-Dench/lu-launcher/resource/patch"
+	"github.com/I-Am-Dench/lu-launcher/resource/server"
 )
 
 const (
@@ -21,13 +22,11 @@ const (
 )
 
 const (
-	DEFAULT_DIR_CLIENT = "LEGO Software/Lego Universe"
+	DEFAULT_DIR_CLIENT = "LEGO Software/Lego Universe/client"
 )
 
 //go:embed embedded/icon.png
 var iconData []byte
-
-var versionPattern = regexp.MustCompile(`^(v|V)?[0-9]+\.[0-9]+\.[0-9]+([0-9a-zA-Z_.-]+)?$`)
 
 func Icon() *fyne.StaticResource {
 	return fyne.NewStaticResource("icon.png", iconData)
@@ -59,12 +58,18 @@ func InitializeSettings() error {
 
 	if !Exists("servers.json") {
 		log.Println("\"servers.json\" does not exist; Generating default version")
-		localServer, err := CreateServer("Localhost", "", "", ldf.DefaultBootConfig())
+		localServer, err := CreateServer(server.Config{
+			Name:          "Localhost",
+			PatchToken:    "",
+			PatchProtocol: "",
+			Config:        ldf.DefaultBootConfig(),
+		})
+
 		if err != nil {
 			return err
 		}
 
-		servers := ServerList{}
+		servers := ServerList{make([]*server.Server, 1)}
 		err = servers.Add(localServer)
 		if err != nil {
 			return err
@@ -102,8 +107,19 @@ func ClientCache() (client.Cache, error) {
 	return client.NewSqliteCache(settingsDir)
 }
 
-func PatchRejections() (RejectedPatches, error) {
-	rejections := NewRejectedPatches()
+func NewServer(config server.Config) *server.Server {
+	config.SettingsDir = settingsDir
+	config.DownloadDir = "patches"
+	return server.New(config)
+}
+
+func CreateServer(config server.Config) (*server.Server, error) {
+	server := NewServer(config)
+	return server, server.SaveConfig()
+}
+
+func PatchRejections() (*patch.RejectionList, error) {
+	rejections := patch.NewRejectionList(filepath.Join(settingsDir, "rejectedPatches.json"))
 	err := rejections.Load()
 	return rejections, err
 }
@@ -111,11 +127,4 @@ func PatchRejections() (RejectedPatches, error) {
 func Exists(name string) bool {
 	_, err := os.Stat(filepath.Join(settingsDir, name))
 	return !errors.Is(err, os.ErrNotExist)
-}
-
-func ValidateVersionName(version string) error {
-	if !versionPattern.MatchString(version) {
-		return fmt.Errorf("invalid version name \"%s\": version name must match `%v`", version, versionPattern)
-	}
-	return nil
 }

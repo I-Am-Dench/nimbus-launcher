@@ -1,0 +1,12 @@
+{
+    "download": [
+        {
+            "path": "/boot.cfg",
+            "name": "boot.cfg"
+        }
+    ],
+    "update": {
+        "boot": "boot.cfg",
+        "protocol": "proto"
+    }
+}

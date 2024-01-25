@@ -12,6 +12,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"github.com/I-Am-Dench/lu-launcher/ldf"
 	"github.com/I-Am-Dench/lu-launcher/resource"
+	"github.com/I-Am-Dench/lu-launcher/resource/server"
 )
 
 type ServerForm struct {
@@ -106,16 +107,21 @@ func NewServerForm(window fyne.Window, heading string) *ServerForm {
 	return form
 }
 
-func (form *ServerForm) CreateServer() (*resource.Server, error) {
+func (form *ServerForm) CreateServer() (*server.Server, error) {
 	err := form.Validate()
 	if err != nil {
 		return nil, err
 	}
 
-	return resource.CreateServer(form.title.Text, form.patchToken.Text, form.patchProtocol.Selected, form.bootForm.GetConfig())
+	return resource.CreateServer(server.Config{
+		Name:          form.title.Text,
+		PatchToken:    form.patchToken.Text,
+		PatchProtocol: form.patchProtocol.Selected,
+		Config:        form.bootForm.GetConfig(),
+	})
 }
 
-func (form *ServerForm) UpdateWith(server *resource.Server) {
+func (form *ServerForm) UpdateWith(server *server.Server) {
 	if server == nil {
 		return
 	}
@@ -127,8 +133,13 @@ func (form *ServerForm) UpdateWith(server *resource.Server) {
 	form.bootForm.UpdateWith(server.Config)
 }
 
-func (form *ServerForm) Get() *resource.Server {
-	return resource.NewServer(form.title.Text, form.patchToken.Text, form.patchProtocol.Selected, form.bootForm.GetConfig())
+func (form *ServerForm) Get() *server.Server {
+	return resource.NewServer(server.Config{
+		Name:          form.title.Text,
+		PatchToken:    form.patchToken.Text,
+		PatchProtocol: form.patchProtocol.Selected,
+		Config:        form.bootForm.GetConfig(),
+	})
 }
 
 func (form *ServerForm) Validate() error {

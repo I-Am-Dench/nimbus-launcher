@@ -1,4 +1,4 @@
-package luwidgets
+package nlwidgets
 
 import (
 	"fyne.io/fyne/v2"
