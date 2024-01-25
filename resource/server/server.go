@@ -160,7 +160,6 @@ func (server *Server) GetPatch(version string) (patch.Patch, error) {
 	path := filepath.Join(patchDirectory, "patch.json")
 
 	data, err := os.ReadFile(path)
-	log.Println(err)
 	if err == nil {
 		patch := patch.NewTpp(version)
 
