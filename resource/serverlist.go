@@ -6,19 +6,25 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+
+	"github.com/I-Am-Dench/lu-launcher/resource/server"
 )
 
 type ServerList struct {
-	list []*Server
+	list []*server.Server
 }
 
-func (servers *ServerList) SaveInfos() error {
-	data, err := json.MarshalIndent(servers.list, "", "    ")
+func (list *ServerList) Path() string {
+	return filepath.Join(settingsDir, "servers.json")
+}
+
+func (list *ServerList) SaveInfos() error {
+	data, err := json.MarshalIndent(list.list, "", "    ")
 	if err != nil {
 		return fmt.Errorf("cannot save server infos: %v", err)
 	}
 
-	err = os.WriteFile(filepath.Join(settingsDir, "servers.json"), data, 0755)
+	err = os.WriteFile(list.Path(), data, 0755)
 	if err != nil {
 		return fmt.Errorf("cannot save server infos: %v", err)
 	}
@@ -26,85 +32,81 @@ func (servers *ServerList) SaveInfos() error {
 	return nil
 }
 
-func (servers *ServerList) Load() error {
-	data, err := os.ReadFile(filepath.Join(settingsDir, "servers.json"))
+func (list *ServerList) Load() error {
+	data, err := os.ReadFile(list.Path())
 	if err != nil {
 		return fmt.Errorf("cannot read servers.json: %v", err)
 	}
 
-	err = json.Unmarshal(data, &servers.list)
+	err = json.Unmarshal(data, &list.list)
 	if err != nil {
 		return fmt.Errorf("cannot unmarshal servers.json: %v", err)
 	}
 
-	for _, server := range servers.list {
-		err := server.LoadConfig()
+	for _, server := range list.list {
+		err := server.LoadConfig(settingsDir, "patches")
 		if err != nil {
-			log.Printf("load servers error: %v\n", err)
+			log.Printf("load servers error: %v", err)
 		}
 	}
 
 	return nil
 }
 
-func (servers *ServerList) Size() int {
-	return len(servers.list)
+func (list *ServerList) Size() int {
+	return len(list.list)
 }
 
-func (servers *ServerList) List() []*Server {
-	return servers.list
-}
-
-func (servers *ServerList) Names() []string {
+func (list *ServerList) Names() []string {
 	names := []string{}
-	for _, server := range servers.list {
+	for _, server := range list.list {
 		names = append(names, server.Name)
 	}
 	return names
 }
 
-func (servers *ServerList) Get(id string) *Server {
-	for _, server := range servers.list {
-		if server.Id == id {
+func (list *ServerList) Get(id string) *server.Server {
+	for _, server := range list.list {
+		if server.ID == id {
 			return server
 		}
 	}
 	return nil
 }
 
-func (servers *ServerList) GetIndex(index int) *Server {
-	if 0 <= index && index < servers.Size() {
-		return servers.list[index]
+func (list *ServerList) GetIndex(index int) *server.Server {
+	if 0 <= index && index < list.Size() {
+		return list.list[index]
 	}
 	return nil
 }
 
-func (servers *ServerList) Find(id string) int {
-	for i, server := range servers.list {
-		if server.Id == id {
+func (list *ServerList) Find(id string) int {
+	for i, server := range list.list {
+		for server.ID == id {
 			return i
 		}
 	}
 	return -1
 }
 
-func (servers *ServerList) Add(server *Server) error {
-	servers.list = append(servers.list, server)
-	return servers.SaveInfos()
+func (list *ServerList) Add(server *server.Server) error {
+	list.list = append(list.list, server)
+	return list.SaveInfos()
 }
 
-func (servers *ServerList) Remove(id string) error {
-	index := servers.Find(id)
+func (list *ServerList) Remove(id string) error {
+	index := list.Find(id)
 	if index < 0 {
 		return nil
 	}
 
-	server := servers.GetIndex(index)
+	server := list.GetIndex(index)
 	err := server.DeleteConfig()
 	if err != nil {
-		log.Printf("Unable to remove boot.cfg for '%s': %v\n", server.Name, err)
+		log.Printf("Unable to remove boot.cfg for \"%s\": %v", server.Name, err)
 	}
 
-	servers.list = append(servers.list[:index], servers.list[index+1:]...)
-	return servers.SaveInfos()
+	list.list = append(list.list[:index], list.list[index+1:]...)
+	return list.SaveInfos()
 }

@@ -10,7 +10,7 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/I-Am-Dench/lu-launcher/luwidgets"
-	"github.com/I-Am-Dench/lu-launcher/resource"
+	"github.com/I-Am-Dench/lu-launcher/resource/patch"
 )
 
 type PatchAcceptState uint32
@@ -21,7 +21,7 @@ const (
 	PatchReject
 )
 
-func NewPatchReviewWindow(app fyne.App, patch resource.Patch, onConfirmCancel func(PatchAcceptState)) fyne.Window {
+func NewPatchReviewWindow(app fyne.App, patch patch.Patch, onConfirmCancel func(PatchAcceptState)) fyne.Window {
 	window := app.NewWindow("Review Patch")
 	window.SetFixedSize(true)
 	window.Resize(fyne.NewSize(800, 600))
@@ -32,8 +32,8 @@ func NewPatchReviewWindow(app fyne.App, patch resource.Patch, onConfirmCancel fu
 	return window
 }
 
-func LoadPatchReviewContainer(window fyne.Window, patch resource.Patch, onConfirmCancel func(PatchAcceptState)) {
-	heading := canvas.NewText(fmt.Sprintf("Received patch.json (%s):", patch.Version), theme.ForegroundColor())
+func LoadPatchReviewContainer(window fyne.Window, patch patch.Patch, onConfirmCancel func(PatchAcceptState)) {
+	heading := canvas.NewText(fmt.Sprintf("Received patch.json (%s):", patch.Version()), theme.ForegroundColor())
 	heading.TextSize = 16
 
 	reject := widget.NewButton(

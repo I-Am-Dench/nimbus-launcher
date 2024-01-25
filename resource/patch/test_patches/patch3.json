@@ -1,0 +1,23 @@
+{
+    "download": [
+        {
+            "path": "/common/a",
+            "name": "a"
+        },
+        {
+            "path": "/common/b",
+            "name": "b"
+        },
+        {
+            "path": "/common/c",
+            "name": "c"
+        }
+    ],
+    "replace": {
+        "a": "data/file1",
+        "b": "data/file2"
+    },
+    "add": {
+        "c": "data/file4"
+    }
+}

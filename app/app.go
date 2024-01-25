@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -18,13 +19,15 @@ import (
 	"github.com/I-Am-Dench/lu-launcher/ldf"
 	"github.com/I-Am-Dench/lu-launcher/luwidgets"
 	"github.com/I-Am-Dench/lu-launcher/resource"
+	"github.com/I-Am-Dench/lu-launcher/resource/patch"
+	"github.com/I-Am-Dench/lu-launcher/resource/server"
 	"github.com/I-Am-Dench/lu-launcher/version"
 )
 
 type App struct {
 	fyne.App
 	settings        *resource.Settings
-	rejectedPatches resource.RejectedPatches
+	rejectedPatches *patch.RejectionList
 
 	client client.Client
 
@@ -53,7 +56,7 @@ type App struct {
 	clientErrorIcon *widget.Icon
 }
 
-func New(settings *resource.Settings, servers resource.ServerList, rejectedPatches resource.RejectedPatches) App {
+func New(settings *resource.Settings, servers resource.ServerList, rejectedPatches *patch.RejectionList) App {
 	a := App{}
 	a.App = app.New()
 
@@ -128,31 +131,31 @@ func (app *App) InitializeGlobalWidgets(servers resource.ServerList) {
 	app.serverList.SetSelectedServer(app.settings.SelectedServer)
 }
 
-func (app *App) BindServerInfo(server *resource.Server) {
-	if server == nil {
-		server = &resource.Server{}
-		server.Config = &ldf.BootConfig{}
+func (app *App) BindServerInfo(serv *server.Server) {
+	if serv == nil {
+		serv = &server.Server{}
+		serv.Config = &ldf.BootConfig{}
 	}
 
-	app.serverNameBinding.Set(server.Config.ServerName)
-	app.authServerBinding.Set(server.Config.AuthServerIP)
-	app.localeBinding.Set(server.Config.Locale)
+	app.serverNameBinding.Set(serv.Config.ServerName)
+	app.authServerBinding.Set(serv.Config.AuthServerIP)
+	app.localeBinding.Set(serv.Config.Locale)
 
-	app.signupBinding.Set(server.Config.SignupURL)
-	app.signinBinding.Set(server.Config.SigninURL)
+	app.signupBinding.Set(serv.Config.SignupURL)
+	app.signinBinding.Set(serv.Config.SigninURL)
 
-	if len(server.PatchProtocol) > 0 {
+	if len(serv.PatchProtocol) > 0 {
 		app.refreshUpdatesButton.Show()
 	} else {
 		app.refreshUpdatesButton.Hide()
 	}
 }
 
-func (app *App) OnServerChanged(server *resource.Server) {
+func (app *App) OnServerChanged(server *server.Server) {
 	app.BindServerInfo(server)
 
 	if server != nil {
-		app.settings.SelectedServer = server.Id
+		app.settings.SelectedServer = server.ID
 	} else {
 		app.settings.SelectedServer = ""
 	}
@@ -173,7 +176,7 @@ func (app *App) OnServerChanged(server *resource.Server) {
 	}
 }
 
-func (app *App) CurrentServer() *resource.Server {
+func (app *App) CurrentServer() *server.Server {
 	return app.serverList.SelectedServer()
 }
 
@@ -204,15 +207,15 @@ func (app *App) TransferCachedClientResources() error {
 	return nil
 }
 
-func (app *App) TransferPatchResources(server *resource.Server) error {
+func (app *App) TransferPatchResources(server *server.Server) error {
 	log.Println("Transfer patch resources...")
-	patch, err := resource.GetPatch(server.CurrentPatch, server)
+	patch, err := server.GetPatch(server.CurrentPatch)
 	if err != nil {
 		return err
 	}
 
 	app.progressBar.ShowIndefinite()
-	err = patch.TransferAllResources(app.settings.Client.Directory, app.clientCache, server)
+	err = patch.TransferResourcesWithDependencies(app.settings.Client.Directory, app.clientCache, server)
 	if err != nil {
 		return err
 	}
@@ -222,7 +225,7 @@ func (app *App) TransferPatchResources(server *resource.Server) error {
 	return nil
 }
 
-func (app *App) CopyBootConfiguration(server *resource.Server) error {
+func (app *App) CopyBootConfiguration(server *server.Server) error {
 	data, err := os.ReadFile(server.BootPath())
 	if err != nil {
 		return fmt.Errorf("cannot read \"%s\": %v", server.BootPath(), err)
@@ -329,7 +332,7 @@ func (app *App) ShowSettings() {
 	settings.Show()
 }
 
-func (app *App) ShowPatch(patch resource.Patch, onConfirmCancel func(luwindows.PatchAcceptState)) {
+func (app *App) ShowPatch(patch patch.Patch, onConfirmCancel func(luwindows.PatchAcceptState)) {
 	if app.patchWindow != nil {
 		app.patchWindow.RequestFocus()
 		return
@@ -360,11 +363,11 @@ func (app *App) ShowInfo() {
 	app.infoWindow.Show()
 }
 
-func (app *App) RunUpdate(server *resource.Server, patch resource.Patch) {
+func (app *App) RunUpdate(server *server.Server, patch patch.Patch) {
 	defer app.serverList.RemoveAsUpdating(server)
 
 	log.Println("Starting update...")
-	err := patch.RunWithDependencies(server, app.rejectedPatches)
+	err := patch.UpdateResources(server, app.rejectedPatches)
 	if err != nil {
 		log.Println(err)
 		dialog.ShowError(err, app.main)
@@ -374,29 +377,29 @@ func (app *App) RunUpdate(server *resource.Server, patch resource.Patch) {
 
 	app.serverList.Refresh()
 
-	server.CurrentPatch = patch.Version
+	server.CurrentPatch = patch.Version()
 	app.serverList.Save()
 }
 
-func (app *App) Update(server *resource.Server) {
+func (app *App) Update(serv *server.Server) {
 	app.SetUpdatingState()
 
-	app.serverList.MarkAsUpdating(server)
+	app.serverList.MarkAsUpdating(serv)
 
-	versions, ok := server.PatchVersions()
+	versions, ok := serv.PatchesSummary()
 	if !ok {
-		log.Printf("Patches missing for \"%s\"\n", server.Name)
+		log.Printf("Patches missing for \"%s\"\n", serv.Name)
 		return
 	}
 
-	go func(version string, server *resource.Server) {
-		defer server.SetPendingUpdate(false)
-		log.Printf("Getting patch \"%s\" for %s\n", version, server.Name)
+	go func(version string, serv *server.Server) {
+		defer serv.SetPendingUpdate(false)
+		log.Printf("Getting patch \"%s\" for %s\n", version, serv.Name)
 
-		patch, err := resource.GetPatch(version, server)
+		p, err := serv.GetPatch(version)
 		if err != nil {
-			log.Printf("Patch error: %v\n", err)
-			if err != resource.ErrPatchesUnavailable {
+			log.Printf("Patch error: %v", err)
+			if !errors.Is(err, patch.ErrPatchesUnavailable) {
 				dialog.ShowError(err, app.main)
 			}
 
@@ -404,15 +407,15 @@ func (app *App) Update(server *resource.Server) {
 			return
 		}
 
-		log.Printf("Patch received with %d downloads\n", len(patch.Download))
+		log.Printf("Patch received: %s", p.Summary())
 
 		if !app.settings.ReviewPatchBeforeUpdate {
-			app.RunUpdate(server, patch)
+			app.RunUpdate(serv, p)
 			app.SetNormalState()
 			return
 		}
 
-		app.ShowPatch(patch, func(state luwindows.PatchAcceptState) {
+		app.ShowPatch(p, func(state luwindows.PatchAcceptState) {
 			defer app.SetNormalState()
 
 			if state == luwindows.PatchCancel {
@@ -420,78 +423,79 @@ func (app *App) Update(server *resource.Server) {
 			}
 
 			if state == luwindows.PatchReject {
-				err := app.rejectedPatches.Add(server, patch.Version)
+				err := app.rejectedPatches.Add(serv, p.Version())
 				if err == nil {
-					log.Printf("Rejected patch version \"%s\"\n", patch.Version)
+					log.Printf("Rejected patch version \"%s\"\n", p.Version())
 				} else {
 					dialog.ShowError(fmt.Errorf("failed to reject patch: %v", err), app.main)
 				}
 				return
 			}
 
-			app.RunUpdate(server, patch)
+			app.RunUpdate(serv, p)
 		})
-	}(versions.CurrentVersion, server)
+	}(versions.CurrentVersion, serv)
 }
 
-func (app *App) CheckForUpdates(server *resource.Server) {
-	if server == nil {
+func (app *App) CheckForUpdates(serv *server.Server) {
+	if serv == nil {
 		return
 	}
 
-	if len(server.Config.PatchServerIP) == 0 || !app.clientErrorIcon.Hidden {
+	if len(serv.Config.PatchServerIP) == 0 || !app.clientErrorIcon.Hidden {
 		return
 	}
 
-	if _, ok := server.PatchVersions(); ok {
-		log.Printf("Patches for \"%s\" already received", server.Name)
+	if _, ok := serv.PatchesSummary(); ok {
+		log.Printf("Patches for \"%s\" already received", serv.Name)
 		return
 	}
 
 	app.SetCheckingUpdatesState()
-	go func(server *resource.Server) {
-		log.Printf("Checking for updates for \"%s\"; Current version: \"%s\"\n", server.Name, server.CurrentPatch)
-		patches, err := resource.GetPatchVersions(server)
+	go func(serv *server.Server) {
+		log.Printf("Checking for updates for \"%s\"; Current version: \"%s\"\n", serv.Name, serv.CurrentPatch)
+
+		patches, err := serv.GetPatchesSummary()
 		if err != nil {
 			log.Printf("Patch server error: %v\n", err)
-			if err != resource.ErrPatchesUnavailable && err != resource.ErrPatchesUnsupported {
+			if err != patch.ErrPatchesUnavailable && err != patch.ErrPatchesUnsupported {
 				dialog.ShowError(err, app.main)
 			}
 
-			if err != resource.ErrPatchesUnauthorized {
-				server.SetPatchVersions(resource.PatchVersions{})
+			if err != patch.ErrPatchesUnauthorized {
+				serv.SetPatchesSummary(server.PatchesSummary{})
 			}
 
 			app.SetNormalState()
 			return
 		}
 
-		if server.CurrentPatch == patches.CurrentVersion {
+		if serv.CurrentPatch == patches.CurrentVersion {
 			log.Println("Server is already latest version.")
-			server.SetPatchVersions(patches)
+			serv.SetPatchesSummary(patches)
 			app.SetNormalState()
 			return
 		}
 
-		if err := resource.ValidateVersionName(patches.CurrentVersion); err != nil {
+		if err := patch.ValidateVersionName(patches.CurrentVersion); err != nil {
 			log.Println(err)
-			server.SetPatchVersions(patches)
+			serv.SetPatchesSummary(patches)
 			app.SetNormalState()
 			return
 		}
 
 		log.Printf("Patch version \"%s\" is available\n", patches.CurrentVersion)
 
-		if app.rejectedPatches.IsRejected(server, patches.CurrentVersion) {
+		if app.rejectedPatches.IsRejected(serv, patches.CurrentVersion) {
 			log.Printf("Patch version \"%s\" is rejected; Aborting update sequence.\n", patches.CurrentVersion)
 			app.SetNormalState()
 			return
 		}
 
-		server.SetPatchVersions(patches)
-		server.SetPendingUpdate(true)
+		serv.SetPatchesSummary(patches)
+		serv.SetPendingUpdate(true)
 		app.SetUpdateState()
-	}(server)
+	}(serv)
 }
 
 func (app *App) IsReady() bool {
