@@ -91,6 +91,10 @@ func (list *ServerList) Find(id string) int {
 }
 
 func (list *ServerList) Add(server *server.Server) error {
+	if server == nil {
+		panic(fmt.Errorf("server list: add: server cannot be nil"))
+	}
+
 	list.list = append(list.list, server)
 	return list.SaveInfos()
 }
