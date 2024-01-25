@@ -1,6 +1,7 @@
 package resource
 
 import (
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,7 +17,6 @@ import (
 )
 
 const (
-	assetsDir   = "assets"
 	settingsDir = "settings"
 	serversDir  = "servers"
 )
@@ -25,13 +25,11 @@ const (
 	DEFAULT_DIR_CLIENT = "LEGO Software/Lego Universe/client"
 )
 
-func Asset(name string) (*fyne.StaticResource, error) {
-	bytes, err := os.ReadFile(filepath.Join(assetsDir, name))
-	if err != nil {
-		return nil, fmt.Errorf("assert read error: %v", err)
-	}
+//go:embed embedded/icon.png
+var iconData []byte
 
-	return fyne.NewStaticResource(name, bytes), nil
+func Icon() *fyne.StaticResource {
+	return fyne.NewStaticResource("icon.png", iconData)
 }
 
 func InitializeSettings() error {

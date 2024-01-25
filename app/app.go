@@ -78,7 +78,7 @@ func New(settings *resource.Settings, servers resource.ServerList, rejectedPatch
 
 	a.settingsWindow = nil
 
-	icon, err := resource.Asset(IMAGE_ICON)
+	icon := resource.Icon()
 	if err == nil {
 		a.main.SetIcon(icon)
 	} else {
