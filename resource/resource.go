@@ -71,7 +71,7 @@ func InitializeSettings() error {
 			return err
 		}
 
-		servers := ServerList{make([]*server.Server, 1)}
+		servers := ServerList{make([]*server.Server, 0, 1)}
 		err = servers.Add(localServer)
 		if err != nil {
 			return err
