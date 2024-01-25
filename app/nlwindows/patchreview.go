@@ -9,7 +9,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"github.com/I-Am-Dench/lu-launcher/nlwidgets"
+	"github.com/I-Am-Dench/lu-launcher/app/nlwidgets"
 	"github.com/I-Am-Dench/lu-launcher/resource/patch"
 )
 

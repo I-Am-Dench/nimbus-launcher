@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"fyne.io/fyne/v2/widget"
-	"github.com/I-Am-Dench/lu-launcher/nlwidgets/muxset"
+	"github.com/I-Am-Dench/lu-launcher/app/nlwidgets/muxset"
 	"github.com/I-Am-Dench/lu-launcher/resource"
 	"github.com/I-Am-Dench/lu-launcher/resource/server"
 )
