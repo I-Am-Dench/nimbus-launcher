@@ -407,7 +407,7 @@ func (app *App) Update(serv *server.Server) {
 			return
 		}
 
-		// log.Printf("Patch received with %d downloads\n", len(p.Download))
+		log.Printf("Patch received: %s", p.Summary())
 
 		if !app.settings.ReviewPatchBeforeUpdate {
 			app.RunUpdate(serv, p)

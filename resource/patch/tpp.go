@@ -330,3 +330,17 @@ func (patch *Tpp) TransferResourcesWithDependencies(clientDirectory string, cach
 
 	return patch.TransferResources(clientDirectory, cache, server)
 }
+
+func (patch *Tpp) Summary() string {
+	updates := 0
+
+	if len(patch.Update.Boot) > 0 {
+		updates++
+	}
+
+	if len(patch.Update.Protocol) > 0 {
+		updates++
+	}
+
+	return fmt.Sprintf("%d download(s); %d update(s); %d replacement(s); %d addition(s)", len(patch.Download), updates, len(patch.Replace), len(patch.Add))
+}

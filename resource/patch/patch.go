@@ -10,4 +10,6 @@ type Patch interface {
 
 	TransferResources(clientDirectory string, cache client.Cache, server Server) error
 	TransferResourcesWithDependencies(clientDirectory string, cache client.Cache, server Server) error
+
+	Summary() string
 }
