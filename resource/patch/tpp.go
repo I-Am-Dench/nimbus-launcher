@@ -54,6 +54,10 @@ func (patch *Tpp) doDownloads(server Server) error {
 	os.MkdirAll(downloadPath, 0755)
 
 	for path, name := range patch.Download {
+		if len(name) == 0 {
+			name = filepath.Base(path)
+		}
+
 		if !filepath.IsLocal(name) {
 			return &PatchError{fmt.Errorf("invalid download name \"%s\": name is nonlocal", name)}
 		}
