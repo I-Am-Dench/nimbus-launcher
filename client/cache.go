@@ -8,20 +8,20 @@ import (
 	"time"
 )
 
-type ClientResource struct {
+type Resource struct {
 	Path    string
 	ModTime int64
 	Data    []byte
 }
 
-func (resource ClientResource) Time() time.Time {
+func (resource Resource) Time() time.Time {
 	return time.Unix(resource.ModTime, 0)
 }
 
 type Cache interface {
-	Add(resource ClientResource) error
-	Get(path string) (ClientResource, error)
-	GetResources() ([]ClientResource, error)
+	Add(resource Resource) error
+	Get(path string) (Resource, error)
+	GetResources() ([]Resource, error)
 	Has(path string) bool
 	Close() error
 }
@@ -31,23 +31,23 @@ func Contains(clientDirectory, resource string) bool {
 	return !errors.Is(err, os.ErrNotExist)
 }
 
-func ReadResource(clientDirectory, resource string) (ClientResource, error) {
+func ReadResource(clientDirectory, resource string) (Resource, error) {
 	file, err := os.Open(filepath.Join(clientDirectory, resource))
 	if err != nil {
-		return ClientResource{}, &ResourceError{"client: cannot open resource", err}
+		return Resource{}, &ResourceError{"client: cannot open resource", err}
 	}
 	defer file.Close()
 
 	data, _ := io.ReadAll(file)
 	stat, _ := file.Stat()
-	return ClientResource{
+	return Resource{
 		Path:    filepath.Clean(resource),
 		ModTime: stat.ModTime().Unix(),
 		Data:    data,
 	}, nil
 }
 
-func WriteResource(clientDirectory string, resource ClientResource) error {
+func WriteResource(clientDirectory string, resource Resource) error {
 	path := filepath.Join(clientDirectory, resource.Path)
 	err := os.WriteFile(path, resource.Data, 0755)
 	if err != nil {

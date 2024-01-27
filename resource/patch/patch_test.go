@@ -15,25 +15,25 @@ import (
 )
 
 type cache struct {
-	m map[string]client.ClientResource
+	m map[string]client.Resource
 }
 
-func (cache *cache) Add(resource client.ClientResource) error {
+func (cache *cache) Add(resource client.Resource) error {
 	cache.m[resource.Path] = resource
 	return nil
 }
 
-func (cache *cache) Get(path string) (client.ClientResource, error) {
+func (cache *cache) Get(path string) (client.Resource, error) {
 	resource, ok := cache.m[path]
 	if !ok {
-		return client.ClientResource{}, fmt.Errorf("cache: \"%s\" does not exist", path)
+		return client.Resource{}, fmt.Errorf("cache: \"%s\" does not exist", path)
 	}
 
 	return resource, nil
 }
 
-func (cache *cache) GetResources() ([]client.ClientResource, error) {
-	resources := []client.ClientResource{}
+func (cache *cache) GetResources() ([]client.Resource, error) {
+	resources := []client.Resource{}
 	for _, resource := range cache.m {
 		resources = append(resources, resource)
 	}
@@ -212,7 +212,7 @@ func TestPatching(t *testing.T) {
 	defer teardown()
 
 	clientCache := &cache{
-		m: make(map[string]client.ClientResource),
+		m: make(map[string]client.Resource),
 	}
 
 	_, err := env.ServerConfig.GetPatch("v1.0.0")

@@ -55,32 +55,32 @@ func NewSqliteCache(directory string) (Cache, error) {
 	return cache, nil
 }
 
-func (cache *sqliteCache) Add(resource ClientResource) error {
+func (cache *sqliteCache) Add(resource Resource) error {
 	_, err := cache.Execute(INSERT_CLIENT_RESOURCE, resource.Path, resource.ModTime, resource.Data)
 	return err
 }
 
-func (cache *sqliteCache) Get(path string) (ClientResource, error) {
-	resource := ClientResource{}
+func (cache *sqliteCache) Get(path string) (Resource, error) {
+	resource := Resource{}
 	row := cache.QueryRow(QUERY_RESOURCE, path)
 
 	err := row.Scan(&resource.Path, &resource.ModTime, &resource.Data)
 	if err != nil {
-		return ClientResource{}, fmt.Errorf("clientcache: could not query resource: %v", err)
+		return Resource{}, fmt.Errorf("clientcache: could not query resource: %v", err)
 	}
 
 	return resource, nil
 }
 
-func (cache *sqliteCache) GetResources() ([]ClientResource, error) {
+func (cache *sqliteCache) GetResources() ([]Resource, error) {
 	rows, err := cache.Query(QUERY_ALL_RESOURCES)
 	if err != nil {
-		return []ClientResource{}, err
+		return []Resource{}, err
 	}
 
-	resources := []ClientResource{}
+	resources := []Resource{}
 	for rows.Next() {
-		resource := ClientResource{}
+		resource := Resource{}
 		err := rows.Scan(&resource.Path, &resource.ModTime, &resource.Data)
 		if err == nil {
 			resources = append(resources, resource)
