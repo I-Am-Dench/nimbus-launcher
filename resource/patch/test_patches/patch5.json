@@ -1,18 +1,9 @@
 {
-    "download": [
-        {
-            "path": "/common/a",
-            "name": "a"
-        },
-        {
-            "path": "/common/b",
-            "name": "b"
-        },
-        {
-            "path": "/common/c",
-            "name": "c"
-        }
-    ],
+    "download": {
+        "/common/a": "a",
+        "/common/b": "b",
+        "/common/c": "c"
+    },
     "add": {
         "a": "data/file1",
         "b": "data/file2",

@@ -1,10 +1,7 @@
 {
-    "download": [
-        {
-            "path": "/boot.cfg",
-            "name": "boot.cfg"
-        }
-    ],
+    "download": {
+        "/boot.cfg": "boot.cfg"
+    },
     "update": {
         "boot": "boot.cfg",
         "protocol": "proto"

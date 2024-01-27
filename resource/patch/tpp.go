@@ -25,10 +25,11 @@ type Tpp struct {
 
 	Dependencies []string `json:"depend,omitempty"`
 
-	Download []struct {
-		Path string `json:"path"`
-		Name string `json:"name"`
-	} `json:"download,omitempty"`
+	Download map[string]string `json:"download,omitempty"`
+	// Download []struct {
+	// 	Path string `json:"path"`
+	// 	Name string `json:"name"`
+	// } `json:"download,omitempty"`
 
 	Update struct {
 		Boot     string `json:"boot,omitempty"`
@@ -49,15 +50,15 @@ func (patch *Tpp) Version() string {
 
 func (patch *Tpp) doDownloads(server Server) error {
 	log.Println("Starting downloads...")
-	path := filepath.Join(server.DownloadDir(), patch.version)
-	os.MkdirAll(path, 0755)
+	downloadPath := filepath.Join(server.DownloadDir(), patch.version)
+	os.MkdirAll(downloadPath, 0755)
 
-	for _, download := range patch.Download {
-		if !filepath.IsLocal(download.Name) {
-			return &PatchError{fmt.Errorf("invalid download name \"%s\": name is nonlocal", download.Name)}
+	for path, name := range patch.Download {
+		if !filepath.IsLocal(name) {
+			return &PatchError{fmt.Errorf("invalid download name \"%s\": name is nonlocal", name)}
 		}
 
-		response, err := server.RemoteGet(download.Path)
+		response, err := server.RemoteGet(path)
 		if err != nil {
 			return &PatchError{fmt.Errorf("could not get url: %v", err)}
 		}
@@ -71,7 +72,7 @@ func (patch *Tpp) doDownloads(server Server) error {
 			return &PatchError{fmt.Errorf("invalid response status code from server: %d", response.StatusCode)}
 		}
 
-		file, err := os.OpenFile(filepath.Join(path, download.Name), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
+		file, err := os.OpenFile(filepath.Join(downloadPath, name), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
 		if err != nil {
 			return &PatchError{fmt.Errorf("could not open file in download directory: %v", err)}
 		}
@@ -79,7 +80,7 @@ func (patch *Tpp) doDownloads(server Server) error {
 
 		_, err = io.Copy(file, response.Body)
 		if err != nil {
-			return &PatchError{fmt.Errorf("could not save download \"%s\" to \"%s\": %v", download.Path, download.Name, err)}
+			return &PatchError{fmt.Errorf("could not save download \"%s\" to \"%s\": %v", path, name, err)}
 		}
 	}
 
