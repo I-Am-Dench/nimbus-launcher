@@ -54,8 +54,12 @@ func (patch *Tpp) doDownloads(server Server) error {
 	os.MkdirAll(downloadPath, 0755)
 
 	for path, name := range patch.Download {
-		if len(name) == 0 {
+		if len(path) > 0 && len(name) == 0 {
 			name = filepath.Base(path)
+		}
+
+		if len(name) == 0 {
+			return &PatchError{errors.New("invalid download name: name is empty")}
 		}
 
 		if !filepath.IsLocal(name) {
