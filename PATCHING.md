@@ -22,7 +22,7 @@ This document describes the specification for Theo's Patching Protocol (TPP). Se
 
 ## Protocol
 
-While this protocol could be broken down into a singular list of steps, this list has been split into two parts: [Fetch](#fetch) and [Update](#update). [Fetch](#fetch) dictates the steps in how the protocol determines if a patch is available, and [Update](#update) dictates how that patch is applied.
+While this protocol could be broken down into a singular list of steps, this list has been split into two parts: [Fetch](#fetch) and [Update](#update). [Fetch](#fetch) dictates the steps with how the protocol determines if a patch is available, and [Update](#update) dictates how that patch is applied.
 
 ### Fetch
 
@@ -41,9 +41,10 @@ PLEASE NOTE THE FOLLOWING WHEN IMPLEMENTING A PATCH RUNNER:
 
 - *Patch* dependencies MUST NOT inherit the *Local Patch Directory* from its parent *Patch*.
 - Dependencies MUST NOT run the **update** directive.
-- *download objects* include a `path` relative to the *Version Directory* and a `name` which is relative to the *Local Patch Directory*.
+- download source paths are relative to the *Version Directory* and a name which is relative to the *Local Patch Directory*.
 - The Nimbus Launcher runs the **transfer** directive ONLY when the play button is pushed. The protocol DOES NOT enforce this as a standard.
 - ALL PATCHES MUST verify that their *Patch Version* follows the [strict versioning conventions](#versioning) and should terminate if the version name does not match.
+    - Version names may become less strict in later iterations of the protocol.
 
 While all *Patch Directives* within the *patch.json* can be included in any order, the Patch Runner MUST run each directive in the following sequence:
 
@@ -56,13 +57,16 @@ While all *Patch Directives* within the *patch.json* can be included in any orde
     3. **If the current version name** iteration is VALID and is suffixed WITHOUT `*` ->
         1. Fetch the *patch.json* for the current version name
         2. Recursively run the [Update](#update) section of the protocol WITHOUT fetching that version’s dependencies.
-2. Download (**download**) - contains a list of *download objects*: For each of the *download objects* ->
-    1. **Fetch the Patch Resource** from the *Version Directory* located by the `path`.
-    2. **Save the resource** within the *Local Patch Directory* with the specified `name`.
-3. Transfer (**transfer**) - contains a mapping of *Patch Resource* names to a resource relative to the *Client Directory*. For each of the mapped pairs ->
+2. Download (**download**) - contains a mapping of a path to a resource relative to the `Patch Directory` and a name for the resource to be saved to relative to the `Local Patch Directory`: For each of the mapped pairs ->
+    1. **Fetch the Patch Resource** from the *Version Directory* located by the path.
+    2. **Save the resource** within the *Local Patch Directory* with the specified name.
+3. Replace (**replace**) - contains a mapping of *Patch Resource* names to a resource relative to the *Client Directory*. For each of the mapped pairs ->
     1. **If either of the resource names** are NONLOCAL (their resolved path is outside of their *Local Patch Directory* or the *Client Directory*) the protocol MUST terminate.
     2. **Copy the *Patch Resource*** to the resource relative to the *Client Directory*, ONLY IF that client resource already exists. If the client resource does not already exist, the transfer MUST be ignored and MAY terminate the protocol. This step may cache the client resources if necessary.
-4. Update (**update**) - contains a set of sub-directives, completing operations that may be more complex than a simple copy. These sub-directive can be completed in any order. For each sub-directive ->
+4. Add (**add**) - contains a mapping of *Patch Resource* names to a resource relative to the *Client Directory*. For each of the mapped pairs ->
+    1. **If either of the resource names** are NONLOCAL (their resolved path is outside of their *Local Patch Directory* or the *Client Directory*) the protocol MUST terminate.
+    2. **Copy the *Patch Resource*** to a new resource relative to the *Client Directory*, ONLY IF THAT client resource does NOT already exist. If the client resource already exists, the transfer MUST be ignored and MAY terminate the protocol.
+5. Update (**update**) - contains a set of sub-directives, completing operations that may be more complex than a simple copy. These sub-directive can be completed in any order. For each sub-directive ->
     - **boot** : the name of a *Patch Resource*
         - Update the *Local Server Boot Configuration* with the specified *Patch Resource*.
     - **protocol** : a protocol name
@@ -120,17 +124,17 @@ The Nimbus Launcher checks *Patch Version* names with the following regular expr
 ```json
 {
     "depend": [ "v0.5.1*", ... ],
-    "download": [
-        {
-            "path": "/v1.0.0/boot.cfg",
-            "name": "boot.cfg"
-        }
-    ],
+    "download": {
+        "/v1.0.0/boot.cfg": "boot.cfg"
+    },
     "update": {
         "boot": "boot.cfg"
     },
-    "transfer": {
+    "replace": {
         "logo.dds": "res/ui/ingame/passport_i90.dds"
+    },
+    "add": {
+        "modloader.dll": "mods/modloader.dll"
     }
 }
 ```
