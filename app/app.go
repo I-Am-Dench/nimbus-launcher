@@ -181,23 +181,44 @@ func (app *App) CurrentServer() *server.Server {
 }
 
 func (app *App) TransferCachedClientResources() error {
+	defer app.progressBar.Hide()
 	log.Println("Transferring cached client resources...")
 
-	// resources, err := app.clientCache.GetResources()
-	resources, err := app.clientResources.Replacements().List()
+	// Reset replaced resources
+	replaced, err := app.clientResources.Replacements().List()
 	if err != nil {
-		return fmt.Errorf("could not query resources")
+		return fmt.Errorf("could not query replaced resources: %v", err)
 	}
-	log.Printf("Queried %d cached resources.", len(resources))
+	log.Printf("Queried %d replaced resources.", len(replaced))
 
-	app.progressBar.SetMax(float64(len(resources)))
+	app.progressBar.SetMax(float64(len(replaced)))
 	app.progressBar.ShowValue(0, "Transferring resources: $VALUE/$MAX")
-	defer app.progressBar.Hide()
-	for i, resource := range resources {
-		log.Printf("Transferring cached resource: %s\n", resource.Path)
+	for i, resource := range replaced {
+		log.Printf("Transferring replaced resource: %s", resource.Path)
+
 		err := client.WriteResource(app.settings.Client.Directory, resource)
 		if err != nil {
-			return fmt.Errorf("could not transfer cached resource")
+			return fmt.Errorf("could not transfer replaced resource: %v", err)
+		}
+
+		app.progressBar.SetValue(float64(i + 1))
+	}
+
+	// Delete added resources
+	added, err := app.clientResources.Additions().List()
+	if err != nil {
+		return fmt.Errorf("could not query added resources: %v", err)
+	}
+	log.Printf("Queried %d added resources.", len(added))
+
+	app.progressBar.SetMax(float64(len(replaced)))
+	app.progressBar.ShowValue(0, "Removing added resources: $VALUE/$MAX")
+	for i, resource := range added {
+		log.Printf("Deleting added resource: %s", resource)
+
+		err := client.RemoveResource(app.settings.Client.Directory, resource)
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("could not remove added resource: %v", err)
 		}
 
 		app.progressBar.SetValue(float64(i + 1))

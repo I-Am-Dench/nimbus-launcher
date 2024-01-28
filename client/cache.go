@@ -2,6 +2,7 @@ package client
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -69,4 +70,24 @@ func WriteResource(clientDirectory string, resource Resource) error {
 	}
 
 	return os.Chtimes(path, time.Time{}, resource.Time())
+}
+
+func RemoveResource(clientDirectory string, path string) error {
+	fullPath := filepath.Join(clientDirectory, path)
+
+	stat, err := os.Stat(fullPath)
+	if err != nil {
+		return &ResourceError{"client: cannot remove resource", err}
+	}
+
+	if stat.IsDir() {
+		return &ResourceError{"client: cannot remove resource", fmt.Errorf("\"%s\" is a directory", fullPath)}
+	}
+
+	err = os.Remove(fullPath)
+	if err != nil {
+		return &ResourceError{"client: cannot remove resource", err}
+	}
+
+	return nil
 }
