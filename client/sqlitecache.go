@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"path/filepath"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -135,8 +134,8 @@ type sqliteResources struct {
 	cancel context.CancelFunc
 }
 
-func NewSqliteResources(directory string) (Resources, error) {
-	dsn := fmt.Sprintf("file:%s", filepath.Join(directory, "client_cache.sqlite"))
+func NewSqliteResources(path string) (Resources, error) {
+	dsn := fmt.Sprintf("file:%s", path)
 	db, err := sql.Open("sqlite3", dsn)
 	if err != nil {
 		return nil, err

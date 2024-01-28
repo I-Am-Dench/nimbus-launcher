@@ -104,7 +104,7 @@ func Servers() (ServerList, error) {
 }
 
 func ClientResources() (client.Resources, error) {
-	return client.NewSqliteResources(settingsDir)
+	return client.NewSqliteResources(filepath.Join(settingsDir, "client_cache.sqlite"))
 }
 
 func NewServer(config server.Config) *server.Server {
