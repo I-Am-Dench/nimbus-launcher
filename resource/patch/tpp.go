@@ -26,10 +26,6 @@ type Tpp struct {
 	Dependencies []string `json:"depend,omitempty"`
 
 	Download map[string]string `json:"download,omitempty"`
-	// Download []struct {
-	// 	Path string `json:"path"`
-	// 	Name string `json:"name"`
-	// } `json:"download,omitempty"`
 
 	Update struct {
 		Boot     string `json:"boot,omitempty"`
