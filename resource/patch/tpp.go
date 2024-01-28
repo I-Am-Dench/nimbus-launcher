@@ -249,10 +249,10 @@ func (patch *Tpp) replaceResources(clientDirectory string, resources client.Reso
 				return fmt.Errorf("could not read patch destination: %v", err)
 			}
 
-			log.Printf("Adding %s to cache", resource.Path)
+			log.Printf("Adding %s to replacements cache", resource.Path)
 			err = resources.Replacements().Add(resource)
 			if err != nil {
-				return fmt.Errorf("could not add patch destination to cache: %v", err)
+				return fmt.Errorf("could not add patch destination to replacements cache: %v", err)
 			}
 		}
 
@@ -289,7 +289,7 @@ func (patch *Tpp) add(source, destination string) error {
 	return nil
 }
 
-func (patch *Tpp) addResources(clientDirectory string, server Server) error {
+func (patch *Tpp) addResources(clientDirectory string, resources client.Resources, server Server) error {
 	for source, destination := range patch.Add {
 		if !filepath.IsLocal(source) {
 			return fmt.Errorf("invalid source resource \"%s\": path is nonlocal", source)
@@ -303,6 +303,15 @@ func (patch *Tpp) addResources(clientDirectory string, server Server) error {
 
 		if client.Contains(clientDirectory, destination) {
 			return fmt.Errorf("cannot transfer \"%s\" to \"%s\": resource already exists", source, destination)
+		}
+
+		resourceName := filepath.Clean(destination)
+		if !resources.Additions().Has(resourceName) {
+			log.Printf("Adding %s to additions cache", resourceName)
+			err := resources.Additions().Add(resourceName)
+			if err != nil {
+				return fmt.Errorf("could not add patch destination to additions cache: %v", err)
+			}
 		}
 
 		sourcePath := filepath.Join(server.DownloadDir(), patch.version, source)
@@ -320,7 +329,7 @@ func (patch *Tpp) addResources(clientDirectory string, server Server) error {
 func (patch *Tpp) TransferResources(clientDirectory string, resources client.Resources, server Server) error {
 	return errors.Join(
 		patch.replaceResources(clientDirectory, resources, server),
-		patch.addResources(clientDirectory, server),
+		patch.addResources(clientDirectory, resources, server),
 	)
 }
 
