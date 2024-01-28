@@ -33,14 +33,6 @@ type Resources interface {
 	Close() error
 }
 
-// type Cache interface {
-// 	Add(resource Resource) error
-// 	Get(path string) (Resource, error)
-// 	GetResources() ([]Resource, error)
-// 	Has(path string) bool
-// 	Close() error
-// }
-
 func Contains(clientDirectory, resource string) bool {
 	_, err := os.Stat(filepath.Join(clientDirectory, resource))
 	return !errors.Is(err, os.ErrNotExist)
