@@ -18,13 +18,27 @@ func (resource Resource) Time() time.Time {
 	return time.Unix(resource.ModTime, 0)
 }
 
-type Cache interface {
-	Add(resource Resource) error
-	Get(path string) (Resource, error)
-	GetResources() ([]Resource, error)
-	Has(path string) bool
+type Cache[T any] interface {
+	Add(T) error
+	Get(key string) (T, error)
+	List() ([]T, error)
+	Has(key string) bool
+}
+
+type Resources interface {
+	Replacements() Cache[Resource]
+	Additions() Cache[string]
+
 	Close() error
 }
+
+// type Cache interface {
+// 	Add(resource Resource) error
+// 	Get(path string) (Resource, error)
+// 	GetResources() ([]Resource, error)
+// 	Has(path string) bool
+// 	Close() error
+// }
 
 func Contains(clientDirectory, resource string) bool {
 	_, err := os.Stat(filepath.Join(clientDirectory, resource))

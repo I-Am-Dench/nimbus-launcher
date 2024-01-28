@@ -103,8 +103,8 @@ func Servers() (ServerList, error) {
 	return servers, err
 }
 
-func ClientCache() (client.Cache, error) {
-	return client.NewSqliteCache(settingsDir)
+func ClientResources() (client.Resources, error) {
+	return client.NewSqliteResources(settingsDir)
 }
 
 func NewServer(config server.Config) *server.Server {

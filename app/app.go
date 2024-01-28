@@ -31,7 +31,7 @@ type App struct {
 
 	client client.Client
 
-	clientCache client.Cache
+	clientResources client.Resources
 
 	main           fyne.Window
 	settingsWindow fyne.Window
@@ -65,11 +65,11 @@ func New(settings *resource.Settings, servers resource.ServerList, rejectedPatch
 
 	a.client = client.NewStandardClient()
 
-	cache, err := resource.ClientCache()
+	resources, err := resource.ClientResources()
 	if err != nil {
 		log.Panicf("Could not create client cache database: %v", err)
 	}
-	a.clientCache = cache
+	a.clientResources = resources
 
 	a.main = a.NewWindow(fmt.Sprintf("Nimbus Launcher (%v)", version.Get().Name()))
 	a.main.SetFixedSize(true)
@@ -99,7 +99,7 @@ func New(settings *resource.Settings, servers resource.ServerList, rejectedPatch
 	a.LoadContent()
 
 	a.main.SetOnClosed(func() {
-		err := a.clientCache.Close()
+		err := a.clientResources.Close()
 		if err != nil {
 			log.Printf("could not properly close clientCache: %v", err)
 		}
@@ -183,7 +183,8 @@ func (app *App) CurrentServer() *server.Server {
 func (app *App) TransferCachedClientResources() error {
 	log.Println("Transferring cached client resources...")
 
-	resources, err := app.clientCache.GetResources()
+	// resources, err := app.clientCache.GetResources()
+	resources, err := app.clientResources.Replacements().List()
 	if err != nil {
 		return fmt.Errorf("could not query resources")
 	}
@@ -215,7 +216,7 @@ func (app *App) TransferPatchResources(server *server.Server) error {
 	}
 
 	app.progressBar.ShowIndefinite()
-	err = patch.TransferResourcesWithDependencies(app.settings.Client.Directory, app.clientCache, server)
+	err = patch.TransferResourcesWithDependencies(app.settings.Client.Directory, app.clientResources, server)
 	if err != nil {
 		return err
 	}

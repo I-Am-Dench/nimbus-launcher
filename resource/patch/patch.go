@@ -8,8 +8,8 @@ type Patch interface {
 	DownloadResources(Server, *RejectionList) error
 	UpdateResources(Server, *RejectionList) error
 
-	TransferResources(clientDirectory string, cache client.Cache, server Server) error
-	TransferResourcesWithDependencies(clientDirectory string, cache client.Cache, server Server) error
+	TransferResources(clientDirectory string, resources client.Resources, server Server) error
+	TransferResourcesWithDependencies(clientDirectory string, resources client.Resources, server Server) error
 
 	Summary() string
 }

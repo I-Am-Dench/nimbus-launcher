@@ -14,16 +14,16 @@ import (
 	"github.com/I-Am-Dench/lu-launcher/resource/patch"
 )
 
-type cache struct {
+type replacementCache struct {
 	m map[string]client.Resource
 }
 
-func (cache *cache) Add(resource client.Resource) error {
+func (cache *replacementCache) Add(resource client.Resource) error {
 	cache.m[resource.Path] = resource
 	return nil
 }
 
-func (cache *cache) Get(path string) (client.Resource, error) {
+func (cache *replacementCache) Get(path string) (client.Resource, error) {
 	resource, ok := cache.m[path]
 	if !ok {
 		return client.Resource{}, fmt.Errorf("cache: \"%s\" does not exist", path)
@@ -32,7 +32,7 @@ func (cache *cache) Get(path string) (client.Resource, error) {
 	return resource, nil
 }
 
-func (cache *cache) GetResources() ([]client.Resource, error) {
+func (cache *replacementCache) List() ([]client.Resource, error) {
 	resources := []client.Resource{}
 	for _, resource := range cache.m {
 		resources = append(resources, resource)
@@ -40,12 +40,56 @@ func (cache *cache) GetResources() ([]client.Resource, error) {
 	return resources, nil
 }
 
-func (cache *cache) Has(path string) bool {
+func (cache *replacementCache) Has(path string) bool {
 	_, ok := cache.m[path]
 	return ok
 }
 
-func (cache *cache) Close() error {
+type additionsCache struct {
+	m map[string]struct{}
+}
+
+func (cache *additionsCache) Add(path string) error {
+	cache.m[path] = struct{}{}
+	return nil
+}
+
+func (cache *additionsCache) Get(path string) (string, error) {
+	_, ok := cache.m[path]
+	if ok {
+		return path, nil
+	}
+
+	return "", nil
+}
+
+func (cache *additionsCache) List() ([]string, error) {
+	paths := []string{}
+	for path := range cache.m {
+		paths = append(paths, path)
+	}
+	return paths, nil
+}
+
+func (cache *additionsCache) Has(path string) bool {
+	_, ok := cache.m[path]
+	return ok
+}
+
+type resources struct {
+	replacements replacementCache
+	additions    additionsCache
+}
+
+func (resources *resources) Replacements() client.Cache[client.Resource] {
+	return &resources.replacements
+}
+
+func (resources *resources) Additions() client.Cache[string] {
+	return &resources.additions
+}
+
+func (*resources) Close() error {
 	return nil
 }
 
@@ -143,7 +187,7 @@ func countDirectoryContents(dir string) (int, error) {
 	return count, nil
 }
 
-func testPatchVersion(t *testing.T, env *environment, cache client.Cache, version string, clientFS fileSystem, expectedFS fileSystem) {
+func testPatchVersion(t *testing.T, env *environment, resources client.Resources, version string, clientFS fileSystem, expectedFS fileSystem) {
 	t.Log("Initializing client contents:")
 	clientFS.Init(env.ClientDir(), t)
 
@@ -157,7 +201,7 @@ func testPatchVersion(t *testing.T, env *environment, cache client.Cache, versio
 		t.Fatalf("test patching: %s: update resources: %v", version, err)
 	}
 
-	err = patch.TransferResources(env.ClientDir(), cache, env.ServerConfig)
+	err = patch.TransferResources(env.ClientDir(), resources, env.ServerConfig)
 	if err != nil {
 		t.Fatalf("test patching: %s: transfer resource: %v", version, err)
 	}
@@ -181,7 +225,7 @@ func testPatchVersion(t *testing.T, env *environment, cache client.Cache, versio
 	}
 }
 
-func testBadPatchVersion(t *testing.T, env *environment, cache client.Cache, version string, clientFS fileSystem) {
+func testBadPatchVersion(t *testing.T, env *environment, resources client.Resources, version string, clientFS fileSystem) {
 	t.Log("Initializing client contents:")
 	clientFS.Init(env.ClientDir(), t)
 
@@ -190,7 +234,7 @@ func testBadPatchVersion(t *testing.T, env *environment, cache client.Cache, ver
 		t.Fatalf("test patching: bad %s: %v", version, err)
 	}
 
-	err = patch.TransferResources(env.ClientDir(), cache, env.ServerConfig)
+	err = patch.TransferResources(env.ClientDir(), resources, env.ServerConfig)
 	if err == nil {
 		t.Fatalf("test patching: bad %s: transfer resources: did not return an error", version)
 	}
@@ -211,8 +255,9 @@ func TestPatching(t *testing.T) {
 	env, teardown := setup(t, serverFS)
 	defer teardown()
 
-	clientCache := &cache{
-		m: make(map[string]client.Resource),
+	clientResources := &resources{
+		replacements: replacementCache{m: make(map[string]client.Resource)},
+		additions:    additionsCache{m: make(map[string]struct{})},
 	}
 
 	_, err := env.ServerConfig.GetPatch("v1.0.0")
@@ -225,14 +270,14 @@ func TestPatching(t *testing.T) {
 	t.Log("Started test patch server.")
 
 	// Test replace directive
-	testPatchVersion(t, env, clientCache, "v1.0.0", clientFS, fileSystem{
+	testPatchVersion(t, env, clientResources, "v1.0.0", clientFS, fileSystem{
 		"data/file1": []byte("Test 1"),
 		"data/file2": []byte("Test 2"),
 		"data/file3": []byte("Test 3"),
 	})
 
 	// Test add directive
-	testPatchVersion(t, env, clientCache, "v2.0.0", clientFS, fileSystem{
+	testPatchVersion(t, env, clientResources, "v2.0.0", clientFS, fileSystem{
 		"data/file1": []byte("default data 1"),
 		"data/file2": []byte("default data 2"),
 		"data/file3": []byte("default data 3"),
@@ -242,7 +287,7 @@ func TestPatching(t *testing.T) {
 	})
 
 	// Test replace and add directive
-	testPatchVersion(t, env, clientCache, "v3.0.0", clientFS, fileSystem{
+	testPatchVersion(t, env, clientResources, "v3.0.0", clientFS, fileSystem{
 		"data/file1": []byte("Test 1"),
 		"data/file2": []byte("Test 2"),
 		"data/file3": []byte("default data 3"),
@@ -250,16 +295,16 @@ func TestPatching(t *testing.T) {
 	})
 
 	// Test replacing resources that do not exist
-	testBadPatchVersion(t, env, clientCache, "v4.0.0", clientFS)
+	testBadPatchVersion(t, env, clientResources, "v4.0.0", clientFS)
 
 	// Test adding resources that already exist
-	testBadPatchVersion(t, env, clientCache, "v5.0.0", clientFS)
+	testBadPatchVersion(t, env, clientResources, "v5.0.0", clientFS)
 
 	// Test bad version name
-	testBadPatchVersion(t, env, clientCache, "invalid_version", clientFS)
+	testBadPatchVersion(t, env, clientResources, "invalid_version", clientFS)
 
 	// Test update directives
-	testPatchVersion(t, env, clientCache, "v6.0.0", clientFS, clientFS) // client should remain unchanged
+	testPatchVersion(t, env, clientResources, "v6.0.0", clientFS, clientFS) // client should remain unchanged
 
 	if env.ServerConfig.Config.ServerName != expectedBoot.ServerName {
 		t.Fatalf("test patching: expected ServerName to be \"%s\" but got \"%s\"", env.ServerConfig.Config.ServerName, expectedBoot.ServerName)

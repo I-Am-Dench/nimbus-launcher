@@ -230,7 +230,7 @@ func (patch *Tpp) replace(source, destination string) error {
 	return nil
 }
 
-func (patch *Tpp) replaceResources(clientDirectory string, cache client.Cache, server Server) error {
+func (patch *Tpp) replaceResources(clientDirectory string, resources client.Resources, server Server) error {
 	for source, destination := range patch.Replace {
 		if !filepath.IsLocal(source) {
 			return fmt.Errorf("invalid source resource \"%s\": path is nonlocal", source)
@@ -243,14 +243,14 @@ func (patch *Tpp) replaceResources(clientDirectory string, cache client.Cache, s
 		log.Printf("[REPLACE] Transferring: %s -> %s", source, destination)
 
 		resourceName := filepath.Clean(destination)
-		if !cache.Has(resourceName) {
+		if !resources.Replacements().Has(resourceName) {
 			resource, err := client.ReadResource(clientDirectory, resourceName)
 			if err != nil {
 				return fmt.Errorf("could not read patch destination: %v", err)
 			}
 
 			log.Printf("Adding %s to cache", resource.Path)
-			err = cache.Add(resource)
+			err = resources.Replacements().Add(resource)
 			if err != nil {
 				return fmt.Errorf("could not add patch destination to cache: %v", err)
 			}
@@ -317,27 +317,27 @@ func (patch *Tpp) addResources(clientDirectory string, server Server) error {
 	return nil
 }
 
-func (patch *Tpp) TransferResources(clientDirectory string, cache client.Cache, server Server) error {
+func (patch *Tpp) TransferResources(clientDirectory string, resources client.Resources, server Server) error {
 	return errors.Join(
-		patch.replaceResources(clientDirectory, cache, server),
+		patch.replaceResources(clientDirectory, resources, server),
 		patch.addResources(clientDirectory, server),
 	)
 }
 
-func (patch *Tpp) TransferResourcesWithDependencies(clientDirectory string, cache client.Cache, server Server) error {
+func (patch *Tpp) TransferResourcesWithDependencies(clientDirectory string, resources client.Resources, server Server) error {
 	dependencies, err := patch.GetDependencies(server)
 	if err != nil {
 		return err
 	}
 
 	for _, dependency := range dependencies {
-		err := dependency.TransferResources(clientDirectory, cache, server)
+		err := dependency.TransferResources(clientDirectory, resources, server)
 		if err != nil {
 			return fmt.Errorf("transfer dependecy: %v", err)
 		}
 	}
 
-	return patch.TransferResources(clientDirectory, cache, server)
+	return patch.TransferResources(clientDirectory, resources, server)
 }
 
 func (patch *Tpp) Summary() string {
