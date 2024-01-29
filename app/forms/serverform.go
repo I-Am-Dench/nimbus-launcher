@@ -67,7 +67,7 @@ func NewServerForm(window fyne.Window, heading string) *ServerForm {
 				}
 				serverXML.SetText(uc.URI().Path())
 
-				server, err := resource.LoadXML(uc.URI().Path())
+				server, err := server.LoadXML(uc.URI().Path())
 				if err != nil {
 					dialog.ShowError(err, window)
 					return
