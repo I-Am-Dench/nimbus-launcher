@@ -16,6 +16,8 @@ import (
 type BootForm struct {
 	container *fyne.Container
 
+	bootFile *widget.Label
+
 	serverName   *widget.Entry
 	authServerIP *widget.Entry
 
@@ -47,43 +49,10 @@ type BootForm struct {
 func NewBootForm(window fyne.Window) *BootForm {
 	form := new(BootForm)
 
-	bootFile := widget.NewLabel("")
-	bootFile.Truncation = fyne.TextTruncateEllipsis
+	form.bootFile = widget.NewLabel("")
+	form.bootFile.Truncation = fyne.TextTruncateEllipsis
 
-	bootFileOpen := widget.NewButtonWithIcon(
-		"", theme.FileIcon(),
-		func() {
-			dialog := dialog.NewFileOpen(func(uc fyne.URIReadCloser, err error) {
-				if err != nil {
-					dialog.ShowError(err, window)
-					return
-				}
-
-				if uc == nil || uc.URI() == nil {
-					return
-				}
-				bootFile.SetText(uc.URI().Path())
-
-				data, err := io.ReadAll(uc)
-				if err != nil {
-					dialog.ShowError(err, window)
-					return
-				}
-
-				bootConfig := ldf.BootConfig{}
-				err = ldf.Unmarshal(data, &bootConfig)
-				if err != nil {
-					dialog.ShowError(err, window)
-					return
-				}
-
-				form.UpdateWith(&bootConfig)
-			}, window)
-			dialog.SetFilter(storage.NewExtensionFileFilter([]string{".cfg"}))
-
-			dialog.Show()
-		},
-	)
+	bootFileOpen := widget.NewButtonWithIcon("", theme.FileIcon(), form.PromptBootFile(window))
 
 	form.serverName = widget.NewEntry()
 	form.serverName.PlaceHolder = "Overbuild Universe (US)"
@@ -124,7 +93,7 @@ func NewBootForm(window fyne.Window) *BootForm {
 
 	form.container = container.NewVBox(
 		widget.NewForm(
-			widget.NewFormItem("Boot File", container.NewBorder(nil, nil, bootFileOpen, nil, bootFile)),
+			widget.NewFormItem("Boot File", container.NewBorder(nil, nil, bootFileOpen, nil, form.bootFile)),
 			widget.NewFormItem("Server Name", form.serverName),
 			widget.NewFormItem("Auth Server IP", form.authServerIP),
 			widget.NewFormItem("UGC Use 3D Services", form.ugcUse3DServices),
@@ -161,6 +130,40 @@ func NewBootForm(window fyne.Window) *BootForm {
 	form.UpdateWith(ldf.DefaultBootConfig())
 
 	return form
+}
+
+func (form *BootForm) PromptBootFile(window fyne.Window) func() {
+	return func() {
+		dialog := dialog.NewFileOpen(func(uc fyne.URIReadCloser, err error) {
+			if err != nil {
+				dialog.ShowError(err, window)
+				return
+			}
+
+			if uc == nil || uc.URI() == nil {
+				return
+			}
+			form.bootFile.SetText(uc.URI().Path())
+
+			data, err := io.ReadAll(uc)
+			if err != nil {
+				dialog.ShowError(err, window)
+				return
+			}
+
+			bootConfig := ldf.BootConfig{}
+			err = ldf.Unmarshal(data, &bootConfig)
+			if err != nil {
+				dialog.ShowError(err, window)
+				return
+			}
+
+			form.UpdateWith(&bootConfig)
+		}, window)
+
+		dialog.SetFilter(storage.NewExtensionFileFilter([]string{".cfg"}))
+		dialog.Show()
+	}
 }
 
 func (form *BootForm) UpdateWith(config *ldf.BootConfig) {
