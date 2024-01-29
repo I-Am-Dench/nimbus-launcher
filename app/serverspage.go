@@ -163,6 +163,45 @@ func (page *ServersPage) addServerPage(form *forms.ServerForm, window fyne.Windo
 	)
 }
 
+func (page *ServersPage) PromptExportServer(window fyne.Window, list *nlwidgets.ServerList) func() {
+	return func() {
+		dialog := dialog.NewFileSave(func(uc fyne.URIWriteCloser, err error) {
+			if uc == nil {
+				return
+			}
+
+			if err != nil {
+				dialog.ShowError(fmt.Errorf("error when choosing file: %v", err), window)
+				return
+			}
+
+			server := list.GetIndex(page.serverList.SelectedIndex())
+			if server == nil {
+				dialog.ShowError(fmt.Errorf("export server: server is nil"), window)
+				return
+			}
+
+			serverXML := server.ToXML()
+			data, err := xml.MarshalIndent(serverXML, "", "    ")
+			if err != nil {
+				dialog.ShowError(fmt.Errorf("cannot marshal server.xml: %v", err), window)
+			}
+
+			_, err = uc.Write(append([]byte(EXPORT_HEADER), data...))
+			if err != nil {
+				dialog.ShowError(fmt.Errorf("cannot write server.xml: %v", err), window)
+				return
+			}
+
+			dialog.ShowInformation("Export Complete", "Exported server configuration successfully!", window)
+		}, window)
+
+		dialog.SetFileName("server.xml")
+		dialog.SetFilter(storage.NewExtensionFileFilter([]string{".xml"}))
+		dialog.Show()
+	}
+}
+
 func (page *ServersPage) editServerPage(form *forms.ServerForm, window fyne.Window, list *nlwidgets.ServerList) *fyne.Container {
 	saveButton := widget.NewButton(
 		"Save", func() {
@@ -205,45 +244,7 @@ func (page *ServersPage) editServerPage(form *forms.ServerForm, window fyne.Wind
 	)
 	saveButton.Importance = widget.HighImportance
 
-	exportButton := widget.NewButtonWithIcon(
-		"Export", theme.DocumentIcon(),
-		func() {
-			dialog := dialog.NewFileSave(func(uc fyne.URIWriteCloser, err error) {
-				if uc == nil {
-					return
-				}
-
-				if err != nil {
-					dialog.ShowError(fmt.Errorf("error when choosing file: %v", err), window)
-					return
-				}
-
-				server := list.GetIndex(page.serverList.SelectedIndex())
-				if server == nil {
-					dialog.ShowError(fmt.Errorf("fatal export server error: server is nil"), window)
-					return
-				}
-
-				serverXML := server.ToXML()
-				data, err := xml.MarshalIndent(serverXML, "", "    ")
-				if err != nil {
-					dialog.ShowError(fmt.Errorf("cannot marshal server.xml: %v", err), window)
-					return
-				}
-
-				_, err = uc.Write(append([]byte(EXPORT_HEADER), data...))
-				if err != nil {
-					dialog.ShowError(fmt.Errorf("error when writing to server.xml: %v", err), window)
-					return
-				}
-
-				dialog.ShowInformation("Export Complete", "Exported server configuration successfully!", window)
-			}, window)
-			dialog.SetFileName("server.xml")
-			dialog.SetFilter(storage.NewExtensionFileFilter([]string{".xml"}))
-			dialog.Show()
-		},
-	)
+	exportButton := widget.NewButtonWithIcon("Export", theme.DocumentIcon(), page.PromptExportServer(window, list))
 
 	return container.NewBorder(
 		nil,
