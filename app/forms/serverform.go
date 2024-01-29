@@ -18,6 +18,8 @@ import (
 type ServerForm struct {
 	container *fyne.Container
 
+	serverXMLFile *widget.Label
+
 	title         *widget.Entry
 	patchToken    *widget.Entry
 	patchProtocol *widget.Select
@@ -34,8 +36,8 @@ func NewServerForm(window fyne.Window, heading string) *ServerForm {
 	bootHeading := canvas.NewText("boot.cfg", theme.ForegroundColor())
 	bootHeading.TextSize = 16
 
-	serverXML := widget.NewLabel("")
-	serverXML.Truncation = fyne.TextTruncateEllipsis
+	form.serverXMLFile = widget.NewLabel("")
+	form.serverXMLFile.Truncation = fyne.TextTruncateEllipsis
 
 	form.title = widget.NewEntry()
 	form.title.PlaceHolder = "My Server"
@@ -53,48 +55,12 @@ func NewServerForm(window fyne.Window, heading string) *ServerForm {
 
 	form.bootForm = NewBootForm(window)
 
-	serverXMLOpen := widget.NewButtonWithIcon(
-		"", theme.FileIcon(),
-		func() {
-			fileDialog := dialog.NewFileOpen(func(uc fyne.URIReadCloser, err error) {
-				if err != nil {
-					dialog.ShowError(fmt.Errorf("error when opening server.xml file: %v", err), window)
-					return
-				}
-
-				if uc == nil || uc.URI() == nil {
-					return
-				}
-				serverXML.SetText(uc.URI().Path())
-
-				server, err := server.LoadXML(uc.URI().Path())
-				if err != nil {
-					dialog.ShowError(err, window)
-					return
-				}
-
-				form.title.SetText(server.Name)
-				form.patchToken.SetText(server.Patch.Token)
-				form.patchProtocol.SetSelected(server.Patch.Protocol)
-
-				bootConfig := ldf.BootConfig{}
-				err = ldf.Unmarshal([]byte(server.Boot.Text), &bootConfig)
-				if err != nil {
-					dialog.ShowError(err, window)
-					return
-				}
-
-				form.bootForm.UpdateWith(&bootConfig)
-			}, window)
-			fileDialog.SetFilter(storage.NewExtensionFileFilter([]string{".xml"}))
-			fileDialog.Show()
-		},
-	)
+	serverXMLOpen := widget.NewButtonWithIcon("", theme.FileIcon(), form.PromptServerXMLFile(window))
 
 	form.container = container.NewVBox(
 		infoHeading,
 		widget.NewForm(
-			widget.NewFormItem("Server XML", container.NewBorder(nil, nil, serverXMLOpen, nil, serverXML)),
+			widget.NewFormItem("Server XML", container.NewBorder(nil, nil, serverXMLOpen, nil, form.serverXMLFile)),
 			widget.NewFormItem("Name", form.title),
 			widget.NewFormItem("Patch Token", form.patchToken),
 			widget.NewFormItem("Patch Protocol", form.patchProtocol),
@@ -105,6 +71,44 @@ func NewServerForm(window fyne.Window, heading string) *ServerForm {
 	)
 
 	return form
+}
+
+func (form *ServerForm) PromptServerXMLFile(window fyne.Window) func() {
+	return func() {
+		dialog := dialog.NewFileOpen(func(uc fyne.URIReadCloser, err error) {
+			if err != nil {
+				dialog.ShowError(fmt.Errorf("error when opening server.xml file: %v", err), window)
+				return
+			}
+
+			if uc == nil || uc.URI() == nil {
+				return
+			}
+			form.serverXMLFile.SetText(uc.URI().Path())
+
+			server, err := server.LoadXML(uc.URI().Path())
+			if err != nil {
+				dialog.ShowError(err, window)
+				return
+			}
+
+			form.title.SetText(server.Name)
+			form.patchToken.SetText(server.Patch.Token)
+			form.patchProtocol.SetSelected(server.Patch.Protocol)
+
+			bootConfig := ldf.BootConfig{}
+			err = ldf.Unmarshal([]byte(server.Boot.Text), &bootConfig)
+			if err != nil {
+				dialog.ShowError(err, window)
+				return
+			}
+
+			form.bootForm.UpdateWith(&bootConfig)
+		}, window)
+
+		dialog.SetFilter(storage.NewExtensionFileFilter([]string{".xml"}))
+		dialog.Show()
+	}
 }
 
 func (form *ServerForm) CreateServer() (*server.Server, error) {
