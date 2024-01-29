@@ -21,12 +21,12 @@ func NewRejectionList(path string) *RejectionList {
 func (rejections *RejectionList) Load() error {
 	data, err := os.ReadFile(rejections.path)
 	if err != nil {
-		return fmt.Errorf("load rejections: cannot load file: %v", err)
+		return fmt.Errorf("load rejections: cannot load file: %w", err)
 	}
 
 	err = json.Unmarshal(data, &rejections.m)
 	if err != nil {
-		return fmt.Errorf("load rejections: cannot unmarshal file: %v", err)
+		return fmt.Errorf("load rejections: cannot unmarshal file: %w", err)
 	}
 
 	return nil
@@ -35,12 +35,12 @@ func (rejections *RejectionList) Load() error {
 func (rejections *RejectionList) Save() error {
 	data, err := json.MarshalIndent(rejections.m, "", "    ")
 	if err != nil {
-		return fmt.Errorf("save rejections: cannot marshal contents: %v", err)
+		return fmt.Errorf("save rejections: cannot marshal contents: %w", err)
 	}
 
 	err = os.WriteFile(rejections.path, data, 0755)
 	if err != nil {
-		return fmt.Errorf("save rejections: cannot save data: %v", err)
+		return fmt.Errorf("save rejections: cannot save data: %w", err)
 	}
 
 	return nil

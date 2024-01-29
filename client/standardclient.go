@@ -18,11 +18,11 @@ func (client standardClient) Path() string {
 func (client standardClient) Verify() error {
 	stats, err := os.Stat(client.path)
 	if err != nil {
-		return fmt.Errorf("client verify: %v", err)
+		return fmt.Errorf("client verify: %w", err)
 	}
 
 	if stats.IsDir() {
-		return fmt.Errorf("client verify: '%s' is a directory", client.path)
+		return fmt.Errorf("client verify: \"%s\" is a directory", client.path)
 	}
 
 	return nil

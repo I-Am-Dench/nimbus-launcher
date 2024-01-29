@@ -187,7 +187,7 @@ func (app *App) TransferCachedClientResources() error {
 	// Reset replaced resources
 	replaced, err := app.clientResources.Replacements().List()
 	if err != nil {
-		return fmt.Errorf("could not query replaced resources: %v", err)
+		return fmt.Errorf("could not query replaced resources: %w", err)
 	}
 	log.Printf("Queried %d replaced resources.", len(replaced))
 
@@ -198,7 +198,7 @@ func (app *App) TransferCachedClientResources() error {
 
 		err := client.WriteResource(app.settings.Client.Directory, resource)
 		if err != nil {
-			return fmt.Errorf("could not transfer replaced resource: %v", err)
+			return fmt.Errorf("could not transfer replaced resource: %w", err)
 		}
 
 		app.progressBar.SetValue(float64(i + 1))
@@ -207,7 +207,7 @@ func (app *App) TransferCachedClientResources() error {
 	// Delete added resources
 	added, err := app.clientResources.Additions().List()
 	if err != nil {
-		return fmt.Errorf("could not query added resources: %v", err)
+		return fmt.Errorf("could not query added resources: %w", err)
 	}
 	log.Printf("Queried %d added resources.", len(added))
 
@@ -218,7 +218,7 @@ func (app *App) TransferCachedClientResources() error {
 
 		err := client.RemoveResource(app.settings.Client.Directory, resource)
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("could not remove added resource: %v", err)
+			return fmt.Errorf("could not remove added resource: %w", err)
 		}
 
 		app.progressBar.SetValue(float64(i + 1))
@@ -250,7 +250,7 @@ func (app *App) TransferPatchResources(server *server.Server) error {
 func (app *App) CopyBootConfiguration(server *server.Server) error {
 	data, err := os.ReadFile(server.BootPath())
 	if err != nil {
-		return fmt.Errorf("cannot read \"%s\": %v", server.BootPath(), err)
+		return fmt.Errorf("cannot read \"%s\": %w", server.BootPath(), err)
 	}
 
 	configPath := filepath.Join(app.settings.Client.Directory, "boot.cfg")

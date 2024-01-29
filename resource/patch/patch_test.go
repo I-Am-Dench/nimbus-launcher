@@ -155,7 +155,7 @@ func hasSameContent(a, b []byte) bool {
 func checkContents(dir, path string, expected []byte) error {
 	actual, err := os.ReadFile(filepath.Join(dir, path))
 	if err != nil {
-		return fmt.Errorf("check contents: %v", err)
+		return fmt.Errorf("check contents: %w", err)
 	}
 
 	if !hasSameContent(expected, actual) {

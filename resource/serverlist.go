@@ -21,12 +21,12 @@ func (list *ServerList) Path() string {
 func (list *ServerList) SaveInfos() error {
 	data, err := json.MarshalIndent(list.list, "", "    ")
 	if err != nil {
-		return fmt.Errorf("cannot save server infos: %v", err)
+		return fmt.Errorf("cannot save server infos: %w", err)
 	}
 
 	err = os.WriteFile(list.Path(), data, 0755)
 	if err != nil {
-		return fmt.Errorf("cannot save server infos: %v", err)
+		return fmt.Errorf("cannot save server infos: %w", err)
 	}
 
 	return nil
@@ -35,12 +35,12 @@ func (list *ServerList) SaveInfos() error {
 func (list *ServerList) Load() error {
 	data, err := os.ReadFile(list.Path())
 	if err != nil {
-		return fmt.Errorf("cannot read servers.json: %v", err)
+		return fmt.Errorf("cannot read servers.json: %w", err)
 	}
 
 	err = json.Unmarshal(data, &list.list)
 	if err != nil {
-		return fmt.Errorf("cannot unmarshal servers.json: %v", err)
+		return fmt.Errorf("cannot unmarshal servers.json: %w", err)
 	}
 
 	for _, server := range list.list {

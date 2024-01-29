@@ -22,13 +22,13 @@ type ServerXML struct {
 func LoadXML(name string) (ServerXML, error) {
 	data, err := os.ReadFile(name)
 	if err != nil {
-		return ServerXML{}, fmt.Errorf("cannot read server XML \"%s\": %v", name, err)
+		return ServerXML{}, fmt.Errorf("cannot read server XML \"%s\": %w", name, err)
 	}
 
 	server := ServerXML{}
 	err = xml.Unmarshal(data, &server)
 	if err != nil {
-		return ServerXML{}, fmt.Errorf("cannot unmarshal server XML \"%s\": %v", name, err)
+		return ServerXML{}, fmt.Errorf("cannot unmarshal server XML \"%s\": %w", name, err)
 	}
 
 	return server, nil

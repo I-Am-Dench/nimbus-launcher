@@ -52,7 +52,7 @@ func (cache *sqliteReplacements) Get(path string) (Resource, error) {
 
 	err := row.Scan(&resource.Path, &resource.ModTime, &resource.Data)
 	if err != nil {
-		return Resource{}, fmt.Errorf("sqlite replacement cache: could not query resource: %v", err)
+		return Resource{}, fmt.Errorf("sqlite replacement cache: could not query resource: %w", err)
 	}
 
 	return resource, nil
@@ -97,7 +97,7 @@ func (cache *sqliteAdditions) Get(path string) (string, error) {
 
 	err := row.Scan(&queriedPath)
 	if err != nil {
-		return "", fmt.Errorf("sqlite additions cache: could not query path: %v", err)
+		return "", fmt.Errorf("sqlite additions cache: could not query path: %w", err)
 	}
 
 	return queriedPath, nil
@@ -158,13 +158,13 @@ func NewSqliteResources(path string) (Resources, error) {
 	_, err = resources.db.ExecContext(ctx, CREATE_REPLACED_RESOURCES)
 	if err != nil {
 		resources.Close()
-		return nil, fmt.Errorf("could not initialize sqlite replacements cache: %v", err)
+		return nil, fmt.Errorf("could not initialize sqlite replacements cache: %w", err)
 	}
 
 	_, err = resources.db.ExecContext(ctx, CREATE_ADDED_RESOURCES)
 	if err != nil {
 		resources.Close()
-		return nil, fmt.Errorf("could not initialize sqlite additions cache: %v", err)
+		return nil, fmt.Errorf("could not initialize sqlite additions cache: %w", err)
 	}
 
 	return resources, nil

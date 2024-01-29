@@ -47,12 +47,12 @@ func (settings *Settings) ClientPath() string {
 func (settings *Settings) Save() error {
 	data, err := json.MarshalIndent(settings, "", "    ")
 	if err != nil {
-		return fmt.Errorf("marshal settings: %v", err)
+		return fmt.Errorf("marshal settings: %w", err)
 	}
 
 	err = os.WriteFile(filepath.Join(settingsDir, "launcher.json"), data, 0755)
 	if err != nil {
-		return fmt.Errorf("write settings: %v", err)
+		return fmt.Errorf("write settings: %w", err)
 	}
 
 	return nil

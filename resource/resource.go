@@ -85,13 +85,13 @@ func InitializeSettings() error {
 func LauncherSettings() (Settings, error) {
 	data, err := os.ReadFile(filepath.Join(settingsDir, "launcher.json"))
 	if err != nil {
-		return Settings{}, fmt.Errorf("launcher settings read: %v", err)
+		return Settings{}, fmt.Errorf("read launcher settings: %w", err)
 	}
 
 	settings := Settings{}
 	err = json.Unmarshal(data, &settings)
 	if err != nil {
-		return Settings{}, fmt.Errorf("launcher settings unmarshal: %v", err)
+		return Settings{}, fmt.Errorf("unmarshal launcher settings: %w", err)
 	}
 
 	return settings, nil

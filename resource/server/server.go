@@ -77,12 +77,12 @@ func (server *Server) SaveConfig() error {
 
 	data, err := ldf.MarshalLines(server.Config)
 	if err != nil {
-		return fmt.Errorf("cannot marshal boot.cfg: %v", err)
+		return fmt.Errorf("cannot marshal boot.cfg: %w", err)
 	}
 
 	err = os.WriteFile(server.BootPath(), data, 0755)
 	if err != nil {
-		return fmt.Errorf("cannot save boot.cfg: %v", err)
+		return fmt.Errorf("cannot save boot.cfg: %w", err)
 	}
 
 	return nil
@@ -105,12 +105,12 @@ func (server *Server) LoadConfig(dir ...string) error {
 
 	data, err := os.ReadFile(server.BootPath())
 	if err != nil {
-		return fmt.Errorf("cannot load boot.cfg: %v", err)
+		return fmt.Errorf("cannot load boot.cfg: %w", err)
 	}
 
 	err = ldf.Unmarshal(data, server.Config)
 	if err != nil {
-		return fmt.Errorf("cannot unmarshal boot.cfg: %v", err)
+		return fmt.Errorf("cannot unmarshal boot.cfg: %w", err)
 	}
 
 	return nil
@@ -139,7 +139,7 @@ func (server *Server) GetPatch(version string) (patch.Patch, error) {
 
 		err = json.Unmarshal(data, &patch)
 		if err != nil {
-			return nil, fmt.Errorf("cannot unmarshal \"%s\": %v", path, err)
+			return nil, fmt.Errorf("cannot unmarshal \"%s\": %w", path, err)
 		}
 
 		return patch, nil
@@ -161,13 +161,13 @@ func (server *Server) GetPatch(version string) (patch.Patch, error) {
 
 	data, err = io.ReadAll(response.Body)
 	if err != nil {
-		return nil, fmt.Errorf("cannot read body of patch version response: %v", err)
+		return nil, fmt.Errorf("cannot read body of patch version response: %w", err)
 	}
 
 	patch := patch.NewTpp(version)
 	err = json.Unmarshal(data, &patch)
 	if err != nil {
-		return nil, fmt.Errorf("malformed response body from patch version: %v", err)
+		return nil, fmt.Errorf("malformed response body from patch version: %w", err)
 	}
 
 	os.MkdirAll(patchDirectory, 0755)
@@ -183,7 +183,7 @@ func (server *Server) GetPatch(version string) (patch.Patch, error) {
 func (server *Server) RemoteGet(elem ...string) (*http.Response, error) {
 	url, err := server.PatchServerUrl(elem...)
 	if err != nil {
-		return nil, fmt.Errorf("could not create patch url: %v", err)
+		return nil, fmt.Errorf("could not create patch url: %w", err)
 	}
 
 	log.Printf("Patch server request: %s", url)
@@ -217,13 +217,13 @@ func (server *Server) GetPatchesSummary() (PatchesSummary, error) {
 
 	data, err := io.ReadAll(response.Body)
 	if err != nil {
-		return PatchesSummary{}, fmt.Errorf("cannot read boyd of patch server response: %v", err)
+		return PatchesSummary{}, fmt.Errorf("cannot read boyd of patch server response: %w", err)
 	}
 
 	patches := PatchesSummary{}
 	err = json.Unmarshal(data, &patches)
 	if err != nil {
-		return PatchesSummary{}, fmt.Errorf("malformed response body from server: %v", err)
+		return PatchesSummary{}, fmt.Errorf("malformed response body from server: %w", err)
 	}
 
 	return patches, nil

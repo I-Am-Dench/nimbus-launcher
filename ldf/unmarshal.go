@@ -53,7 +53,7 @@ func parseValue(value string) (ldfValue, error) {
 
 	intIdentifier, err := strconv.Atoi(typeIdentifier)
 	if err != nil {
-		return ldfValue{}, fmt.Errorf("invalid type identifier: %v", err)
+		return ldfValue{}, fmt.Errorf("invalid type identifier: %w", err)
 	}
 
 	if intIdentifier < 0 {

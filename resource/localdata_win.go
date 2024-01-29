@@ -12,7 +12,7 @@ import (
 func localDataDirectory() (string, error) {
 	localAppData, err := os.UserCacheDir()
 	if err != nil {
-		return "", fmt.Errorf("cannot find AppData\\Local: %v", err)
+		return "", fmt.Errorf("cannot find AppData\\Local: %w", err)
 	}
 
 	return localAppData, nil

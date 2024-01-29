@@ -64,7 +64,7 @@ func (patch *Tpp) doDownloads(server Server) error {
 
 		response, err := server.RemoteGet(path)
 		if err != nil {
-			return &PatchError{fmt.Errorf("could not get url: %v", err)}
+			return &PatchError{fmt.Errorf("could not get url: %w", err)}
 		}
 		defer response.Body.Close()
 
@@ -78,13 +78,13 @@ func (patch *Tpp) doDownloads(server Server) error {
 
 		file, err := os.OpenFile(filepath.Join(downloadPath, name), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
 		if err != nil {
-			return &PatchError{fmt.Errorf("could not open file in download directory: %v", err)}
+			return &PatchError{fmt.Errorf("could not open file in download directory: %w", err)}
 		}
 		defer file.Close()
 
 		_, err = io.Copy(file, response.Body)
 		if err != nil {
-			return &PatchError{fmt.Errorf("could not save download \"%s\" to \"%s\": %v", path, name, err)}
+			return &PatchError{fmt.Errorf("could not save download \"%s\" to \"%s\": %w", path, name, err)}
 		}
 	}
 
@@ -127,7 +127,7 @@ func (patch *Tpp) GetDependencies(server Server, recursive ...bool) ([]Patch, er
 
 		dependency, err := server.GetPatch(version)
 		if err != nil {
-			return []Patch{}, fmt.Errorf("cannot resolve patch dependency \"%s\": %v", version, err)
+			return []Patch{}, fmt.Errorf("cannot resolve patch dependency \"%s\": %w", version, err)
 		}
 
 		patches = append(patches, dependency)
@@ -135,7 +135,7 @@ func (patch *Tpp) GetDependencies(server Server, recursive ...bool) ([]Patch, er
 		if dependent, ok := dependency.(Dependent); ok && (fetchSubDependencies || recurse) {
 			subDependencies, err := dependent.GetDependencies(server, recurse)
 			if err != nil {
-				return []Patch{}, fmt.Errorf("cannot resolve recursive dependency \"%s\": %v", version, err)
+				return []Patch{}, fmt.Errorf("cannot resolve recursive dependency \"%s\": %w", version, err)
 			}
 			patches = append(patches, subDependencies...)
 		}
@@ -154,13 +154,13 @@ func (patch *Tpp) updateBoot(server Server) error {
 
 	data, err := os.ReadFile(filepath.Join(path, patch.Update.Boot))
 	if err != nil {
-		return fmt.Errorf("could not read boot patch file \"%s\": %v", patch.Update.Boot, err)
+		return fmt.Errorf("could not read boot patch file \"%s\": %w", patch.Update.Boot, err)
 	}
 
 	config := &ldf.BootConfig{}
 	err = ldf.Unmarshal(data, config)
 	if err != nil {
-		return fmt.Errorf("could not unmarshal boot patch file: %v", err)
+		return fmt.Errorf("could not unmarshal boot patch file: %w", err)
 	}
 
 	return server.SetBootConfig(config)
@@ -193,7 +193,7 @@ func (patch *Tpp) UpdateResources(server Server, rejections *RejectionList) erro
 	for _, dependency := range dependencies {
 		err := dependency.DownloadResources(server, rejections)
 		if err != nil {
-			return &PatchError{fmt.Errorf("dependency \"%s\": %v", dependency.Version(), err)}
+			return &PatchError{fmt.Errorf("dependency \"%s\": %w", dependency.Version(), err)}
 		}
 	}
 
@@ -208,19 +208,19 @@ func (patch *Tpp) UpdateResources(server Server, rejections *RejectionList) erro
 func (patch *Tpp) replace(source, destination string) error {
 	sourceFile, err := os.Open(source)
 	if err != nil {
-		return fmt.Errorf("could not open patch source: %v", err)
+		return fmt.Errorf("could not open patch source: %w", err)
 	}
 	defer sourceFile.Close()
 
 	destinationFile, err := os.OpenFile(destination, os.O_WRONLY|os.O_TRUNC, 0755)
 	if err != nil {
-		return fmt.Errorf("could not open patch destination: %v", err)
+		return fmt.Errorf("could not open patch destination: %w", err)
 	}
 	defer destinationFile.Close()
 
 	_, err = io.Copy(destinationFile, sourceFile)
 	if err != nil {
-		return fmt.Errorf("could not copy \"%s\" to \"%s\": %v", source, destination, err)
+		return fmt.Errorf("could not copy \"%s\" to \"%s\": %w", source, destination, err)
 	}
 
 	return nil
@@ -242,13 +242,13 @@ func (patch *Tpp) replaceResources(clientDirectory string, resources client.Reso
 		if !resources.Replacements().Has(resourceName) {
 			resource, err := client.ReadResource(clientDirectory, resourceName)
 			if err != nil {
-				return fmt.Errorf("could not read patch destination: %v", err)
+				return fmt.Errorf("could not read patch destination: %w", err)
 			}
 
 			log.Printf("Adding %s to replacements cache", resource.Path)
 			err = resources.Replacements().Add(resource)
 			if err != nil {
-				return fmt.Errorf("could not add patch destination to replacements cache: %v", err)
+				return fmt.Errorf("could not add patch destination to replacements cache: %w", err)
 			}
 		}
 
@@ -267,19 +267,19 @@ func (patch *Tpp) replaceResources(clientDirectory string, resources client.Reso
 func (patch *Tpp) add(source, destination string) error {
 	sourceFile, err := os.Open(source)
 	if err != nil {
-		return fmt.Errorf("could not open patch source: %v", err)
+		return fmt.Errorf("could not open patch source: %w", err)
 	}
 	defer sourceFile.Close()
 
 	destinationFile, err := os.OpenFile(destination, os.O_CREATE|os.O_EXCL|os.O_WRONLY|os.O_TRUNC, 0755)
 	if err != nil {
-		return fmt.Errorf("could not open patch destination: %v", err)
+		return fmt.Errorf("could not open patch destination: %w", err)
 	}
 	defer destinationFile.Close()
 
 	_, err = io.Copy(destinationFile, sourceFile)
 	if err != nil {
-		return fmt.Errorf("could not copy \"%s\" to \"%s\": %v", source, destination, err)
+		return fmt.Errorf("could not copy \"%s\" to \"%s\": %w", source, destination, err)
 	}
 
 	return nil
@@ -306,7 +306,7 @@ func (patch *Tpp) addResources(clientDirectory string, resources client.Resource
 			log.Printf("Adding %s to additions cache", resourceName)
 			err := resources.Additions().Add(resourceName)
 			if err != nil {
-				return fmt.Errorf("could not add patch destination to additions cache: %v", err)
+				return fmt.Errorf("could not add patch destination to additions cache: %w", err)
 			}
 		}
 
@@ -338,7 +338,7 @@ func (patch *Tpp) TransferResourcesWithDependencies(clientDirectory string, reso
 	for _, dependency := range dependencies {
 		err := dependency.TransferResources(clientDirectory, resources, server)
 		if err != nil {
-			return fmt.Errorf("transfer dependecy: %v", err)
+			return fmt.Errorf("transfer dependecy: %w", err)
 		}
 	}
 
