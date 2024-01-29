@@ -47,12 +47,10 @@ type BootForm struct {
 }
 
 func NewBootForm(window fyne.Window) *BootForm {
-	form := new(BootForm)
+	form := &BootForm{}
 
 	form.bootFile = widget.NewLabel("")
 	form.bootFile.Truncation = fyne.TextTruncateEllipsis
-
-	bootFileOpen := widget.NewButtonWithIcon("", theme.FileIcon(), form.PromptBootFile(window))
 
 	form.serverName = widget.NewEntry()
 	form.serverName.PlaceHolder = "Overbuild Universe (US)"
@@ -90,6 +88,8 @@ func NewBootForm(window fyne.Window) *BootForm {
 	form.crashLogURL = widget.NewEntry()
 
 	form.trackDiskUsage = widget.NewCheck("", func(b bool) {})
+
+	bootFileOpen := widget.NewButtonWithIcon("", theme.FileIcon(), form.PromptBootFile(window))
 
 	form.container = container.NewVBox(
 		widget.NewForm(
