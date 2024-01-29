@@ -41,7 +41,7 @@ func Contains(clientDirectory, resource string) bool {
 func ReadResource(clientDirectory, resource string) (Resource, error) {
 	file, err := os.Open(filepath.Join(clientDirectory, resource))
 	if err != nil {
-		return Resource{}, &ResourceError{"client: cannot open resource", err}
+		return Resource{}, fmt.Errorf("client: cannot open resource: %w", err)
 	}
 	defer file.Close()
 
@@ -58,7 +58,7 @@ func WriteResource(clientDirectory string, resource Resource) error {
 	path := filepath.Join(clientDirectory, resource.Path)
 	err := os.WriteFile(path, resource.Data, 0755)
 	if err != nil {
-		return &ResourceError{"client: cannot write resource", err}
+		return fmt.Errorf("client: cannot write resource: %w", err)
 	}
 
 	return os.Chtimes(path, time.Time{}, resource.Time())
@@ -69,16 +69,16 @@ func RemoveResource(clientDirectory string, path string) error {
 
 	stat, err := os.Stat(fullPath)
 	if err != nil {
-		return &ResourceError{"client: cannot remove resource", err}
+		return fmt.Errorf("client: cannot remove resource: %w", err)
 	}
 
 	if stat.IsDir() {
-		return &ResourceError{"client: cannot remove resource", fmt.Errorf("\"%s\" is a directory", fullPath)}
+		return fmt.Errorf("client: cannot remove resource: \"%s\" is a directory", fullPath)
 	}
 
 	err = os.Remove(fullPath)
 	if err != nil {
-		return &ResourceError{"client: cannot remove resource", err}
+		return fmt.Errorf("client: cannot remove resource: %w", err)
 	}
 
 	return nil
