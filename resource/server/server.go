@@ -239,7 +239,7 @@ func (server *Server) SetPatchProtocol(protocol string) {
 }
 
 func (server *Server) ToXML() XML {
-	data, _ := ldf.MarshalLines(server.Config)
+	data, _ := ldf.Marshal(server.Config)
 	return XML{
 		Name: server.Name,
 		Boot: struct {
