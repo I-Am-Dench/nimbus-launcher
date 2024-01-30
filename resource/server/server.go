@@ -62,14 +62,21 @@ func (server *Server) Id() string {
 	return server.ID
 }
 
+// Returns the path in the format: {server.downloadDir}/{server.ID}
 func (server *Server) DownloadDir() string {
 	return filepath.Join(server.downloadDir, server.ID)
 }
 
+// Returns the path in the format: {server.settingsDir}/servers/{server.Boot}
 func (server *Server) BootPath() string {
 	return filepath.Join(server.settingsDir, "servers", server.Boot)
 }
 
+// Marshals the contents of server.Config and writes it to the path specified by
+// server.BootConfig().
+//
+// If len(server.Boot) == 0 when this method is called, server.Boot will be set to a
+// string with the format: "boot_{server.ID}.cfg".
 func (server *Server) SaveConfig() error {
 	if len(server.Boot) == 0 {
 		server.Boot = fmt.Sprintf("boot_%s.cfg", server.ID)
@@ -88,6 +95,13 @@ func (server *Server) SaveConfig() error {
 	return nil
 }
 
+// Reads the file located by server.BootPath() and unmarshals it into server.Config.
+//
+// If len(server.Boot) == 0, this function return immediately with no error
+//
+// This method can be optionally called with up to 2 parameters. The first optional parameter
+// will always update the internal settingsDir field. The second option parameter will always
+// update the internal downloadDir field.
 func (server *Server) LoadConfig(dir ...string) error {
 	if len(dir) > 0 {
 		server.settingsDir = dir[0]
@@ -120,15 +134,38 @@ func (server *Server) DeleteConfig() error {
 	return os.Remove(server.BootPath())
 }
 
+// Returns a string formatted as: server.PatchProtocol://PatchServerIP:PatchServerPort
 func (server *Server) PatchServerHost() string {
 	return fmt.Sprint(server.PatchProtocol, "://", server.Config.PatchServerIP, ":", server.Config.PatchServerPort)
 }
 
+// Calls url.JoinPath to format a valid URL in the form: server.PatchServerHost()/PatchServerDir/{elem...}
+//
+// For example:
+//
+//	// server.PatchServerHost() returns "http://127.0.0.1:10000"
+//	// PatchServerDir = "patches"
+//
+//	server.PatchServerUrl("some", "content", "here") // returns "http://127.0.0.1:10000/patches/some/content/here"
 func (server *Server) PatchServerUrl(elem ...string) (string, error) {
 	path := []string{server.Config.PatchServerDir}
 	return url.JoinPath(server.PatchServerHost(), append(path, elem...)...)
 }
 
+// Fetches the patch.json for the specified version.
+//
+// This method first checks for a file called patch.json located in the directory
+// "server.DownloadDir()/{version}". If the file does not exist, the patch.json is
+// request from the remote by calling server.RemoteGet(version).
+//
+// If server.RemoteGet returns an error, patch.ErrPatchesUnavailable is returned.
+//
+// If server.RemoteGet returns a status code of 401, patch.ErrPatchesUnauthorized is returned.
+//
+// If server.RemoteGet returns any other status code >= 400, patch.ErrPatchesUnavailable is returned.
+//
+// If the contents of the patch.json are formatted correctly (calling json.Marshal on the data does not return an error),
+// the data is saved in the file "server.DownloadDir()/{version}/patch.json".
 func (server *Server) GetPatch(version string) (patch.Patch, error) {
 	patchDirectory := filepath.Join(server.DownloadDir(), version)
 	path := filepath.Join(patchDirectory, "patch.json")
@@ -180,6 +217,9 @@ func (server *Server) GetPatch(version string) (patch.Patch, error) {
 	return patch, err
 }
 
+// Returns an *http.Response after sending a request to the url created by server.PatchServerUrl(elem...).
+//
+// If the len(server.PatchToken) > 0, the TPP-Token header is added to the request with the value of server.PatchToken.
 func (server *Server) RemoteGet(elem ...string) (*http.Response, error) {
 	url, err := server.PatchServerUrl(elem...)
 	if err != nil {
@@ -200,6 +240,11 @@ func (server *Server) RemoteGet(elem ...string) (*http.Response, error) {
 	return client.Do(request)
 }
 
+// Sends an HTTP request to at the URL formatted with server.PatchServerUrl().
+//
+// If the request fails, patch.ErrPatchesUnavailable is returned.
+//
+// If the response returns a status code of 503, patch.ErrPatchesUnsupported is returned.
 func (server *Server) GetPatchesSummary() (PatchesSummary, error) {
 	response, err := server.RemoteGet()
 	if err != nil {
@@ -229,6 +274,7 @@ func (server *Server) GetPatchesSummary() (PatchesSummary, error) {
 	return patches, nil
 }
 
+// Sets server.Config to boot and then calls server.SaveConfig() returning the error.
 func (server *Server) SetBootConfig(boot *ldf.BootConfig) error {
 	server.Config = boot
 	return server.SaveConfig()
@@ -258,10 +304,14 @@ func (server *Server) ToXML() XML {
 	}
 }
 
+// Returns the PatchesSummary saved from a call to server.SetPatchesSummary.
+//
+// If server.SetPatchesSummary has not yet been called, this method returns false.
 func (server *Server) PatchesSummary() (PatchesSummary, bool) {
 	return server.patchesList, server.hasPatchesList
 }
 
+// Internally stores the summary
 func (server *Server) SetPatchesSummary(summary PatchesSummary) {
 	server.patchesList = summary
 	server.hasPatchesList = true
