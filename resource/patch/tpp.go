@@ -20,6 +20,7 @@ type Dependent interface {
 	GetDependencies(server Server, recursive ...bool) ([]Patch, error)
 }
 
+// See PATCHING.md
 type Tpp struct {
 	version string `json:"-"`
 
