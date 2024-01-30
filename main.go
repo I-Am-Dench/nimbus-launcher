@@ -1,7 +1,9 @@
 package main
 
 import (
+	"errors"
 	"log"
+	"os"
 
 	"github.com/I-Am-Dench/lu-launcher/app"
 	"github.com/I-Am-Dench/lu-launcher/resource"
@@ -29,7 +31,7 @@ func main() {
 	log.Printf("Loaded %d server configuration(s)\n", servers.Size())
 
 	rejectedPatches, err := resource.PatchRejections()
-	if err != nil {
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		log.Println(err)
 	}
 	log.Printf("Loaded %d patch rejection(s)\n", rejectedPatches.Amount())
