@@ -485,7 +485,7 @@ func (app *App) CheckForUpdates(serv *server.Server) {
 			}
 
 			if err != patch.ErrPatchesUnauthorized {
-				serv.SetPatchesSummary(server.PatchesSummary{})
+				serv.SetPatchesSummary(patch.Summary{})
 			}
 
 			app.SetNormalState()

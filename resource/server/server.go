@@ -20,11 +20,6 @@ const (
 	HEADER_PATCH_TOKEN = "TPP-Token"
 )
 
-type PatchesSummary struct {
-	CurrentVersion   string   `json:"currentVersion"`
-	PreviousVersions []string `json:"previousVersions"`
-}
-
 var _ patch.Server = &Server{}
 
 type Server struct {
@@ -40,9 +35,9 @@ type Server struct {
 
 	Config *ldf.BootConfig `json:"-"`
 
-	hasPatchesList bool           `json:"-"`
-	patchesList    PatchesSummary `json:"-"`
-	pendingUpdate  bool           `json:"-"`
+	hasPatchesList bool          `json:"-"`
+	patchesList    patch.Summary `json:"-"`
+	pendingUpdate  bool          `json:"-"`
 }
 
 func New(config Config) *Server {
@@ -245,30 +240,30 @@ func (server *Server) RemoteGet(elem ...string) (*http.Response, error) {
 // If the request fails, patch.ErrPatchesUnavailable is returned.
 //
 // If the response returns a status code of 503, patch.ErrPatchesUnsupported is returned.
-func (server *Server) GetPatchesSummary() (PatchesSummary, error) {
+func (server *Server) GetPatchesSummary() (patch.Summary, error) {
 	response, err := server.RemoteGet("summary.json")
 	if err != nil {
-		return PatchesSummary{}, patch.ErrPatchesUnavailable
+		return patch.Summary{}, patch.ErrPatchesUnavailable
 	}
 	defer response.Body.Close()
 
 	if response.StatusCode == http.StatusServiceUnavailable {
-		return PatchesSummary{}, patch.ErrPatchesUnsupported
+		return patch.Summary{}, patch.ErrPatchesUnsupported
 	}
 
 	if response.StatusCode >= 400 {
-		return PatchesSummary{}, fmt.Errorf("invalid response status code from server: %d", response.StatusCode)
+		return patch.Summary{}, fmt.Errorf("invalid response status code from server: %d", response.StatusCode)
 	}
 
 	data, err := io.ReadAll(response.Body)
 	if err != nil {
-		return PatchesSummary{}, fmt.Errorf("cannot read body of patch server response: %w", err)
+		return patch.Summary{}, fmt.Errorf("cannot read body of patch server response: %w", err)
 	}
 
-	patches := PatchesSummary{}
+	patches := patch.Summary{}
 	err = json.Unmarshal(data, &patches)
 	if err != nil {
-		return PatchesSummary{}, fmt.Errorf("malformed response body from server: %w", err)
+		return patch.Summary{}, fmt.Errorf("malformed response body from server: %w", err)
 	}
 
 	return patches, nil
@@ -307,12 +302,12 @@ func (server *Server) ToXML() XML {
 // Returns the PatchesSummary saved from a call to server.SetPatchesSummary.
 //
 // If server.SetPatchesSummary has not yet been called, this method returns false.
-func (server *Server) PatchesSummary() (PatchesSummary, bool) {
+func (server *Server) PatchesSummary() (patch.Summary, bool) {
 	return server.patchesList, server.hasPatchesList
 }
 
 // Internally stores the summary
-func (server *Server) SetPatchesSummary(summary PatchesSummary) {
+func (server *Server) SetPatchesSummary(summary patch.Summary) {
 	server.patchesList = summary
 	server.hasPatchesList = true
 }
