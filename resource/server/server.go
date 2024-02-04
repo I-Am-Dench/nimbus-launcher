@@ -151,7 +151,7 @@ func (server *Server) PatchServerUrl(elem ...string) (string, error) {
 //
 // This method first checks for a file called patch.json located in the directory
 // "server.DownloadDir()/{version}". If the file does not exist, the patch.json is
-// request from the remote by calling server.RemoteGet(version, "patch.json").
+// requested from the remote by calling server.RemoteGet(version, "patch.json").
 //
 // If server.RemoteGet returns an error, patch.ErrPatchesUnavailable is returned.
 //
@@ -235,7 +235,7 @@ func (server *Server) RemoteGet(elem ...string) (*http.Response, error) {
 	return client.Do(request)
 }
 
-// Sends an HTTP request to at the URL formatted with server.PatchServerUrl().
+// Sends an HTTP request to the remote by calling server.RemoteGet("summary.json").
 //
 // If the request fails, patch.ErrPatchesUnavailable is returned.
 //
