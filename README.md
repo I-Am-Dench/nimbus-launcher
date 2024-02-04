@@ -27,11 +27,7 @@ Since the [Client Startup](#2-client-startup) functionality has not yet been imp
 
 ## Setup
 
-When you first run the launcher, ensure that your client configurations are properly set. Open up the settings window and click on `Launcher`. Make sure your Client Directory is configured to your client's folder (the folder that contains the `res/` directory and the `exe` file), and your Client Name is configured to the name of the client executable (this will most likely be `legouniverse.exe` and will probably never change).
-
-When you close the settings window, ensure that the `Play` button is enabled. If it is, the launcher is properly configured.
-
-You can then open the settings window again, and click on the `Servers` tab (this should be selected by default). Add or edit any server configurations that you need and then close the settings window.
+When you first run the launcher, you may need to ensure that your client configurations are properly set. Clicking the gear icon will reveal the Settings window with two tabs: **Servers** and **Launcher**. The **Servers** tab is where you can Add, Edit, and Remove server configurations. The **Launcher** tab includes some launcher specific settings and patching settings, as well as client settings. If your launcher's play button is disabled, make sure that your Client Directory is configured to your client's folder (the folder that contains the `res/` directory and the `exe` file), and your Client Name is configured to the name of the client exectuable (this will most likely be `legouniverse.exe` and will probably never change).
 
 Once you are happy with your configurations, close the settings window and use the server selector to choose which server you would like to boot into. Server IP info for your currently selected server will be clearly labeled within the launcher. When you are ready, you can press the `Play` button.
 
@@ -44,9 +40,9 @@ Two main phases occur when you press the `Play` button:
 
 ### 1. Client Preparation
 
-1. The client is effectively reset to it's original state before any patches were applied.
-    - Replaced client resources (cached in the `settings/client_cache.sqlite` database), which were the original client resources replaced through patches, are copied over to their original locations irrespective of whether the resources are original or not.
-    - Added client resources (cached in the `settings/client_cache.sqlite` database), which are new resources added through patches, are removed.
+1. The client is effectively reset to its original state before any patches were applied.
+    - Original client resources (cached in the `settings/client_cache.sqlite` database) which were **replaced** through patches, are copied over to their original locations irrespective of whether the resources are original or not.
+    - New client resources (cached in the `settings/client_cache.sqlite` database) which were **added** through patches, are removed.
 2. If the currently selected server is not the same as the previously run server, the `boot.cfg` file for the currently selected server is copied over into the client directory.
 3. Any resources that are a part of the current patch for the selected server are copied over into the client.
     - Replacement resources will cache the already existing resource ONLY IF the resource does not yet exist in the `settings/client_cache.sqlite` database.
