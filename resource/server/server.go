@@ -156,7 +156,7 @@ func (server *Server) PatchServerUrl(elem ...string) (string, error) {
 //
 // This method first checks for a file called patch.json located in the directory
 // "server.DownloadDir()/{version}". If the file does not exist, the patch.json is
-// request from the remote by calling server.RemoteGet(version).
+// request from the remote by calling server.RemoteGet(version, "patch.json").
 //
 // If server.RemoteGet returns an error, patch.ErrPatchesUnavailable is returned.
 //
@@ -182,7 +182,7 @@ func (server *Server) GetPatch(version string) (patch.Patch, error) {
 		return patch, nil
 	}
 
-	response, err := server.RemoteGet(version)
+	response, err := server.RemoteGet(version, "patch.json")
 	if err != nil {
 		return nil, patch.ErrPatchesUnavailable
 	}
@@ -246,7 +246,7 @@ func (server *Server) RemoteGet(elem ...string) (*http.Response, error) {
 //
 // If the response returns a status code of 503, patch.ErrPatchesUnsupported is returned.
 func (server *Server) GetPatchesSummary() (PatchesSummary, error) {
-	response, err := server.RemoteGet()
+	response, err := server.RemoteGet("summary.json")
 	if err != nil {
 		return PatchesSummary{}, patch.ErrPatchesUnavailable
 	}
@@ -262,7 +262,7 @@ func (server *Server) GetPatchesSummary() (PatchesSummary, error) {
 
 	data, err := io.ReadAll(response.Body)
 	if err != nil {
-		return PatchesSummary{}, fmt.Errorf("cannot read boyd of patch server response: %w", err)
+		return PatchesSummary{}, fmt.Errorf("cannot read body of patch server response: %w", err)
 	}
 
 	patches := PatchesSummary{}

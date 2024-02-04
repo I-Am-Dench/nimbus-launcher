@@ -105,14 +105,14 @@ func readTestPatch(name string) []byte {
 func serverFileSystem(updatedBoot *ldf.BootConfig) fileSystem {
 	fs := make(fileSystem)
 
-	fs["/patches/v1.0.0"] = readTestPatch("patch1.json")
-	fs["/patches/v2.0.0"] = readTestPatch("patch2.json")
-	fs["/patches/v3.0.0"] = readTestPatch("patch3.json")
-	fs["/patches/v4.0.0"] = readTestPatch("patch4.json")
-	fs["/patches/v5.0.0"] = readTestPatch("patch5.json")
-	fs["/patches/v6.0.0"] = readTestPatch("patch6.json")
+	fs["/patches/v1.0.0/patch.json"] = readTestPatch("patch1.json")
+	fs["/patches/v2.0.0/patch.json"] = readTestPatch("patch2.json")
+	fs["/patches/v3.0.0/patch.json"] = readTestPatch("patch3.json")
+	fs["/patches/v4.0.0/patch.json"] = readTestPatch("patch4.json")
+	fs["/patches/v5.0.0/patch.json"] = readTestPatch("patch5.json")
+	fs["/patches/v6.0.0/patch.json"] = readTestPatch("patch6.json")
 
-	fs["/patches/invalid_version"] = readTestPatch("patch1.json") // Could be any patch
+	fs["/patches/invalid_version/patch.json"] = readTestPatch("patch1.json") // Could be any patch
 
 	data, err := ldf.Marshal(updatedBoot)
 	if err != nil {
