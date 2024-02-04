@@ -14,8 +14,6 @@ import (
 	"github.com/I-Am-Dench/lu-launcher/ldf"
 )
 
-var _ Patch = &Tpp{}
-
 type Dependent interface {
 	GetDependencies(server Server, recursive ...bool) ([]Patch, error)
 }

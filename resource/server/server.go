@@ -20,7 +20,7 @@ const (
 	HEADER_PATCH_TOKEN = "TPP-Token"
 )
 
-var _ patch.Server = &Server{}
+var _ patch.Server = (*Server)(nil)
 
 type Server struct {
 	settingsDir string `json:"-"`
