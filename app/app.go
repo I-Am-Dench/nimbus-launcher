@@ -10,6 +10,7 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
@@ -333,11 +334,14 @@ func (app *App) ShowSettings() {
 	app.settings.PreviouslyRunServer = ""
 	app.settings.Save()
 
-	settings := app.NewWindow("Settings")
-	settings.SetFixedSize(true)
-	settings.Resize(fyne.NewSize(800, 600))
-	settings.SetIcon(theme.StorageIcon())
-	settings.SetOnClosed(func() {
+	app.settingsWindow = nlwindows.NewSettingsWindow(app, func(w fyne.Window) []*container.TabItem {
+		return []*container.TabItem{
+			container.NewTabItem("Servers", app.ServerSettings(w)),
+			container.NewTabItem("Launcher", app.LauncherSettings(w)),
+		}
+	})
+
+	app.settingsWindow.SetOnClosed(func() {
 		app.settingsWindow = nil
 
 		if app.client.IsValid() {
@@ -347,11 +351,9 @@ func (app *App) ShowSettings() {
 
 	app.serverList.Disable()
 
-	app.LoadSettingsContent(settings)
-	app.settingsWindow = settings
+	app.settingsWindow.CenterOnScreen()
+	app.settingsWindow.Show()
 
-	settings.CenterOnScreen()
-	settings.Show()
 }
 
 func (app *App) ShowPatch(patch patch.Patch, onConfirmCancel func(nlwindows.PatchAcceptState)) {

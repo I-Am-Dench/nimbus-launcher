@@ -92,25 +92,6 @@ func (app *App) Footer() *fyne.Container {
 	)
 }
 
-func (app *App) LoadSettingsContent(window fyne.Window) {
-	heading := canvas.NewText("Settings", theme.ForegroundColor())
-	heading.TextSize = 24
-
-	tabs := container.NewAppTabs(
-		container.NewTabItem("Servers", app.ServerSettings(window)),
-		container.NewTabItem("Launcher", app.LauncherSettings(window)),
-	)
-
-	window.SetContent(
-		container.NewPadded(
-			container.NewBorder(
-				heading, nil, nil, nil,
-				tabs,
-			),
-		),
-	)
-}
-
 func (app *App) ServerSettings(window fyne.Window) *fyne.Container {
 	return container.NewPadded(
 		NewServersPage(window, app.serverList).Container(),
