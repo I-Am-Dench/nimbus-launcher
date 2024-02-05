@@ -20,11 +20,21 @@ const (
 	HEADER_PATCH_TOKEN = "TPP-Token"
 )
 
+type State int
+
+const (
+	Normal = State(iota)
+	CheckingUpdates
+	PendingUpdate
+)
+
 var _ patch.Server = (*Server)(nil)
 
 type Server struct {
 	settingsDir string `json:"-"`
 	downloadDir string `json:"-"`
+
+	state State `json:"-"`
 
 	ID            string `json:"id"`
 	Name          string `json:"name"`
@@ -37,7 +47,6 @@ type Server struct {
 
 	hasPatchesList bool          `json:"-"`
 	patchesList    patch.Summary `json:"-"`
-	pendingUpdate  bool          `json:"-"`
 }
 
 func New(config Config) *Server {
@@ -312,10 +321,14 @@ func (server *Server) SetPatchesSummary(summary patch.Summary) {
 	server.hasPatchesList = true
 }
 
-func (server *Server) PendingUpdate() bool {
-	return server.pendingUpdate
+func (server *Server) SetState(state State) {
+	server.state = state
 }
 
-func (server *Server) SetPendingUpdate(isPending bool) {
-	server.pendingUpdate = isPending
+func (server *Server) CheckingUpdates() bool {
+	return server.state == CheckingUpdates
+}
+
+func (server *Server) PendingUpdate() bool {
+	return server.state == PendingUpdate
 }

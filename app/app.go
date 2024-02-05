@@ -167,7 +167,9 @@ func (app *App) OnServerChanged(server *server.Server) {
 	if app.IsReady() && app.settings.CheckPatchesAutomatically {
 		app.CheckForUpdates(server)
 	} else if server != nil {
-		if server.PendingUpdate() {
+		if server.CheckingUpdates() {
+			app.SetCheckingUpdatesState()
+		} else if server.PendingUpdate() {
 			app.SetUpdateState()
 		} else {
 			app.SetNormalState()
@@ -415,7 +417,7 @@ func (app *App) Update(serv *server.Server) {
 	}
 
 	go func(version string, serv *server.Server) {
-		defer serv.SetPendingUpdate(false)
+		defer serv.SetState(server.Normal)
 		log.Printf("Getting patch \"%s\" for %s\n", version, serv.Name)
 
 		p, err := serv.GetPatch(version)
@@ -473,6 +475,7 @@ func (app *App) CheckForUpdates(serv *server.Server) {
 		return
 	}
 
+	serv.SetState(server.CheckingUpdates)
 	app.SetCheckingUpdatesState()
 	go func(serv *server.Server) {
 		log.Printf("Checking for updates for \"%s\"; Current version: \"%s\"\n", serv.Name, serv.CurrentPatch)
@@ -488,6 +491,7 @@ func (app *App) CheckForUpdates(serv *server.Server) {
 				serv.SetPatchesSummary(patch.Summary{})
 			}
 
+			serv.SetState(server.Normal)
 			app.SetNormalState()
 			return
 		}
@@ -495,6 +499,7 @@ func (app *App) CheckForUpdates(serv *server.Server) {
 		if serv.CurrentPatch == patches.CurrentVersion {
 			log.Println("Server is already latest version.")
 			serv.SetPatchesSummary(patches)
+			serv.SetState(server.Normal)
 			app.SetNormalState()
 			return
 		}
@@ -502,6 +507,7 @@ func (app *App) CheckForUpdates(serv *server.Server) {
 		if err := patch.ValidateVersionName(patches.CurrentVersion); err != nil {
 			log.Println(err)
 			serv.SetPatchesSummary(patches)
+			serv.SetState(server.Normal)
 			app.SetNormalState()
 			return
 		}
@@ -510,12 +516,13 @@ func (app *App) CheckForUpdates(serv *server.Server) {
 
 		if app.rejectedPatches.IsRejected(serv, patches.CurrentVersion) {
 			log.Printf("Patch version \"%s\" is rejected; Aborting update sequence.\n", patches.CurrentVersion)
+			serv.SetState(server.Normal)
 			app.SetNormalState()
 			return
 		}
 
 		serv.SetPatchesSummary(patches)
-		serv.SetPendingUpdate(true)
+		serv.SetState(server.PendingUpdate)
 		app.SetUpdateState()
 	}(serv)
 }
