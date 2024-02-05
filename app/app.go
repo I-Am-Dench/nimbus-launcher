@@ -77,8 +77,6 @@ func New(settings *resource.Settings, servers resource.ServerList, rejectedPatch
 	a.main.Resize(fyne.NewSize(800, 300))
 	a.main.SetMaster()
 
-	a.settingsWindow = nil
-
 	icon := resource.Icon()
 	if err == nil {
 		a.main.SetIcon(icon)
