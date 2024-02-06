@@ -15,6 +15,8 @@ launcher/
 |-- launcher.exe
 ```
 
+The executable is NOT SIGNED. Your operating system may prompt you that the application is blocked. If you are not comfortable overriding the block, you will need to [Build or Run](#building-or-running-from-source) the application from source.
+
 Running the executable will generate a settings folder. If you move the executable to a different folder, make sure to bring the settings folder with it. 
 
 If you have Go installed on your system, the launcher can be installed by using the `go install` command:
