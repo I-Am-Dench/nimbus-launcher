@@ -12,7 +12,7 @@ import (
 )
 
 func (app *App) LoadContent() {
-	heading := canvas.NewText("Launch Lego Universe", theme.ForegroundColor())
+	heading := canvas.NewText("Launch LEGO Universe", theme.ForegroundColor())
 	heading.TextSize = 24
 
 	infoButton := widget.NewButtonWithIcon(
