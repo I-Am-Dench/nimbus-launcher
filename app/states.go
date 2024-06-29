@@ -32,6 +32,7 @@ func (app *App) SetNormalState() {
 func (app *App) SetUpdatingState() {
 	app.progressBar.ShowIndefinite()
 
+	app.serverList.Disable()
 	app.playButton.Disable()
 	app.playButton.SetText("Updating")
 
@@ -54,6 +55,7 @@ func (app *App) SetUpdateState() {
 func (app *App) SetCheckingUpdatesState() {
 	app.progressBar.ShowIndefinite()
 
+	app.serverList.Disable()
 	app.playButton.Disable()
 	app.playButton.SetText("Checking updates")
 	app.playButton.SetIcon(nil)
