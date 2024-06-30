@@ -3,4 +3,4 @@
 
 package version
 
-var v = Version{1, 0, 0, true}
+var v = Version{0, 1, 0, true}
