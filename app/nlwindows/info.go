@@ -32,7 +32,7 @@ func OpenLicense() {
 		dir = path.Dir(exe)
 	}
 
-	// Only for windows -- Needs `open -t [or -e]` for Mac or equivalent for Linux
+	// Need Linux Implementation
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
 	case "windows":
