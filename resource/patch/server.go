@@ -3,7 +3,7 @@ package patch
 import (
 	"net/http"
 
-	"github.com/I-Am-Dench/lu-launcher/ldf"
+	"github.com/I-Am-Dench/nimbus-launcher/ldf"
 )
 
 type Server interface {

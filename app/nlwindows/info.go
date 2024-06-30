@@ -12,7 +12,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"github.com/I-Am-Dench/lu-launcher/version"
+	"github.com/I-Am-Dench/nimbus-launcher/version"
 )
 
 func mustParse(rawUrl string) *url.URL {
@@ -23,7 +23,7 @@ func mustParse(rawUrl string) *url.URL {
 	return url
 }
 
-var RepoURL = mustParse("https://github.com/I-Am-Dench/lu-launcher")
+var RepoURL = mustParse("https://github.com/I-Am-Dench/nimbus-launcher")
 
 func OpenLicense() {
 	dir := "."

@@ -1,6 +1,6 @@
 package patch
 
-import "github.com/I-Am-Dench/lu-launcher/client"
+import "github.com/I-Am-Dench/nimbus-launcher/client"
 
 type Patch interface {
 	// Returns the version of this patch

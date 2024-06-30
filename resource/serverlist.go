@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/I-Am-Dench/lu-launcher/resource/server"
+	"github.com/I-Am-Dench/nimbus-launcher/resource/server"
 )
 
 type ServerList struct {

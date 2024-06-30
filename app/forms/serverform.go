@@ -10,9 +10,9 @@ import (
 	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"github.com/I-Am-Dench/lu-launcher/ldf"
-	"github.com/I-Am-Dench/lu-launcher/resource"
-	"github.com/I-Am-Dench/lu-launcher/resource/server"
+	"github.com/I-Am-Dench/nimbus-launcher/ldf"
+	"github.com/I-Am-Dench/nimbus-launcher/resource"
+	"github.com/I-Am-Dench/nimbus-launcher/resource/server"
 )
 
 type ServerForm struct {

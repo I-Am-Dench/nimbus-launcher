@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/I-Am-Dench/lu-launcher/ldf"
+	"github.com/I-Am-Dench/nimbus-launcher/ldf"
 )
 
 func TestUnmarshal(t *testing.T) {

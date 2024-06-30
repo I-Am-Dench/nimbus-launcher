@@ -11,8 +11,8 @@ import (
 	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"github.com/I-Am-Dench/lu-launcher/app/forms"
-	"github.com/I-Am-Dench/lu-launcher/app/nlwidgets"
+	"github.com/I-Am-Dench/nimbus-launcher/app/forms"
+	"github.com/I-Am-Dench/nimbus-launcher/app/nlwidgets"
 )
 
 const (

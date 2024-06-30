@@ -22,7 +22,7 @@ Running the executable will generate a settings folder. If you move the executab
 If you have Go installed on your system, the launcher can be installed by using the `go install` command:
 
 ```bash
-go install github.com/I-Am-Dench/lu-launcher@latest
+go install github.com/I-Am-Dench/nimbus-launcher@latest
 ```
 
 Since the [Client Startup](#2-client-startup) functionality has not yet been implemented for Mac and Linux, releases for each platform will not be available until their functions have been tested. Building and/or running the launcher from source, however, will still work as normal just with the missing functionality.

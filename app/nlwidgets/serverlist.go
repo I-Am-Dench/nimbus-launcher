@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	"fyne.io/fyne/v2/widget"
-	"github.com/I-Am-Dench/lu-launcher/app/nlwidgets/muxset"
-	"github.com/I-Am-Dench/lu-launcher/resource"
-	"github.com/I-Am-Dench/lu-launcher/resource/server"
+	"github.com/I-Am-Dench/nimbus-launcher/app/nlwidgets/muxset"
+	"github.com/I-Am-Dench/nimbus-launcher/resource"
+	"github.com/I-Am-Dench/nimbus-launcher/resource/server"
 )
 
 type ServerList struct {

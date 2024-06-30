@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/I-Am-Dench/lu-launcher/client"
-	"github.com/I-Am-Dench/lu-launcher/ldf"
+	"github.com/I-Am-Dench/nimbus-launcher/client"
+	"github.com/I-Am-Dench/nimbus-launcher/ldf"
 )
 
 type Dependent interface {

@@ -1,4 +1,4 @@
-module github.com/I-Am-Dench/lu-launcher
+module github.com/I-Am-Dench/nimbus-launcher
 
 go 1.21.0
 

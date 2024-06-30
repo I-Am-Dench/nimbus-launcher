@@ -15,14 +15,14 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"github.com/I-Am-Dench/lu-launcher/app/nlwidgets"
-	"github.com/I-Am-Dench/lu-launcher/app/nlwindows"
-	"github.com/I-Am-Dench/lu-launcher/client"
-	"github.com/I-Am-Dench/lu-launcher/ldf"
-	"github.com/I-Am-Dench/lu-launcher/resource"
-	"github.com/I-Am-Dench/lu-launcher/resource/patch"
-	"github.com/I-Am-Dench/lu-launcher/resource/server"
-	"github.com/I-Am-Dench/lu-launcher/version"
+	"github.com/I-Am-Dench/nimbus-launcher/app/nlwidgets"
+	"github.com/I-Am-Dench/nimbus-launcher/app/nlwindows"
+	"github.com/I-Am-Dench/nimbus-launcher/client"
+	"github.com/I-Am-Dench/nimbus-launcher/ldf"
+	"github.com/I-Am-Dench/nimbus-launcher/resource"
+	"github.com/I-Am-Dench/nimbus-launcher/resource/patch"
+	"github.com/I-Am-Dench/nimbus-launcher/resource/server"
+	"github.com/I-Am-Dench/nimbus-launcher/version"
 )
 
 type App struct {

@@ -12,8 +12,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/I-Am-Dench/lu-launcher/ldf"
-	"github.com/I-Am-Dench/lu-launcher/resource/patch"
+	"github.com/I-Am-Dench/nimbus-launcher/ldf"
+	"github.com/I-Am-Dench/nimbus-launcher/resource/patch"
 )
 
 const (

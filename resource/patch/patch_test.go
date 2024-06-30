@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/I-Am-Dench/lu-launcher/client"
-	"github.com/I-Am-Dench/lu-launcher/ldf"
-	"github.com/I-Am-Dench/lu-launcher/resource/patch"
+	"github.com/I-Am-Dench/nimbus-launcher/client"
+	"github.com/I-Am-Dench/nimbus-launcher/ldf"
+	"github.com/I-Am-Dench/nimbus-launcher/resource/patch"
 )
 
 type replacementCache struct {

@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/I-Am-Dench/lu-launcher/ldf"
-	"github.com/I-Am-Dench/lu-launcher/resource/patch"
-	"github.com/I-Am-Dench/lu-launcher/resource/server"
+	"github.com/I-Am-Dench/nimbus-launcher/ldf"
+	"github.com/I-Am-Dench/nimbus-launcher/resource/patch"
+	"github.com/I-Am-Dench/nimbus-launcher/resource/server"
 )
 
 type environment struct {

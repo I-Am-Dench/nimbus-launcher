@@ -5,9 +5,9 @@ import (
 	"log"
 	"os"
 
-	"github.com/I-Am-Dench/lu-launcher/app"
-	"github.com/I-Am-Dench/lu-launcher/resource"
-	"github.com/I-Am-Dench/lu-launcher/version"
+	"github.com/I-Am-Dench/nimbus-launcher/app"
+	"github.com/I-Am-Dench/nimbus-launcher/resource"
+	"github.com/I-Am-Dench/nimbus-launcher/version"
 )
 
 func main() {
