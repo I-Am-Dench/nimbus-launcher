@@ -23,6 +23,8 @@ func mustParse(rawUrl string) *url.URL {
 	return url
 }
 
+var RepoURL = mustParse("https://github.com/I-Am-Dench/lu-launcher")
+
 func OpenLicense() {
 	dir := "."
 	if exe, err := os.Executable(); err == nil {
@@ -54,7 +56,7 @@ func NewInfoWindow(app fyne.App) fyne.Window {
 						widget.NewFormItem("Version", widget.NewLabel(version.Get().Name())),
 						widget.NewFormItem("Revision", widget.NewLabel(version.Revision())),
 						widget.NewFormItem("Author", widget.NewLabel("I-Am-Dench")),
-						widget.NewFormItem("Source", widget.NewHyperlink("https://github.com/I-Am-Dench/lu-launcher", mustParse("https://github.com/I-Am-Dench/lu-launcher"))),
+						widget.NewFormItem("Source", widget.NewHyperlink(RepoURL.String(), RepoURL)),
 						widget.NewFormItem("License", widget.NewButton("GNU GPLv3", OpenLicense)),
 					),
 					container.NewStack(
