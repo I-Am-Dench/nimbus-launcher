@@ -72,7 +72,7 @@ func NewInfoWindow(app fyne.App) fyne.Window {
 					),
 					container.NewStack(
 						container.NewVBox(
-							widget.NewLabel("Copyright (C) 2023 Theodore Friedrich (I-Am-Dench)"),
+							widget.NewLabel("Copyright (C) 2023 I-Am-Dench"),
 							widget.NewLabel("This program is free software: you can redistribute it and/or modify\nit under the terms of the GNU General Public License as published by\nthe Free Software Foundation, either version 3 of the License, or\n(at your option) any later version."),
 							widget.NewLabel("This program is distributed in the hope that it will be useful,\nbut WITHOUT ANY WARRANTY; without even the implied warranty of\nMERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\nGNU General Public License for more details."),
 						),
