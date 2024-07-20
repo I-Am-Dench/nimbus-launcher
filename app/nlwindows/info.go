@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"runtime"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -31,8 +32,18 @@ func OpenLicense() {
 		dir = path.Dir(exe)
 	}
 
-	// Only for windows -- Needs `open -t [or -e]` for Mac or equivalent for Linux
-	cmd := exec.Command("notepad", path.Join(dir, "LICENSE"))
+	// Need Linux Implementation
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("notepad", path.Join(dir, "LICENSE"))
+	case "darwin":
+		cmd = exec.Command("open", "-t", path.Join(dir, "LICENSE"))
+	default:
+		log.Printf("OpenLicense: unsupported GOOS: %s", runtime.GOOS)
+		return
+	}
+
 	cmd.Stderr = os.Stdout
 
 	log.Println("OpenLicense:", cmd)
