@@ -80,9 +80,7 @@ If an authentication token is required to retrieve *Patch* content from a server
 
 ## Versioning
 
-The **TPP** follows a strict version naming convention. Any *Patch Version* that does not follow the standard versioning pattern MUST incure an error.
-
-*Patch Versions* MUST use 3 numeric version components: MAJOR, MINOR, and PATCH. Optionally, versions can be followed by any number of alpha numeric characters or a '_', '.', or '-'. An optional prefix, 'v', is also permitted.
+The **TPP** strictly follows semantic versioning, optionally prefixed by 'v' and optionally suffixed by any number of alpha numerica characters or a '_', '.' or '-'. Any *Patch Version* that does not follow the standard versioning pattern MUST incure an error.
 
 The Nimbus Launcher checks *Patch Version* names with the following regular expression:
 
