@@ -97,7 +97,9 @@ For non server owners, always approach patches with EXTREME CAUTION. Never accep
   - **If cancelled**, the patch contents will NOT be downloaded nor updated, and the patch will simply be ignored until the next time the updates are refreshed.
   - **If rejected**, the patch version will be blacklisted and will always be ignored on update refreshes or if it appears as a patch dependency.
 
-### Patch Server Configuration (Subject to Change with between versions 0.*.* and 1.0.0)
+### Patch Server Configuration
+
+> Subject to change with between versions 0.\*.\* and 1.0.0
 
 Configuring the launcher to point to a patch server is done through both the `boot.cfg` file and the local server configuration.
 
