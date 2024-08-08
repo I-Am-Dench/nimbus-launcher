@@ -97,7 +97,7 @@ For non server owners, always approach patches with EXTREME CAUTION. Never accep
   - **If cancelled**, the patch contents will NOT be downloaded nor updated, and the patch will simply be ignored until the next time the updates are refreshed.
   - **If rejected**, the patch version will be blacklisted and will always be ignored on update refreshes or if it appears as a patch dependency.
 
-### Patch Server Configuration
+### Patch Server Configuration (Subject to Change with between versions 0.*.* and 1.0.0)
 
 Configuring the launcher to point to a patch server is done through both the `boot.cfg` file and the local server configuration.
 
@@ -120,9 +120,7 @@ For the `boot.cfg` file, modify the following fields:
 
 ### Patch Server Setup
 
-To set up a patch server, you need an HTTP/HTTPS server which complies with the custom [TPP Protocol](/PATCHING.md).
-
-If you are not integrating the TPP Protocol onto your own server, a simple patch server can be found here: [nimbus-patcher](https://github.com/I-Am-Dench/nimbus-patcher).
+To set up a patch server, you need an HTTP/HTTPS server which complies with the [TPP Protocol](/PATCHING.md).
 
 ### Patch Server Authentication (Optional)
 
