@@ -19,13 +19,9 @@ The executable is NOT SIGNED. Your operating system may prompt you that the appl
 
 Running the executable will generate a settings folder. If you move the executable to a different folder, make sure to bring the settings folder with it. 
 
-If you have Go installed on your system, the launcher can be installed by using the `go install` command:
-
-```bash
-go install github.com/I-Am-Dench/nimbus-launcher@latest
-```
-
 Since the [Client Startup](#2-client-startup) functionality has not yet been implemented for Mac and Linux, releases for each platform will not be available until their functions have been tested. Building and/or running the launcher from source, however, will still work as normal just with the missing functionality.
+
+If you have Go installed on your system, you may follow the instructions the [Building or Running from Source](#building-or-running-from-source) section.
 
 ## Setup
 
