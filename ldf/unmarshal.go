@@ -4,8 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
+)
+
+var (
+	LineDelim = regexp.MustCompile("(,|\n+)")
 )
 
 type keyType int
@@ -92,9 +97,13 @@ func Unmarshal(data []byte, v any) error {
 	keyValuePairs := make(map[string]ldfValue)
 
 	s := string(data)
-	rawPairs := strings.Split(s, ",")
+	rawPairs := LineDelim.Split(s, -1)
 
 	for _, p := range rawPairs {
+		if len(strings.TrimSpace(p)) == 0 {
+			continue
+		}
+
 		key, value, err := parseKeyValuePair(p)
 		if err != nil {
 			return err
