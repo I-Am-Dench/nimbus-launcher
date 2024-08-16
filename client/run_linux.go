@@ -14,13 +14,6 @@ import (
 
 const (
 	SteamHome = ".steam/steam/"
-
-	ProtonAppId = "2805730"
-)
-
-var (
-	protonPath = ""
-	steamPath  = ""
 )
 
 func findRecentProtonVersion(dir string) (string, error) {
@@ -38,39 +31,41 @@ func findRecentProtonVersion(dir string) (string, error) {
 	return filepath.Join(versions[len(versions)-1], "proton"), nil
 }
 
-func init() {
+func resolveProton() (string, string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		log.Printf("init: proton: %v", err)
-		return
+		return "", "", fmt.Errorf("resolve proton: %w", err)
 	}
 
 	steam, err := filepath.EvalSymlinks(filepath.Join(home, SteamHome))
 	if err != nil {
-		log.Printf("init: proton: %v", err)
-		return
+		return "", "", fmt.Errorf("resolve proton: %w", err)
 	}
-
-	log.Printf("init: proton: Found Steam installation at: %s", steam)
-	steamPath = steam
 
 	proton, err := findRecentProtonVersion(filepath.Join(steam, "steamapps", "common"))
 	if err != nil {
-		log.Printf("init: proton: %v", err)
-		return
+		return "", "", fmt.Errorf("resolve proton: %w", err)
 	}
 
-	log.Printf("init: proton: Found Proton installation at: %s", proton)
-	protonPath = proton
+	return proton, steam, nil
 }
 
 func (client *standardClient) Start() (*exec.Cmd, error) {
+	proton, steam, err := resolveProton()
+	if err != nil {
+		return nil, err
+	}
+	log.Printf("Found Steam installation: %s", steam)
+	log.Printf("Found Proton installation: %s", proton)
+
 	dir := filepath.Dir(client.path)
+
+	// Setting CompatData directory inside of the client's directory
 	compatData := filepath.Join(dir, ".proton")
 
 	os.MkdirAll(compatData, 0755)
 
-	cmd := exec.Command(protonPath, "run", client.path)
+	cmd := exec.Command(proton, "run", client.path)
 	cmd.Dir = dir
 	cmd.Env = os.Environ()
 
@@ -78,7 +73,7 @@ func (client *standardClient) Start() (*exec.Cmd, error) {
 		"WINEDLLOVERRIDES=dinput8.dll=n,b",
 		"PROTON_USE_WINED3D=1",
 		fmt.Sprintf("STEAM_COMPAT_DATA_PATH=%s", compatData),
-		fmt.Sprintf("STEAM_COMPAT_CLIENT_INSTALL_PATH=%s", steamPath),
+		fmt.Sprintf("STEAM_COMPAT_CLIENT_INSTALL_PATH=%s", steam),
 	}...)
 
 	cmd.Stderr = os.Stdout
