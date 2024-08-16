@@ -316,7 +316,10 @@ func (app *App) PressPlay() {
 
 	app.progressBar.Hide()
 	go func(cmd *exec.Cmd) {
-		cmd.Wait()
+		if err := cmd.Wait(); err != nil {
+			log.Println(err)
+		}
+		log.Println("Client exited.")
 		app.SetNormalState()
 	}(cmd)
 }
