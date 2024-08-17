@@ -83,10 +83,17 @@ func (client *standardClient) Start() (*exec.Cmd, error) {
 
 	dir := filepath.Dir(client.path)
 
-	// Setting CompatData directory inside of the client's directory
-	compatData := filepath.Join(dir, ".proton")
+	// compatdata is usually found within ".steam/steam/steamapps/compatdata/{appid}", but since
+	// LEGO Universe is no longer in service and importing it into steam as an
+	// external app appears to generate a random AppId, to guarantee a directory
+	// we'll use "{clientDirectory}/.proton".
+	//
+	// Possible setting for future versions?
+	compatdata := filepath.Join(dir, ".proton")
 
-	os.MkdirAll(compatData, 0755)
+	if err := os.MkdirAll(compatdata, 0755); err != nil {
+		return nil, fmt.Errorf("failed to make compatdata path: %w", err)
+	}
 
 	cmd := exec.Command(proton, "run", client.path)
 	cmd.Dir = dir
@@ -95,7 +102,7 @@ func (client *standardClient) Start() (*exec.Cmd, error) {
 	cmd.Env = append(cmd.Env, []string{
 		"WINEDLLOVERRIDES=dinput8.dll=n,b",
 		"PROTON_USE_WINED3D=1",
-		fmt.Sprintf("STEAM_COMPAT_DATA_PATH=%s", compatData),
+		fmt.Sprintf("STEAM_COMPAT_DATA_PATH=%s", compatdata),
 		fmt.Sprintf("STEAM_COMPAT_CLIENT_INSTALL_PATH=%s", steam),
 	}...)
 
