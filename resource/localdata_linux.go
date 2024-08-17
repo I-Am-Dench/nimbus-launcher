@@ -16,5 +16,5 @@ func DefaultApplicationsDirectory() string {
 		log.Println("Using ~/")
 		return "~/"
 	}
-	return filepath.Join(homeDirectory, "games", DEFAULT_DIR_CLIENT)
+	return filepath.Join(homeDirectory, "games")
 }
