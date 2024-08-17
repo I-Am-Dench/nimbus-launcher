@@ -10,13 +10,34 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"strconv"
+	"strings"
 )
 
 const (
 	SteamHome = ".steam/steam/"
 )
 
-func findRecentProtonVersion(dir string) (string, error) {
+func getProtonVersion(dir string) int {
+	data, err := os.ReadFile(filepath.Join(dir, "version"))
+	if err != nil {
+		return 0
+	}
+
+	rawVersion, _, ok := strings.Cut(string(data), " ")
+	if !ok {
+		return 0
+	}
+
+	version, err := strconv.Atoi(rawVersion)
+	if err != nil {
+		return 0
+	}
+
+	return version
+}
+
+func FindRecentProtonVersion(dir string) (string, error) {
 	versions, err := filepath.Glob(filepath.Join(dir, "Proton*"))
 	if err != nil {
 		return "", err
@@ -26,9 +47,11 @@ func findRecentProtonVersion(dir string) (string, error) {
 		return "", fmt.Errorf("no proton versions installed")
 	}
 
-	sort.Strings(versions)
+	sort.Slice(versions, func(i, j int) bool {
+		return getProtonVersion(versions[i]) > getProtonVersion(versions[j])
+	})
 
-	return filepath.Join(versions[len(versions)-1], "proton"), nil
+	return filepath.Join(versions[0], "proton"), nil
 }
 
 func resolveProton() (string, string, error) {
@@ -42,7 +65,7 @@ func resolveProton() (string, string, error) {
 		return "", "", fmt.Errorf("resolve proton: %w", err)
 	}
 
-	proton, err := findRecentProtonVersion(filepath.Join(steam, "steamapps", "common"))
+	proton, err := FindRecentProtonVersion(filepath.Join(steam, "steamapps", "common"))
 	if err != nil {
 		return "", "", fmt.Errorf("resolve proton: %w", err)
 	}
