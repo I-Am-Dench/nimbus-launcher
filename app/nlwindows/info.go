@@ -39,6 +39,8 @@ func OpenLicense() {
 		cmd = exec.Command("notepad", path.Join(dir, "LICENSE"))
 	case "darwin":
 		cmd = exec.Command("open", "-t", path.Join(dir, "LICENSE"))
+	case "linux":
+		cmd = exec.Command("xdg-open", path.Join(dir, "LICENSE"))
 	default:
 		log.Printf("OpenLicense: unsupported GOOS: %s", runtime.GOOS)
 		return
