@@ -65,7 +65,7 @@ Two main phases occur when you press the `Play` button:
   - `WINEDLLOVERRIDES="dinput8.dll=n,b"`
   - `PROTON_USE_WINED3D=1`
   - `STEAM_COMPAT_DATA_PATH="{client-directory}/.proton"`
-  - `STEAM_COMPAT_CLIENT_INSTALL_PAT="{steam-directory}"`
+  - `STEAM_COMPAT_CLIENT_INSTALL_PATH="{steam-directory}"`
 - See [`client/run_linux.go`](https://github.com/I-Am-Dench/nimbus-launcher/blob/main/client/run_linux.go) for more details.
 
 ## Building or Running from Source
