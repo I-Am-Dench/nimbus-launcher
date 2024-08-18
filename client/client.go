@@ -9,6 +9,8 @@ type Client interface {
 	SetPath(path string) error
 	IsValid() bool
 	Start() (*exec.Cmd, error)
+
+	MeetsPrerequisites() bool
 }
 
 func NewStandardClient() Client {

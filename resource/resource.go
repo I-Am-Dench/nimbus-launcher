@@ -22,7 +22,7 @@ const (
 )
 
 const (
-	DEFAULT_DIR_CLIENT = "LEGO Software/Lego Universe/client"
+	DEFAULT_DIR_CLIENT = "LEGO Software/LEGO Universe/client"
 )
 
 //go:embed embedded/icon.png

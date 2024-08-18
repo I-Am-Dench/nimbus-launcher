@@ -57,9 +57,16 @@ Two main phases occur when you press the `Play` button:
 - Intel (x86): Due to Apple dropping support for 32-bit programs, the client will NOT run through the native executable nor the windows executable through external programs such as [wine](https://www.winehq.org/). Playing the game on an Intel based Mac will require the use of an emulator or VM.
 - M1 (ARM): The client may still be able to be launched through [wine](https://www.winehq.org/). This is currently a **work in progress**.
 
-#### Linux (NOT IMPLEMENTED)
+#### Linux
 
-- The client is able to run through [wine](https://www.winehq.org/), but is currently a **work in progress**. 
+- The launcher uses [https://github.com/ValveSoftware/Proton](https://github.com/ValveSoftware/Proton) to run the client and will return an error if the client is run without Proton installed. Patches, however, are still applied even if the game does not run.
+- While it is possible to build/install Proton from source, it is recommended to install it through Steam as the launcher searches through the Steam directories for the latest version.
+- The client is run as `{latest-proton-version}/proton run ./legouniverse.exe` where the current directory is configured to `Client Directory` and the environment variables are:
+  - `WINEDLLOVERRIDES="dinput8.dll=n,b"`
+  - `PROTON_USE_WINED3D=1`
+  - `STEAM_COMPAT_DATA_PATH="{client-directory}/.proton"`
+  - `STEAM_COMPAT_CLIENT_INSTALL_PATH="{steam-directory}"`
+- See [`client/run_linux.go`](https://github.com/I-Am-Dench/nimbus-launcher/blob/main/client/run_linux.go) for more details.
 
 ## Building or Running from Source
 
