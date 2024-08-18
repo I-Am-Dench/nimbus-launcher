@@ -316,7 +316,10 @@ func (app *App) PressPlay() {
 
 	app.progressBar.Hide()
 	go func(cmd *exec.Cmd) {
-		cmd.Wait()
+		if err := cmd.Wait(); err != nil {
+			log.Println(err)
+		}
+		log.Println("Client exited.")
 		app.SetNormalState()
 	}(cmd)
 }
@@ -549,11 +552,32 @@ func (app *App) CheckClient() {
 	}
 }
 
+func (app *App) CheckPrerequisites() {
+	if app.client.MeetsPrerequisites() {
+		app.settings.MeetsPrerequisites = true
+		app.settings.Save()
+		return
+	}
+
+	window := nlwindows.NewPrerequisitesWindow(app, func(b bool) {
+		app.settings.MeetsPrerequisites = b
+		app.settings.Save()
+	})
+
+	window.CenterOnScreen()
+	window.RequestFocus()
+	window.Show()
+}
+
 func (app *App) Start() {
 	app.CheckClient()
 
 	if app.settings.CheckPatchesAutomatically {
 		app.CheckForUpdates(app.CurrentServer())
+	}
+
+	if !app.settings.MeetsPrerequisites {
+		go app.CheckPrerequisites()
 	}
 
 	app.main.CenterOnScreen()
