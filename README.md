@@ -8,18 +8,19 @@ Due to the LEGO Group's wishes, LEGO® Universe servers ARE NOT (and should not 
 
 ## Installation
 
-Binaries for the current version of the launcher will be available under the [Releases]() tab. Releases will be labeled with the current launcher version followed by the target platform (i.e. `v1.0.0-win.zip`). The `zip` file will include an `assets` folder and a copy of the compiled executable. The structure of the `zip` file's contents should be as follows:
+Binaries for the current version of the launcher will be available under the [Releases](https://github.com/I-Am-Dench/nimbus-launcher/releases) tab. Releases will be labeled with the current launcher version followed by the target platform (i.e. `v1.0.0-win.zip`). The `zip` file will include an `assets` folder and a copy of the compiled executable. The structure of the `zip` file's contents should be as follows:
 
 ```
 launcher/
-|-- launcher.exe
+|-- LICENSE
+|-- nimbus-launcher.exe
 ```
 
 The executable is NOT SIGNED. Your operating system may prompt you that the application is blocked. If you are not comfortable overriding the block, you will need to [Build or Run](#building-or-running-from-source) the application from source.
 
 Running the executable will generate a settings folder. If you move the executable to a different folder, make sure to bring the settings folder with it. 
 
-Since the [Client Startup](#2-client-startup) functionality has not yet been implemented for Mac and Linux, releases for each platform will not be available until their functions have been tested. Building and/or running the launcher from source, however, will still work as normal just with the missing functionality.
+Since the [Client Startup](#2-client-startup) functionality has not yet been implemented for Mac, the only available releases are for Linux and Windows. Building and/or running the launcher from source, however, will still work as normal just with the missing functionality.
 
 If you have Go installed on your system, you may follow the instructions the [Building or Running from Source](#building-or-running-from-source) section.
 
