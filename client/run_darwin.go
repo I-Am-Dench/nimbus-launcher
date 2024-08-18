@@ -11,3 +11,7 @@ import (
 func (client *standardClient) Start() (*exec.Cmd, error) {
 	return nil, errors.New("client start: functionality has not yet been implemented for this system")
 }
+
+func (client *standardClient) MeetsPrerequisites() bool {
+	return true
+}

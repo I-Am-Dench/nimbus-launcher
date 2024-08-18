@@ -110,3 +110,14 @@ func (client *standardClient) Start() (*exec.Cmd, error) {
 
 	return cmd, cmd.Start()
 }
+
+func (client *standardClient) MeetsPrerequisites() bool {
+	proton, _, err := resolveProton()
+	if err == nil {
+		log.Printf("Found Proton installation: %s", proton)
+	} else {
+		log.Print(err)
+	}
+
+	return err == nil
+}

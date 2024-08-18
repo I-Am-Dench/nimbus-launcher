@@ -13,3 +13,7 @@ func (client standardClient) Start() (*exec.Cmd, error) {
 	cmd.Dir = filepath.Dir(client.path)
 	return cmd, cmd.Start()
 }
+
+func (client standardClient) MeetsPrerequisites() bool {
+	return true
+}

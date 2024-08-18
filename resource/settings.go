@@ -14,6 +14,7 @@ const (
 type Settings struct {
 	SelectedServer      string `json:"selectedServer"`
 	PreviouslyRunServer string `json:"previouslyRunServer"`
+	MeetsPrerequisites  bool   `json:"meetsPrerequisites"`
 
 	Client struct {
 		Directory            string `json:"directory"`
