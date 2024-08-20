@@ -35,10 +35,8 @@ type App struct {
 
 	clientResources client.Resources
 
-	main           fyne.Window
-	settingsWindow fyne.Window
-	patchWindow    fyne.Window
-	// infoWindow     fyne.Window
+	main        fyne.Window
+	patchWindow fyne.Window
 
 	serverList *nlwidgets.ServerList
 
