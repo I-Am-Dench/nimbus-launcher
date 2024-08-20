@@ -107,6 +107,17 @@ func New(settings *resource.Settings, servers resource.ServerList, rejectedPatch
 
 	nlwindows.NewInfoWindow(a.App)
 
+	nlwindows.NewSettingsWindow(a.App, func(w fyne.Window) []*container.TabItem {
+		return []*container.TabItem{
+			container.NewTabItem("Servers", a.ServerSettings(w)),
+			container.NewTabItem("Launcher", a.LauncherSettings(w)),
+		}
+	}).SetOnClosed(func() {
+		if a.client.IsValid() {
+			a.serverList.Enable()
+		}
+	})
+
 	return a
 }
 
@@ -332,34 +343,12 @@ func (app *App) PressUpdate() {
 }
 
 func (app *App) ShowSettings() {
-	if app.settingsWindow != nil {
-		app.settingsWindow.RequestFocus()
-		return
-	}
-
 	app.settings.PreviouslyRunServer = ""
 	app.settings.Save()
 
-	app.settingsWindow = nlwindows.NewSettingsWindow(app, func(w fyne.Window) []*container.TabItem {
-		return []*container.TabItem{
-			container.NewTabItem("Servers", app.ServerSettings(w)),
-			container.NewTabItem("Launcher", app.LauncherSettings(w)),
-		}
-	})
-
-	app.settingsWindow.SetOnClosed(func() {
-		app.settingsWindow = nil
-
-		if app.client.IsValid() {
-			app.serverList.Enable()
-		}
-	})
-
 	app.serverList.Disable()
 
-	app.settingsWindow.CenterOnScreen()
-	app.settingsWindow.Show()
-
+	app.ShowInstanceWindow(nlwindows.Settings)
 }
 
 func (app *App) ShowPatch(patch patch.Patch, onConfirmCancel func(nlwindows.PatchAcceptState)) {

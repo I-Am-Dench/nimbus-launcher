@@ -5,10 +5,11 @@ import (
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/theme"
+	"github.com/I-Am-Dench/nimbus-launcher/app/multiwindow"
 )
 
-func NewSettingsWindow(app fyne.App, tabsFunc func(fyne.Window) []*container.TabItem) fyne.Window {
-	window := app.NewWindow("Settings")
+func NewSettingsWindow(app *multiwindow.App, tabsFunc func(fyne.Window) []*container.TabItem) fyne.Window {
+	window := app.NewInstanceWindow("Settings", Settings)
 	window.SetFixedSize(true)
 	window.Resize(fyne.NewSize(800, 600))
 	window.SetIcon(theme.StorageIcon())
