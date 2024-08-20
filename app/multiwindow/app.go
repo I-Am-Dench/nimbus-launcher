@@ -32,7 +32,9 @@ func (app *App) NewInstanceWindow(title string, id int) fyne.Window {
 		panic(fmt.Errorf("multiwindow: app: unique window id is already in use (%d)", id))
 	}
 
-	window := app.NewWindow(title)
+	window := &window{
+		Window: app.NewWindow(title),
+	}
 	window.SetCloseIntercept(func() {
 		state := app.windows[id]
 		state.isOpen = false
@@ -44,6 +46,13 @@ func (app *App) NewInstanceWindow(title string, id int) fyne.Window {
 	}
 
 	return window
+}
+
+func (app *App) closeInstanceWindow(id int) {
+	state := app.windows[id]
+	state.isOpen = false
+	state.window.Hide()
+
 }
 
 func (app *App) ShowInstanceWindow(id int) {
