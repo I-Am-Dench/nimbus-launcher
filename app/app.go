@@ -9,12 +9,12 @@ import (
 	"path/filepath"
 
 	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"github.com/I-Am-Dench/nimbus-launcher/app/multiwindow"
 	"github.com/I-Am-Dench/nimbus-launcher/app/nlwidgets"
 	"github.com/I-Am-Dench/nimbus-launcher/app/nlwindows"
 	"github.com/I-Am-Dench/nimbus-launcher/client"
@@ -26,7 +26,8 @@ import (
 )
 
 type App struct {
-	fyne.App
+	*multiwindow.App
+
 	settings        *resource.Settings
 	rejectedPatches *patch.RejectionList
 
@@ -37,7 +38,7 @@ type App struct {
 	main           fyne.Window
 	settingsWindow fyne.Window
 	patchWindow    fyne.Window
-	infoWindow     fyne.Window
+	// infoWindow     fyne.Window
 
 	serverList *nlwidgets.ServerList
 
@@ -59,7 +60,7 @@ type App struct {
 
 func New(settings *resource.Settings, servers resource.ServerList, rejectedPatches *patch.RejectionList) App {
 	a := App{}
-	a.App = app.New()
+	a.App = multiwindow.New()
 
 	a.settings = settings
 	a.rejectedPatches = rejectedPatches
@@ -103,6 +104,8 @@ func New(settings *resource.Settings, servers resource.ServerList, rejectedPatch
 			log.Printf("could not properly close clientCache: %v", err)
 		}
 	})
+
+	nlwindows.NewInfoWindow(a.App)
 
 	return a
 }
@@ -376,18 +379,7 @@ func (app *App) ShowPatch(patch patch.Patch, onConfirmCancel func(nlwindows.Patc
 }
 
 func (app *App) ShowInfo() {
-	if app.infoWindow != nil {
-		app.infoWindow.RequestFocus()
-		return
-	}
-
-	app.infoWindow = nlwindows.NewInfoWindow(app)
-	app.infoWindow.SetOnClosed(func() {
-		app.infoWindow = nil
-	})
-
-	app.infoWindow.CenterOnScreen()
-	app.infoWindow.Show()
+	app.ShowInstanceWindow(nlwindows.Info)
 }
 
 func (app *App) RunUpdate(server *server.Server, patch patch.Patch) {

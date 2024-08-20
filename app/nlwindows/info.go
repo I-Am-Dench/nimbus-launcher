@@ -13,6 +13,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"github.com/I-Am-Dench/nimbus-launcher/app/multiwindow"
 	"github.com/I-Am-Dench/nimbus-launcher/version"
 )
 
@@ -52,8 +53,8 @@ func OpenLicense() {
 	cmd.Run()
 }
 
-func NewInfoWindow(app fyne.App) fyne.Window {
-	window := app.NewWindow("Info")
+func NewInfoWindow(app *multiwindow.App) fyne.Window {
+	window := app.NewInstanceWindow("Info", Info)
 	window.SetIcon(theme.InfoIcon())
 	window.SetFixedSize(true)
 
