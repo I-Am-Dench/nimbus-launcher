@@ -1,4 +1,4 @@
-package nlwindows
+package patchreview
 
 import (
 	"encoding/json"
@@ -13,26 +13,21 @@ import (
 	"github.com/I-Am-Dench/nimbus-launcher/resource/patch"
 )
 
-type PatchAcceptState uint32
+type Answer uint32
 
 const (
-	PatchAccept = PatchAcceptState(iota)
+	PatchAccept = Answer(iota)
 	PatchCancel
 	PatchReject
 )
 
-func NewPatchReviewWindow(app fyne.App, patch patch.Patch, onConfirmCancel func(PatchAcceptState)) fyne.Window {
+func New(app fyne.App, patch patch.Patch, onConfirmCancel func(Answer)) fyne.Window {
 	window := app.NewWindow("Review Patch")
+
 	window.SetFixedSize(true)
 	window.Resize(fyne.NewSize(800, 600))
 	window.SetIcon(theme.QuestionIcon())
 
-	LoadPatchReviewContainer(window, patch, onConfirmCancel)
-
-	return window
-}
-
-func LoadPatchReviewContainer(window fyne.Window, patch patch.Patch, onConfirmCancel func(PatchAcceptState)) {
 	heading := canvas.NewText(fmt.Sprintf("Received patch.json (%s):", patch.Version()), theme.ForegroundColor())
 	heading.TextSize = 16
 
@@ -85,4 +80,6 @@ func LoadPatchReviewContainer(window fyne.Window, patch patch.Patch, onConfirmCa
 			),
 		),
 	)
+
+	return window
 }

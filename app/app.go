@@ -17,6 +17,7 @@ import (
 	"github.com/I-Am-Dench/nimbus-launcher/app/nlwidgets"
 	"github.com/I-Am-Dench/nimbus-launcher/app/nlwindows"
 	"github.com/I-Am-Dench/nimbus-launcher/app/nlwindows/info"
+	"github.com/I-Am-Dench/nimbus-launcher/app/nlwindows/patchreview"
 	wsettings "github.com/I-Am-Dench/nimbus-launcher/app/nlwindows/settings"
 	"github.com/I-Am-Dench/nimbus-launcher/client"
 	"github.com/I-Am-Dench/nimbus-launcher/ldf"
@@ -347,16 +348,16 @@ func (app *App) ShowSettings() {
 	app.ShowInstanceWindow(nlwindows.Settings)
 }
 
-func (app *App) ShowPatch(patch patch.Patch, onConfirmCancel func(nlwindows.PatchAcceptState)) {
+func (app *App) ShowPatch(patch patch.Patch, onConfirmCancel func(patchreview.Answer)) {
 	if app.patchWindow != nil {
 		app.patchWindow.RequestFocus()
 		return
 	}
 
-	app.patchWindow = nlwindows.NewPatchReviewWindow(app, patch, onConfirmCancel)
+	app.patchWindow = patchreview.New(app, patch, onConfirmCancel)
 	app.patchWindow.SetOnClosed(func() {
 		app.patchWindow = nil
-		onConfirmCancel(nlwindows.PatchCancel)
+		onConfirmCancel(patchreview.PatchAccept)
 	})
 
 	app.patchWindow.CenterOnScreen()
@@ -419,14 +420,14 @@ func (app *App) Update(serv *server.Server) {
 			return
 		}
 
-		app.ShowPatch(p, func(state nlwindows.PatchAcceptState) {
+		app.ShowPatch(p, func(state patchreview.Answer) {
 			defer app.SetNormalState()
 
-			if state == nlwindows.PatchCancel {
+			if state == patchreview.PatchCancel {
 				return
 			}
 
-			if state == nlwindows.PatchReject {
+			if state == patchreview.PatchReject {
 				err := app.rejectedPatches.Add(serv, p.Version())
 				if err == nil {
 					log.Printf("Rejected patch version \"%s\"\n", p.Version())
