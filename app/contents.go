@@ -1,12 +1,9 @@
 package app
 
 import (
-	"path/filepath"
-
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
@@ -89,106 +86,5 @@ func (app *App) Footer() *fyne.Container {
 		app.clientErrorIcon,
 		app.playButton,
 		clientLabel,
-	)
-}
-
-func (app *App) ServerSettings(window fyne.Window) *fyne.Container {
-	return container.NewPadded(
-		NewServersPage(window, app.serverList).Container(),
-	)
-}
-
-func (app *App) LauncherSettings(window fyne.Window) *fyne.Container {
-	generalHeading := canvas.NewText("General", theme.ForegroundColor())
-	generalHeading.TextSize = 16
-
-	clientHeading := canvas.NewText("Client", theme.ForegroundColor())
-	clientHeading.TextSize = 16
-
-	closeOnPlay := widget.NewCheck("", func(b bool) {})
-	closeOnPlay.Checked = app.settings.CloseOnPlay
-
-	checkPatchesAutomatically := widget.NewCheck("", func(b bool) {})
-	checkPatchesAutomatically.Checked = app.settings.CheckPatchesAutomatically
-
-	reviewPatchBeforeUpdate := widget.NewCheck("", func(b bool) {})
-	reviewPatchBeforeUpdate.Checked = app.settings.ReviewPatchBeforeUpdate
-
-	clientDirectory := widget.NewEntry()
-	clientDirectoryButton := widget.NewButtonWithIcon(
-		"", theme.FolderOpenIcon(), func() {
-			dialog.ShowFolderOpen(func(lu fyne.ListableURI, err error) {
-				if err != nil {
-					dialog.ShowError(err, window)
-					return
-				}
-
-				if lu == nil {
-					return
-				}
-
-				clientDirectory.SetText(filepath.Clean(lu.Path()))
-			}, window)
-		},
-	)
-	clientDirectoryButton.Importance = widget.LowImportance
-	clientDirectory.ActionItem = clientDirectoryButton
-
-	clientDirectory.SetText(app.settings.Client.Directory)
-
-	clientName := widget.NewEntry()
-	clientName.PlaceHolder = ".exe"
-	clientName.SetText(app.settings.Client.Name)
-
-	// runCommand := widget.NewEntry()
-	// runCommand.PlaceHolder = "wine or wine64"
-
-	// environmentVariables := widget.NewEntry()
-	// environmentVariables.PlaceHolder = "Separated by ;"
-
-	saveButton := widget.NewButton("Save", func() {
-		app.settings.CloseOnPlay = closeOnPlay.Checked
-		app.settings.CheckPatchesAutomatically = checkPatchesAutomatically.Checked
-		app.settings.ReviewPatchBeforeUpdate = reviewPatchBeforeUpdate.Checked
-
-		app.settings.Client.Directory = clientDirectory.Text
-		app.settings.Client.Name = clientName.Text
-		// app.settings.Client.RunCommand = runCommand.Text
-		// app.settings.Client.EnvironmentVariables = environmentVariables.Text
-
-		err := app.settings.Save()
-		if err != nil {
-			dialog.ShowError(err, window)
-		} else {
-			dialog.ShowInformation("Launcher Settings", "Settings saved!", window)
-			app.CheckClient()
-		}
-	})
-	saveButton.Importance = widget.HighImportance
-
-	return container.NewPadded(
-		container.NewBorder(
-			nil,
-			container.NewBorder(nil, nil, nil, saveButton),
-			nil, nil,
-			container.NewVScroll(
-				container.NewVBox(
-					generalHeading,
-					widget.NewForm(
-						widget.NewFormItem("Close Launcher When Played", closeOnPlay),
-						widget.NewFormItem("Check Patches Automatically", checkPatchesAutomatically),
-						widget.NewFormItem("Review Patch Before Update", reviewPatchBeforeUpdate),
-					),
-					widget.NewSeparator(),
-					clientHeading,
-					widget.NewForm(
-						widget.NewFormItem("Directory", clientDirectory),
-						widget.NewFormItem("Name", clientName),
-						// widget.NewFormItem("Run Command", runCommand),
-						// widget.NewFormItem("EnvironmentVariables", environmentVariables),
-					),
-				),
-			),
-		),
 	)
 }

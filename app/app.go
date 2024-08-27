@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 
 	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
@@ -17,6 +16,7 @@ import (
 	"github.com/I-Am-Dench/nimbus-launcher/app/multiwindow"
 	"github.com/I-Am-Dench/nimbus-launcher/app/nlwidgets"
 	"github.com/I-Am-Dench/nimbus-launcher/app/nlwindows"
+	wsettings "github.com/I-Am-Dench/nimbus-launcher/app/nlwindows/settings"
 	"github.com/I-Am-Dench/nimbus-launcher/client"
 	"github.com/I-Am-Dench/nimbus-launcher/ldf"
 	"github.com/I-Am-Dench/nimbus-launcher/resource"
@@ -105,11 +105,8 @@ func New(settings *resource.Settings, servers resource.ServerList, rejectedPatch
 
 	nlwindows.NewInfoWindow(a.App)
 
-	nlwindows.NewSettingsWindow(a.App, func(w fyne.Window) []*container.TabItem {
-		return []*container.TabItem{
-			container.NewTabItem("Servers", a.ServerSettings(w)),
-			container.NewTabItem("Launcher", a.LauncherSettings(w)),
-		}
+	wsettings.New(a.App, nlwindows.Settings, a.serverList, a.settings, func() {
+		a.CheckClient()
 	}).SetOnClosed(func() {
 		if a.client.IsValid() {
 			a.serverList.Enable()
