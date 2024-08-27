@@ -18,6 +18,7 @@ import (
 	"github.com/I-Am-Dench/nimbus-launcher/app/nlwindows"
 	"github.com/I-Am-Dench/nimbus-launcher/app/nlwindows/info"
 	"github.com/I-Am-Dench/nimbus-launcher/app/nlwindows/patchreview"
+	"github.com/I-Am-Dench/nimbus-launcher/app/nlwindows/prerequisites"
 	wsettings "github.com/I-Am-Dench/nimbus-launcher/app/nlwindows/settings"
 	"github.com/I-Am-Dench/nimbus-launcher/client"
 	"github.com/I-Am-Dench/nimbus-launcher/ldf"
@@ -537,7 +538,7 @@ func (app *App) CheckPrerequisites() {
 		return
 	}
 
-	window := nlwindows.NewPrerequisitesWindow(app, func(b bool) {
+	window := prerequisites.New(app, func(b bool) {
 		app.settings.MeetsPrerequisites = b
 		app.settings.Save()
 	})

@@ -1,4 +1,4 @@
-package nlwindows
+package prerequisites
 
 import (
 	"fmt"
@@ -32,7 +32,7 @@ func prereqContainer() *fyne.Container {
 	}
 }
 
-func NewPrerequisitesWindow(app fyne.App, onClose func(bool)) fyne.Window {
+func New(app fyne.App, onClose func(bool)) fyne.Window {
 	window := app.NewWindow("Missing Prerequisites")
 	window.SetIcon(theme.WarningIcon())
 	window.SetFixedSize(true)
