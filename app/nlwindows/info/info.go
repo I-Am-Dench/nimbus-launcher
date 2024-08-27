@@ -1,11 +1,11 @@
-package nlwindows
+package info
 
 import (
 	"log"
 	"net/url"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"runtime"
 
 	"fyne.io/fyne/v2"
@@ -25,23 +25,22 @@ func mustParse(rawUrl string) *url.URL {
 	return url
 }
 
-var RepoURL = mustParse("https://github.com/I-Am-Dench/nimbus-launcher")
+var RepoUrl = mustParse("https://github.com/I-Am-Dench/nimbus-launcher")
 
 func OpenLicense() {
 	dir := "."
 	if exe, err := os.Executable(); err == nil {
-		dir = path.Dir(exe)
+		dir = filepath.Dir(exe)
 	}
 
-	// Need Linux Implementation
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
 	case "windows":
-		cmd = exec.Command("notepad", path.Join(dir, "LICENSE"))
+		cmd = exec.Command("notepad", filepath.Join(dir, "LICENSE"))
 	case "darwin":
-		cmd = exec.Command("open", "-t", path.Join(dir, "LICENSE"))
+		cmd = exec.Command("open", "-t", filepath.Join(dir, "LICENSE"))
 	case "linux":
-		cmd = exec.Command("xdg-open", path.Join(dir, "LICENSE"))
+		cmd = exec.Command("xdg-open", filepath.Join(dir, "LICENSE"))
 	default:
 		log.Printf("OpenLicense: unsupported GOOS: %s", runtime.GOOS)
 		return
@@ -49,12 +48,12 @@ func OpenLicense() {
 
 	cmd.Stderr = os.Stdout
 
-	log.Println("OpenLicense:", cmd)
+	log.Print("OpenLicense: ", cmd)
 	cmd.Run()
 }
 
-func NewInfoWindow(app *multiwindow.App) fyne.Window {
-	window := app.NewInstanceWindow("Info", Info)
+func New(app *multiwindow.App, id int) fyne.Window {
+	window := app.NewInstanceWindow("Info", id)
 	window.SetIcon(theme.InfoIcon())
 	window.SetFixedSize(true)
 
@@ -70,7 +69,7 @@ func NewInfoWindow(app *multiwindow.App) fyne.Window {
 						widget.NewFormItem("Version", widget.NewLabel(version.Get().Name())),
 						widget.NewFormItem("Revision", widget.NewLabel(version.Revision())),
 						widget.NewFormItem("Author", widget.NewLabel("I-Am-Dench")),
-						widget.NewFormItem("Source", widget.NewHyperlink(RepoURL.String(), RepoURL)),
+						widget.NewFormItem("Source", widget.NewHyperlink(RepoUrl.String(), RepoUrl)),
 						widget.NewFormItem("License", widget.NewButton("GNU GPLv3", OpenLicense)),
 					),
 					container.NewStack(

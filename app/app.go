@@ -16,6 +16,7 @@ import (
 	"github.com/I-Am-Dench/nimbus-launcher/app/multiwindow"
 	"github.com/I-Am-Dench/nimbus-launcher/app/nlwidgets"
 	"github.com/I-Am-Dench/nimbus-launcher/app/nlwindows"
+	"github.com/I-Am-Dench/nimbus-launcher/app/nlwindows/info"
 	wsettings "github.com/I-Am-Dench/nimbus-launcher/app/nlwindows/settings"
 	"github.com/I-Am-Dench/nimbus-launcher/client"
 	"github.com/I-Am-Dench/nimbus-launcher/ldf"
@@ -103,7 +104,7 @@ func New(settings *resource.Settings, servers resource.ServerList, rejectedPatch
 		}
 	})
 
-	nlwindows.NewInfoWindow(a.App)
+	info.New(a.App, nlwindows.Info)
 
 	wsettings.New(a.App, nlwindows.Settings, a.serverList, a.settings, func() {
 		a.CheckClient()
