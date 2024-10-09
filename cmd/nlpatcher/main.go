@@ -74,18 +74,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	patch, patchAvailable, err := p.GetPatch(patcher.PatchOptions{
+	patch, err := p.GetPatch(patcher.PatchOptions{
 		InstallDirectory: *installationPath,
 	})
 	if err != nil {
 		log.Fatal(err)
-	}
-
-	if !patchAvailable {
-		if !*outputBoot {
-			log.Println("nlpatcher: Client is update to date!")
-		}
-		os.Exit(0)
 	}
 
 	boot, err := patch.Patch()

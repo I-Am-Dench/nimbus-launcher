@@ -2,7 +2,6 @@ package patcher
 
 import (
 	"encoding/json"
-	"io"
 	"net/http"
 	"net/http/cookiejar"
 
@@ -20,15 +19,15 @@ type Authenticator interface {
 	Authenticate(*http.Client) error
 }
 
-type ResourceFunc = func(uri string) (io.ReadCloser, error)
+// type ResourceFunc = func(uri string) (io.ReadCloser, error)
 
 type CredentialsFunc = func() (username string, password []byte, err error)
 
 type Config struct {
 	ForceRemoteResources bool
-	ResourceFunc         ResourceFunc
-	CredentialsFunc      CredentialsFunc
-	CookieJar            http.CookieJar
+	// ResourceFunc         ResourceFunc
+	CredentialsFunc CredentialsFunc
+	CookieJar       http.CookieJar
 }
 
 var defaultCookieJar, _ = cookiejar.New(&cookiejar.Options{

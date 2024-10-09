@@ -6,32 +6,47 @@ import (
 	"strings"
 )
 
-type Server struct {
-	Name           string `xml:"name,attr"`
-	Lang           string `xml:"lang,attr"`
-	Online         bool   `xml:"Online"`
-	Version        string `xml:"Version"`
-	PatchIP        string `xml:"PatchIP"`
-	PatchPort      uint16 `xml:"PatchPort"`
-	PatchServerDir string `xml:"PatchServerDir"`
-	Config         string `xml:"Config"`
+type MasterIndex struct {
+	Authentication string `xml:"Authentication"`
+	Config         struct {
+		XMLName xml.Name `xml:"Config"`
+		Type    string   `xml:"type,attr"`
+		URL     string   `xml:",chardata"`
+	}
+	Status string `xml:"Status"`
 }
 
-func (server *Server) PatchServerUrl(local bool) string {
-	if local {
-		return server.PatchIP
+type Server struct {
+	Name    string `xml:"name,attr"`
+	Lang    string `xml:"lang,attr"`
+	Online  bool   `xml:"Online"`
+	Version string `xml:"Version"`
+	Patcher struct {
+		Host string `xml:"Host"`
+		Dir  string `xml:"Dir"`
+		Port uint16 `xml:"Port"`
+	} `xml:"Patcher"`
+	Game struct {
+		AuthIP   string `xml:"AuthIP"`
+		CrashLog string `xml:"CrashLog"`
+	} `xml:"Game"`
+}
+
+func (server *Server) PatchServerUrl(resourceScheme Scheme) string {
+	if resourceScheme == File {
+		return "file:///" + server.Patcher.Host
 	}
 
 	scheme := "http"
-	if server.PatchPort == 443 || server.PatchPort == 8443 {
+	if server.Patcher.Port == 443 || server.Patcher.Port == 8443 {
 		scheme = "https"
 	}
 
-	if server.PatchPort == 443 || server.PatchPort == 80 {
-		return fmt.Sprint(scheme, "://", server.PatchIP)
+	if server.Patcher.Port == 443 || server.Patcher.Port == 80 {
+		return fmt.Sprint(scheme, "://", server.Patcher.Host)
 	}
 
-	return fmt.Sprint(scheme, "://", server.PatchIP, ":", server.PatchPort)
+	return fmt.Sprint(scheme, "://", server.Patcher.Host, ":", server.Patcher.Port)
 }
 
 type ServerList struct {

@@ -2,23 +2,20 @@ package netdevil
 
 import (
 	"fmt"
-	"io"
 	"path"
 	"path/filepath"
 
 	"github.com/I-Am-Dench/goverbuild/archive/manifest"
 	"github.com/I-Am-Dench/goverbuild/models/boot"
 	"github.com/I-Am-Dench/nimbus-launcher/cmd/nlpatcher/patcher"
+	"github.com/I-Am-Dench/nimbus-launcher/cmd/nlpatcher/patcher/protocols/netdevil/resources"
 )
-
-type ResourceFunc = func(uri string) (io.ReadCloser, error)
 
 type patchConfig struct {
 	patcher.PatchOptions `json:"-"`
 
-	ResourceFunc ResourceFunc `json:"-"`
-	Server       *Server      `json:"-"`
-	PatchUrl     string       `json:"-"`
+	GetResource resources.Func `json:"-"`
+	Server      *Server        `json:"-"`
 
 	Locale    string `json:"locale"`
 	HighSpeed bool   `json:"highSpeed"`
@@ -39,7 +36,7 @@ func (patch *patch) Manifest(name string, useVersionsDir ...bool) (*manifest.Man
 }
 
 func (patch *patch) FetchManifest(name string) (*manifest.Manifest, error) {
-	resource, err := patch.ResourceFunc(path.Join(patch.PatchUrl, patch.Server.Version, name))
+	resource, err := patch.GetResource(path.Join(patch.Server.Version, name))
 	if err != nil {
 		return nil, fmt.Errorf("fetch manifest: %s: %w", name, err)
 	}

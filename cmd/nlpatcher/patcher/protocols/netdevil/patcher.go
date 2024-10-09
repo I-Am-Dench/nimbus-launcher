@@ -8,20 +8,27 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
-	"path"
 	"path/filepath"
 
 	"github.com/I-Am-Dench/nimbus-launcher/cmd/nlpatcher/patcher"
+	"github.com/I-Am-Dench/nimbus-launcher/cmd/nlpatcher/patcher/protocols/netdevil/resources"
+)
+
+type Scheme int
+
+const (
+	File = Scheme(iota)
+	Http
 )
 
 type NetDevilPatcher struct {
 	patcher.Config
 
-	client  *http.Client `json:"-"`
-	isLocal bool         `json:"-"`
+	client *http.Client `json:"-"`
+	scheme Scheme       `json:"-"`
 
-	resourceFunc ResourceFunc `json:"-"`
+	GetResource resources.Func `json:"-"`
+	// resourceFunc ResourceFunc `json:"-"`
 
 	ServiceUrl  string `json:"serviceUrl"`
 	Environment string `json:"environment"`
@@ -30,7 +37,7 @@ type NetDevilPatcher struct {
 }
 
 func (patcher *NetDevilPatcher) Authenticate() (bool, error) {
-	if patcher.isLocal || patcher.CredentialsFunc == nil {
+	if patcher.scheme == File || patcher.CredentialsFunc == nil {
 		return true, nil
 	}
 
@@ -63,81 +70,114 @@ func (patcher *NetDevilPatcher) Authenticate() (bool, error) {
 	}
 }
 
-func (patcher *NetDevilPatcher) GetPatch(options patcher.PatchOptions) (patcher.Patch, bool, error) {
-	var serviceUri string
-	if patcher.isLocal {
-		serviceUri = filepath.Join(patcher.ServiceUrl, patcher.Environment+".xml")
+func (patcher *NetDevilPatcher) FetchMasterIndex() (MasterIndex, error) {
+	var masterIndexUrl string
+	if patcher.scheme == File {
+		masterIndexUrl = filepath.Join(patcher.ServiceUrl, patcher.Environment+".xml")
 	} else {
-		serviceUri = fmt.Sprint(patcher.ServiceUrl, "?environment=", patcher.Environment)
+		masterIndexUrl = patcher.ServiceUrl + "?environment=" + patcher.Environment
 	}
 
-	resource, err := patcher.resourceFunc(serviceUri)
+	resource, err := patcher.GetResource(masterIndexUrl)
 	if err != nil {
-		return nil, false, fmt.Errorf("netdevil: environment: %w", err)
+		return MasterIndex{}, fmt.Errorf("fetch master index: %w", err)
 	}
 	defer resource.Close()
 
-	servers := ServerList{}
-	if err := xml.NewDecoder(resource).Decode(&servers); err != nil {
-		return nil, false, fmt.Errorf("netdevil: %w", err)
+	masterIndex := MasterIndex{}
+	if err := xml.NewDecoder(resource).Decode(&masterIndex); err != nil {
+		return MasterIndex{}, fmt.Errorf("fetch master index: %w", err)
+	}
+
+	return masterIndex, nil
+}
+
+func (patcher *NetDevilPatcher) FetchConfig(url string) (ServerList, error) {
+	resource, err := patcher.GetResource(url)
+	if err != nil {
+		return ServerList{}, fmt.Errorf("fetch config: %w", err)
+	}
+	defer resource.Close()
+
+	serverList := ServerList{}
+	if err := xml.NewDecoder(resource).Decode(&serverList); err != nil {
+		return ServerList{}, fmt.Errorf("fetch config: %w", err)
+	}
+
+	return serverList, nil
+}
+
+func (patcher *NetDevilPatcher) patchResourceFunc(server *Server) (resources.Func, error) {
+	uri, err := url.ParseRequestURI(server.PatchServerUrl(patcher.scheme))
+	if err != nil {
+		return nil, fmt.Errorf("invalid uri: %w", err)
+	}
+
+	uri = uri.JoinPath(server.Patcher.Dir)
+
+	resourceFunc, scheme, err := patcher.NewResourcesFunc(uri)
+	if err != nil {
+		return nil, err
+	}
+
+	if scheme == File {
+		resourceFunc = resources.WithFileBase(resourceFunc, resources.FileSchemePath(uri.Path))
+	} else if scheme == Http {
+		resourceFunc = resources.WithUrlBase(resourceFunc, uri.String())
+	}
+
+	return resourceFunc, nil
+}
+
+func (patcher *NetDevilPatcher) GetPatch(options patcher.PatchOptions) (patcher.Patch, error) {
+	masterIndex, err := patcher.FetchMasterIndex()
+	if err != nil {
+		return nil, fmt.Errorf("netdevil: %w", err)
+	}
+
+	if masterIndex.Config.Type != "nd-nimbus" {
+		return nil, fmt.Errorf("netdevil: %w", err)
+	}
+
+	servers, err := patcher.FetchConfig(masterIndex.Config.URL)
+	if err != nil {
+		return nil, fmt.Errorf("netdevil: %w", err)
 	}
 
 	config := patchConfig{
 		PatchOptions: options,
-		ResourceFunc: patcher.resourceFunc,
 	}
 	json.Unmarshal(options.Config, &config)
 
 	server, ok := servers.FindBest(config.Locale)
 	if !ok {
-		return nil, false, errors.New("netdevil: no servers available")
+		return nil, errors.New("netdevil: no servers available")
+	}
+
+	patchResourceFunc, err := patcher.patchResourceFunc(server)
+	if err != nil {
+		return nil, fmt.Errorf("netdevil: %w", err)
 	}
 
 	config.Server = server
-	config.PatchUrl = path.Join(server.PatchServerUrl(patcher.isLocal), server.PatchServerDir)
+	config.GetResource = patchResourceFunc
 
-	patch, err := newPatch(config)
-	if err != nil {
-		return nil, false, fmt.Errorf("netdevil: %w", err)
-	}
-
-	currentVersion, err := patch.Manifest("version.txt")
-	if err != nil {
-		return nil, false, fmt.Errorf("netdevil: %w", err)
-	}
-
-	return patch, currentVersion.Version != patch.ManifestFile.Version, nil
+	return newPatch(config)
 }
 
-func (patcher *NetDevilPatcher) fetchFileResource(uri string) (io.ReadCloser, error) {
-	file, err := os.Open(filepath.FromSlash(uri))
-	if err != nil {
-		return nil, fmt.Errorf("fetch file resource: %w", err)
+func (p *NetDevilPatcher) NewResourcesFunc(uri *url.URL) (resources.Func, Scheme, error) {
+	switch uri.Scheme {
+	default:
+		return nil, 0, fmt.Errorf("unknown service scheme: %s", uri.Scheme)
+	case "file":
+		if p.ForceRemoteResources {
+			return nil, 0, errors.New("local file paths are disallowed")
+		}
+
+		return resources.File, File, nil
+	case "http", "https":
+		return resources.Http(p.client), Http, nil
 	}
-
-	return file, nil
-}
-
-func (patcher *NetDevilPatcher) fetchHttpResource(uri string) (io.ReadCloser, error) {
-	request, err := http.NewRequest(http.MethodGet, uri, nil)
-	if err != nil {
-		return nil, fmt.Errorf("fetch http resource: %w", err)
-	}
-
-	response, err := patcher.client.Do(request)
-	if err != nil {
-		return nil, fmt.Errorf("fetch http resource: %w", err)
-	}
-
-	if response.StatusCode >= 200 && response.StatusCode < 300 {
-		return response.Body, nil
-	}
-
-	// Enables the client to reuse the connection when using Keep-Alive
-	io.Copy(io.Discard, response.Body)
-	response.Body.Close()
-
-	return nil, fmt.Errorf("fetch http resource: unhandled status: %s", response.Status)
 }
 
 func New(r io.Reader, config patcher.Config) (patcher.Patcher, error) {
@@ -159,20 +199,16 @@ func New(r io.Reader, config patcher.Config) (patcher.Patcher, error) {
 		return nil, fmt.Errorf("netdevil: invalid uri: %w", err)
 	}
 
-	switch uri.Scheme {
-	default:
-		return nil, fmt.Errorf("netdevil: unknown service scheme: %s", uri.Scheme)
-	case "file":
-		if config.ForceRemoteResources {
-			return nil, fmt.Errorf("netdevil: local file paths are disallowed")
-		}
+	resourceFunc, scheme, err := p.NewResourcesFunc(uri)
+	if err != nil {
+		return nil, fmt.Errorf("netdevil: %w", err)
+	}
 
-		p.ServiceUrl = patcher.FileSchemeToPath(uri.Path)
-		p.isLocal = true
+	p.GetResource = resourceFunc
+	p.scheme = scheme
 
-		p.resourceFunc = p.fetchFileResource
-	case "http", "https":
-		p.resourceFunc = p.fetchHttpResource
+	if scheme == File {
+		p.ServiceUrl = resources.FileSchemePath(uri.Path)
 	}
 
 	return p, nil
