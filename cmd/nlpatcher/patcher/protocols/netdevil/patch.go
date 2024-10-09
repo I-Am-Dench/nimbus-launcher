@@ -17,8 +17,8 @@ type patchConfig struct {
 	GetResource resources.Func `json:"-"`
 	Server      *Server        `json:"-"`
 
-	Locale    string `json:"locale"`
-	HighSpeed bool   `json:"highSpeed"`
+	Locale       string `json:"locale"`
+	FullDownload bool   `json:"fullDownload"`
 }
 
 type patch struct {
