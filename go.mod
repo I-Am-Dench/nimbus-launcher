@@ -4,7 +4,7 @@ go 1.21.0
 
 require (
 	fyne.io/fyne/v2 v2.4.3
-	github.com/I-Am-Dench/goverbuild v0.4.0
+	github.com/I-Am-Dench/goverbuild v0.5.0
 	github.com/mattn/go-sqlite3 v1.14.20
 	golang.org/x/net v0.29.0
 	golang.org/x/term v0.24.0
