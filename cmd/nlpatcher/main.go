@@ -52,6 +52,7 @@ func main() {
 	noLocal := flagset.Bool("nolocal", false, "Disallows using local file paths for resources.")
 	patcherPath := flagset.String("patcher", "./patcher.json", "Path to the patcher configuration.")
 	installationPath := flagset.String("installation", ".", "Path to installation directory. This directory should contain the client, version, and patcher directories.")
+	packed := flagset.Bool("packed", false, "Whether or not the client is packed.")
 	outputBoot := flagset.Bool("boot", false, "Outputs the raw, marshalled boot.cfg.")
 	flagset.Parse(os.Args[2:])
 
@@ -76,6 +77,7 @@ func main() {
 
 	patch, err := p.GetPatch(patcher.PatchOptions{
 		InstallDirectory: *installationPath,
+		Packed:           *packed,
 	})
 	if err != nil {
 		log.Fatal(err)

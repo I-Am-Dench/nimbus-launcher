@@ -11,6 +11,7 @@ import (
 type PatchOptions struct {
 	InstallDirectory string
 	ServerId         string
+	Packed           bool
 
 	Config json.RawMessage
 }
