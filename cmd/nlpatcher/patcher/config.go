@@ -1,19 +1,24 @@
 package patcher
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/cookiejar"
 
 	"golang.org/x/net/publicsuffix"
 )
 
+type Logger interface {
+	Print(v ...any)
+	Printf(format string, v ...any)
+	Println(v ...any)
+}
+
 type PatchOptions struct {
 	InstallDirectory string
 	ServerId         string
 	Packed           bool
 
-	Config json.RawMessage
+	Log Logger
 }
 
 type Authenticator interface {

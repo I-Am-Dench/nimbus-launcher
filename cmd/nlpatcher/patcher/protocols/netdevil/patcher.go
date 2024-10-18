@@ -28,12 +28,13 @@ type NetDevilPatcher struct {
 	scheme Scheme       `json:"-"`
 
 	GetResource resources.Func `json:"-"`
-	// resourceFunc ResourceFunc `json:"-"`
 
 	ServiceUrl  string `json:"serviceUrl"`
 	Environment string `json:"environment"`
 
 	AuthUrl string `json:"authUrl"`
+
+	Patch patchConfig `json:"patch"`
 }
 
 func (patcher *NetDevilPatcher) Authenticate() (bool, error) {
@@ -144,12 +145,14 @@ func (patcher *NetDevilPatcher) GetPatch(options patcher.PatchOptions) (patcher.
 		return nil, fmt.Errorf("netdevil: %w", err)
 	}
 
-	config := patchConfig{
-		PatchOptions: options,
-	}
-	json.Unmarshal(options.Config, &config)
+	patcher.Patch.PatchOptions = options
 
-	server, ok := servers.FindBest(config.Locale)
+	// config := patchConfig{
+	// 	PatchOptions: options,
+	// }
+	// json.Unmarshal(patcher.patchConfig, &config)
+
+	server, ok := servers.FindBest(patcher.Patch.Locale)
 	if !ok {
 		return nil, errors.New("netdevil: no servers available")
 	}
@@ -159,10 +162,10 @@ func (patcher *NetDevilPatcher) GetPatch(options patcher.PatchOptions) (patcher.
 		return nil, fmt.Errorf("netdevil: %w", err)
 	}
 
-	config.Server = server
-	config.GetResource = patchResourceFunc
+	patcher.Patch.Server = server
+	patcher.Patch.GetResource = patchResourceFunc
 
-	return newPatch(config)
+	return newPatch(patcher.Patch)
 }
 
 func (p *NetDevilPatcher) NewResourcesFunc(uri *url.URL) (resources.Func, Scheme, error) {

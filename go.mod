@@ -4,7 +4,7 @@ go 1.21.0
 
 require (
 	fyne.io/fyne/v2 v2.4.3
-	github.com/I-Am-Dench/goverbuild v0.5.0
+	github.com/I-Am-Dench/goverbuild v0.7.0
 	github.com/mattn/go-sqlite3 v1.14.20
 	golang.org/x/net v0.29.0
 	golang.org/x/term v0.24.0
@@ -26,7 +26,6 @@ require (
 	github.com/gopherjs/gopherjs v1.17.2 // indirect
 	github.com/jsummers/gobmp v0.0.0-20151104160322-e2ba15ffa76e // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/snksoft/crc v1.1.0 // indirect
 	github.com/srwiley/oksvg v0.0.0-20221011165216-be6e8873101c // indirect
 	github.com/srwiley/rasterx v0.0.0-20220730225603-2ab79fcdd4ef // indirect
 	github.com/stretchr/testify v1.8.4 // indirect

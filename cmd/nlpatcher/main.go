@@ -78,6 +78,8 @@ func main() {
 	patch, err := p.GetPatch(patcher.PatchOptions{
 		InstallDirectory: *installationPath,
 		Packed:           *packed,
+
+		Log: log.New(os.Stdout, os.Args[1]+": ", 0),
 	})
 	if err != nil {
 		log.Fatal(err)
