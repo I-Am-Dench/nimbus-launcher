@@ -140,12 +140,13 @@ func (patch *patch) DownloadCompressed(destination string, entry *manifest.Entry
 		return nil, fmt.Errorf("download compressed: %s: %w", entry.Path, err)
 	}
 
-	sd0, err := segmented.NewDataReader(temp, uint32(entry.CompressedSize))
+	// sd0, err := segmented.NewDataReader(temp, uint32(entry.CompressedSize))
+	decompressor, err := segmented.NewDataReader(temp)
 	if err != nil {
 		return nil, fmt.Errorf("download compressed: %s: %w", entry.Path, err)
 	}
 
-	if _, err := io.Copy(file, sd0); err != nil {
+	if _, err := io.Copy(file, decompressor); err != nil {
 		return nil, fmt.Errorf("download compressed: %s: %w", entry.Path, err)
 	}
 
@@ -211,7 +212,7 @@ func (patch *patch) verifyUncompressedEntry(file *os.File, entry *manifest.Entry
 		return err
 	}
 
-	if stat.Size() != entry.UncompressedSize || !bytes.Equal(checksum.Sum(nil), entry.UncompressedChecksum) {
+	if stat.Size() != int64(entry.UncompressedSize) || !bytes.Equal(checksum.Sum(nil), entry.UncompressedChecksum) {
 		return errors.New("manifest entry does not match")
 	}
 
@@ -242,7 +243,7 @@ func (patch *patch) NeedsDownload(path string, entry *manifest.Entry) (needsDown
 
 	if qc, ok := patch.CacheFile.Get(path); ok {
 		diskOk := stat.ModTime().Equal(qc.LastModified()) && stat.Size() == qc.Size()
-		entryOk := entry.UncompressedSize == qc.Size() && bytes.Equal(entry.UncompressedChecksum, qc.Hash())
+		entryOk := int64(entry.UncompressedSize) == qc.Size() && bytes.Equal(entry.UncompressedChecksum, qc.Hash())
 		if diskOk && entryOk {
 			return false, nil
 		}
@@ -352,7 +353,7 @@ func (patch *patch) collectUnpackedEntries(name string, index *manifest.Manifest
 
 	entries := []*manifest.Entry{}
 
-	for _, entry := range manifestfile.Files {
+	for _, entry := range manifestfile.Entries {
 		e := entry
 		if hotfix != nil {
 			if hotfixEntry, ok := hotfix.GetEntry(entry.Path); ok {
@@ -388,7 +389,7 @@ func (patch *patch) collectUnpackedEntries(name string, index *manifest.Manifest
 	}
 
 	if hotfix != nil {
-		for _, hotfixEntry := range hotfix.Files {
+		for _, hotfixEntry := range hotfix.Entries {
 			if _, ok := manifestfile.GetEntry(hotfixEntry.Path); !ok {
 				needsDownload, err := patch.NeedsDownload(hotfixEntry.Path, hotfixEntry)
 				if err != nil {
@@ -446,7 +447,7 @@ func (patch *patch) Patch() (*boot.Config, error) {
 		return nil, fmt.Errorf("patch: %w", err)
 	}
 
-	for _, entry := range version.Files {
+	for _, entry := range version.Entries {
 		if entry.Path == IndexFile || strings.Contains(entry.Path, "patcher.ini") || strings.Contains(entry.Path, "lego_universe_install.exe") {
 			continue
 		}
