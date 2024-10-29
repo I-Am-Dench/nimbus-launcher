@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/I-Am-Dench/goverbuild/archive/cache"
+	"github.com/I-Am-Dench/goverbuild/archive/catalog"
 	"github.com/I-Am-Dench/goverbuild/archive/manifest"
 	"github.com/I-Am-Dench/goverbuild/compress/segmented"
 	"github.com/I-Am-Dench/goverbuild/models/boot"
@@ -30,6 +31,8 @@ const (
 	HotFixFile  = "hotfix.txt"
 	IndexFile   = "index.txt"
 	GameFile    = "trunk.txt"
+
+	CatalogFile = "primary.pki"
 
 	ConfigFile = "client/boot.cfg"
 )
@@ -140,7 +143,6 @@ func (patch *patch) DownloadCompressed(destination string, entry *manifest.Entry
 		return nil, fmt.Errorf("download compressed: %s: %w", entry.Path, err)
 	}
 
-	// sd0, err := segmented.NewDataReader(temp, uint32(entry.CompressedSize))
 	decompressor, err := segmented.NewDataReader(temp)
 	if err != nil {
 		return nil, fmt.Errorf("download compressed: %s: %w", entry.Path, err)
@@ -189,36 +191,6 @@ func (patch *patch) DownloadManifest(name string, atRoot ...bool) (manifestfile 
 	return
 }
 
-func (patch *patch) verifyQuickCheck(path string, file *os.File) (ok bool, err error) {
-	qc, ok := patch.CacheFile.Get(path)
-	if ok {
-		if err = qc.Check(file); errors.Is(err, cache.ErrMismatchedQuickCheck) {
-			return false, nil
-		}
-		return err == nil, err
-	}
-
-	return false, nil
-}
-
-func (patch *patch) verifyUncompressedEntry(file *os.File, entry *manifest.Entry) error {
-	stat, err := file.Stat()
-	if err != nil {
-		return err
-	}
-
-	checksum := md5.New()
-	if _, err := io.Copy(checksum, file); err != nil {
-		return err
-	}
-
-	if stat.Size() != int64(entry.UncompressedSize) || !bytes.Equal(checksum.Sum(nil), entry.UncompressedChecksum) {
-		return errors.New("manifest entry does not match")
-	}
-
-	return nil
-}
-
 func (patch *patch) NeedsDownload(path string, entry *manifest.Entry) (needsDownload bool, err error) {
 	defer func() {
 		if err != nil {
@@ -242,10 +214,10 @@ func (patch *patch) NeedsDownload(path string, entry *manifest.Entry) (needsDown
 	}
 
 	if qc, ok := patch.CacheFile.Get(path); ok {
-		diskOk := stat.ModTime().Equal(qc.LastModified()) && stat.Size() == qc.Size()
-		entryOk := int64(entry.UncompressedSize) == qc.Size() && bytes.Equal(entry.UncompressedChecksum, qc.Hash())
-		if diskOk && entryOk {
+		if err := qc.Check(stat, entry.Info); err == nil {
 			return false, nil
+		} else {
+			patch.Log.Printf("%s: %v", err)
 		}
 	}
 
@@ -255,17 +227,35 @@ func (patch *patch) NeedsDownload(path string, entry *manifest.Entry) (needsDown
 	}
 	defer file.Close()
 
-	if err := patch.verifyUncompressedEntry(file, entry); err != nil {
+	if err := entry.VerifyUncompressed(file); err != nil {
 		return true, nil
 	}
 
 	return false, patch.CacheFile.Store(path, file)
 }
 
+func (patch *patch) verifyQuickCheck(path string, file *os.File, entry *manifest.Entry) (bool, error) {
+	qc, ok := patch.CacheFile.Get(path)
+	if !ok {
+		return false, nil
+	}
+
+	stat, err := file.Stat()
+	if err != nil {
+		return false, err
+	}
+
+	if err := qc.Check(stat, entry.Info); err != nil {
+		return false, nil
+	}
+
+	return true, nil
+}
+
 func (patch *patch) Fetch(name, destination string, manifestfile *manifest.Manifest) (io.ReadCloser, error) {
 	entry, ok := manifestfile.GetEntry(name)
 	if !ok {
-		return nil, fmt.Errorf("fetch: %s: missing manifest entry", destination)
+		return nil, fmt.Errorf("fetch: %s: missing manifest entry", name)
 	}
 
 	file, err := patch.Open(destination, os.O_RDONLY)
@@ -277,10 +267,10 @@ func (patch *patch) Fetch(name, destination string, manifestfile *manifest.Manif
 		return nil, fmt.Errorf("fetch: %s: %w", name, err)
 	}
 
-	if ok, err := patch.verifyQuickCheck(destination, file); err != nil {
+	if ok, err := patch.verifyQuickCheck(destination, file, entry); err != nil {
 		return nil, fmt.Errorf("fetch: %s: %w", name, err)
 	} else if !ok {
-		if err := patch.verifyUncompressedEntry(file, entry); err != nil {
+		if err := entry.VerifyUncompressed(file); err != nil {
 			return patch.DownloadCompressed(destination, entry)
 		}
 	}
@@ -345,6 +335,80 @@ func (patch *patch) FetchManifest(name string, manifestfile *manifest.Manifest, 
 // 	return false, nil
 // }
 
+func (patch *patch) shouldIgnore(resource string) bool {
+	if strings.EqualFold(resource, ConfigFile) {
+		return true
+	}
+
+	resource = strings.ToLower(resource)
+	if strings.HasSuffix(resource, ".pk") {
+		return true
+	}
+
+	if strings.Contains(resource, "_loc") && !strings.Contains(resource, path.Join("_loc", strings.ToLower(patch.Locale))) {
+		return true
+	}
+
+	if strings.Contains(resource, path.Join("ndaudio", "vo")) && !strings.Contains(resource, path.Join("ndaudio", "vo", strings.ToLower(patch.Locale))) {
+		return true
+	}
+
+	return false
+}
+
+func (patch *patch) collectPackedEntries(name string, index *manifest.Manifest, hotfix *manifest.Manifest) ([]*manifest.Entry, error) {
+	manifestfile, err := patch.FetchManifest(name, index, true)
+	if err != nil {
+		return nil, err
+	}
+
+	entries := []*manifest.Entry{}
+
+	for _, entry := range manifestfile.Entries {
+		e := entry
+		if hotfix != nil {
+			if hotfixEntry, ok := hotfix.GetEntry(entry.Path); ok {
+				e = hotfixEntry
+			}
+		}
+
+		if patch.shouldIgnore(e.Path) {
+			continue
+		}
+	}
+
+	return entries, nil
+}
+
+func (patch *patch) fetchCatalog(index *manifest.Manifest) (*catalog.Catalog, error) {
+	resource, err := patch.Fetch(CatalogFile, patch.versions(CatalogFile, true), index)
+	if err != nil {
+		return nil, err
+	}
+	defer resource.Close()
+
+	return catalog.ReadFrom(resource)
+}
+
+func (patch *patch) doPacked(index *manifest.Manifest, hotfix *manifest.Manifest) (*boot.Config, error) {
+	_, err := patch.fetchCatalog(index)
+	if err != nil {
+		return nil, fmt.Errorf("patch: packed: %w", err)
+	}
+
+	entries, err := patch.collectPackedEntries(GameFile, index, hotfix)
+	if err != nil {
+		return nil, fmt.Errorf("patch: packed: %w", err)
+	}
+
+	patch.Log.Print("Entries that need patching:")
+	for _, entry := range entries {
+		patch.Log.Print(entry.Path)
+	}
+
+	return boot.DefaultConfig, nil
+}
+
 func (patch *patch) collectUnpackedEntries(name string, index *manifest.Manifest, hotfix *manifest.Manifest) ([]*manifest.Entry, error) {
 	manifestfile, err := patch.FetchManifest(name, index, true)
 	if err != nil {
@@ -361,19 +425,7 @@ func (patch *patch) collectUnpackedEntries(name string, index *manifest.Manifest
 			}
 		}
 
-		if strings.ToLower(e.Path) == ConfigFile {
-			continue
-		}
-
-		if strings.HasSuffix(e.Path, ".pk") {
-			continue
-		}
-
-		if strings.Contains(strings.ToLower(e.Path), "_loc") && !strings.Contains(strings.ToLower(e.Path), strings.ToLower(path.Join("_loc", patch.Locale))) {
-			continue
-		}
-
-		if strings.Contains(strings.ToLower(e.Path), path.Join("ndaudio", "vo")) && !strings.Contains(strings.ToLower(e.Path), strings.ToLower(path.Join("ndaudio", "vo", patch.Locale))) {
+		if patch.shouldIgnore(e.Path) {
 			continue
 		}
 
@@ -460,7 +512,7 @@ func (patch *patch) Patch() (*boot.Config, error) {
 	}
 
 	if patch.Packed {
-		return nil, fmt.Errorf("patch: packed: %w", errors.ErrUnsupported)
+		return patch.doPacked(index, hotfix)
 	} else {
 		return patch.doUnpacked(index, hotfix)
 	}
