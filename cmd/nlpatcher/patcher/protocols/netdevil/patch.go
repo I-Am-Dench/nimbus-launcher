@@ -148,7 +148,7 @@ func (patch *patch) DownloadPacked(path string, entry *manifest.Entry, archive *
 		return err
 	}
 	defer func() {
-		if e := cleanup(); err == nil {
+		if e := cleanup(); e != nil && err == nil {
 			err = fmt.Errorf("download packed: %s: %w", path, e)
 		}
 	}()
@@ -171,7 +171,7 @@ func (patch *patch) DownloadUnpacked(destination string, entry *manifest.Entry) 
 		return nil, err
 	}
 	defer func() {
-		if e := cleanup(); err == nil {
+		if e := cleanup(); e != nil && err == nil {
 			err = fmt.Errorf("download unpacked: %s: %w", destination, e)
 		}
 	}()
@@ -492,7 +492,27 @@ func (patch *patch) doUnpacked(index *manifest.Manifest, hotfix *manifest.Manife
 	return boot.DefaultConfig, nil
 }
 
+func (patch *patch) initVersions() error {
+	stat, err := os.Stat(filepath.Join(patch.InstallDirectory, VersionsDir))
+	if err == nil {
+		if !stat.IsDir() {
+			return errors.New("versions must be directory")
+		}
+		return nil
+	}
+
+	if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+
+	return os.Mkdir(filepath.Join(patch.InstallDirectory, VersionsDir), 0755)
+}
+
 func (patch *patch) Patch() (*boot.Config, error) {
+	if err := patch.initVersions(); err != nil {
+		return nil, fmt.Errorf("patch: %w", err)
+	}
+
 	var err error
 	patch.CacheFile, err = cache.Open(filepath.Join(patch.InstallDirectory, patch.versions(CacheFile, true)), 32)
 	if err != nil {
