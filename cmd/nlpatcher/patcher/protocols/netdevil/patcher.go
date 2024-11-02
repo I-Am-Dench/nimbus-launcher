@@ -165,6 +165,8 @@ func (patcher *NetDevilPatcher) GetPatch(options patcher.PatchOptions) (patcher.
 	patcher.Patch.Server = server
 	patcher.Patch.GetResource = patchResourceFunc
 
+	patcher.Patch.Boot = server.BootConfig(patcher.scheme, patcher.Patch.Packed)
+
 	return newPatch(patcher.Patch)
 }
 

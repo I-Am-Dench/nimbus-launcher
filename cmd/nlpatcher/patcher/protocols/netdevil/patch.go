@@ -46,6 +46,8 @@ type patchConfig struct {
 
 	Locale       string `json:"locale"`
 	FullDownload bool   `json:"fullDownload"`
+
+	Boot *boot.Config
 }
 
 type patch struct {
@@ -475,12 +477,20 @@ func (patch *patch) doPacked(index *manifest.Manifest, hotfix *manifest.Manifest
 		return nil, fmt.Errorf("patch: packed: %w", err)
 	}
 
-	patch.Log.Print("Entries that need patching:")
-	for _, entry := range entries {
-		patch.Log.Print(entry.Path)
-	}
+	patch.Log.Printf("Found %d entries that need patching", len(entries))
 
-	return boot.DefaultConfig, nil
+	// errs := []error{}
+	// for _, entry := range entries {
+	// 	if err := patch.DownloadPacked(entry.Path, entry, archive); err != nil {
+	// 		errs = append(errs, err)
+	// 	}
+	// }
+
+	// if err := errors.Join(errs...); err != nil {
+	// 	return nil, fmt.Errorf("patch: packed: %w", err)
+	// }
+
+	return patch.Boot, nil
 }
 
 func (patch *patch) doUnpacked(index *manifest.Manifest, hotfix *manifest.Manifest) (*boot.Config, error) {
@@ -489,12 +499,25 @@ func (patch *patch) doUnpacked(index *manifest.Manifest, hotfix *manifest.Manife
 		return nil, fmt.Errorf("patch: unpacked: %w", err)
 	}
 
-	patch.Log.Print("Entries that need patching:")
-	for _, entry := range entries {
-		patch.Log.Print(entry.Path)
-	}
+	patch.Log.Print("Found %d entries that need patching", len(entries))
 
-	return boot.DefaultConfig, nil
+	// errs := []error{}
+	// for _, entry := range entries {
+	// 	r, err := patch.DownloadUnpacked(entry.Path, entry)
+	// 	if err != nil {
+	// 		errs = append(errs, err)
+	// 	}
+
+	// 	if err := r.Close(); err != nil {
+	// 		patch.Log.Printf("patch: unpacked: %w", err)
+	// 	}
+	// }
+
+	// if err := errors.Join(errs...); err != nil {
+	// 	return nil, fmt.Errorf("patch: unpacked: %w", err)
+	// }
+
+	return patch.Boot, nil
 }
 
 func (patch *patch) initVersions() error {

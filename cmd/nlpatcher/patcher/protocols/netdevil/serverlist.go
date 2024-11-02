@@ -4,6 +4,8 @@ import (
 	"encoding/xml"
 	"fmt"
 	"strings"
+
+	"github.com/I-Am-Dench/goverbuild/models/boot"
 )
 
 type MasterIndex struct {
@@ -16,6 +18,22 @@ type MasterIndex struct {
 	Status string `xml:"Status"`
 }
 
+type Optional[T any] struct {
+	Exists bool
+	V      T
+}
+
+func (o *Optional[T]) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	o.Exists = true
+	return d.DecodeElement(&o.V, &start)
+}
+
+type UGC struct {
+	Host         string `xml:"Host"`
+	Dir          string `xml:"Dir"`
+	DataCenterId int    `xml:"DataCenterId"`
+}
+
 type Server struct {
 	Name    string `xml:"name,attr"`
 	Lang    string `xml:"lang,attr"`
@@ -26,6 +44,7 @@ type Server struct {
 		Dir  string `xml:"Dir"`
 		Port uint16 `xml:"Port"`
 	} `xml:"Patcher"`
+	UGC  Optional[UGC] `xml:"UGC"`
 	Game struct {
 		AuthIP   string `xml:"AuthIP"`
 		CrashLog string `xml:"CrashLog"`
@@ -47,6 +66,45 @@ func (server *Server) PatchServerUrl(resourceScheme Scheme) string {
 	}
 
 	return fmt.Sprint(scheme, "://", server.Patcher.Host, ":", server.Patcher.Port)
+}
+
+func (server *Server) BootConfig(resourceScheme Scheme, useCatalog bool) *boot.Config {
+	ugc := UGC{
+		Dir:          "3dservices",
+		DataCenterId: 150,
+	}
+	if server.UGC.Exists {
+		ugc = server.UGC.V
+	}
+
+	patchIP := server.Patcher.Host
+	if resourceScheme == File {
+		patchIP = "localhost"
+		ugc.Host = "localhost"
+	}
+
+	patchPort := 80
+	if server.Patcher.Port > 0 {
+		patchPort = int(server.Patcher.Port)
+	}
+
+	return &boot.Config{
+		ServerName:       server.Name,
+		PatchServerIP:    patchIP,
+		AuthServerIP:     server.Game.AuthIP,
+		PatchServerPort:  int32(patchPort),
+		Logging:          100,
+		DataCenterID:     uint32(ugc.DataCenterId),
+		CPCode:           0,
+		PatchServerDir:   server.Patcher.Dir,
+		UGCUse3dServices: server.UGC.Exists,
+		UGCServerIP:      ugc.Host,
+		UGCServerDir:     ugc.Dir,
+		CrashLogURL:      server.Game.CrashLog,
+		Locale:           server.Lang,
+		ManifestFile:     GameFile,
+		UseCatalog:       useCatalog,
+	}
 }
 
 type ServerList struct {
