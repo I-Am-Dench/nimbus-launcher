@@ -274,7 +274,7 @@ func (patch *patch) needsUnpackedDownload(path string, entry *manifest.Entry) (b
 		return true, nil
 	}
 
-	return false, patch.CacheFile.Store(path, file)
+	return false, patch.CacheFile.Store(path, stat, entry.Info)
 }
 
 func (patch *patch) NeedsDownload(path string, entry *manifest.Entry, archive ...*archive.Archive) (needsDownload bool, err error) {
@@ -340,7 +340,12 @@ func (patch *patch) Fetch(name, destination string, manifestfile *manifest.Manif
 		}
 	}
 
-	if err := patch.CacheFile.Store(destination, file); err != nil {
+	stat, err := file.Stat()
+	if err != nil {
+		return nil, fmt.Errorf("fetch: %s: %w", name, err)
+	}
+
+	if err := patch.CacheFile.Store(destination, stat, entry.Info); err != nil {
 		return nil, fmt.Errorf("fetch: %s: %w", name, err)
 	}
 
