@@ -1,4 +1,4 @@
-package archive
+package netdevil
 
 import (
 	"errors"
@@ -9,6 +9,10 @@ import (
 	"github.com/I-Am-Dench/goverbuild/archive/pack"
 )
 
+var (
+	ErrNotCataloged = errors.New("not cataloged")
+)
+
 type Archive struct {
 	catalog      *catalog.Catalog
 	installation string
@@ -16,7 +20,7 @@ type Archive struct {
 	packs map[string]*pack.Pack
 }
 
-func New(catalog *catalog.Catalog, installation string) *Archive {
+func NewArchive(catalog *catalog.Catalog, installation string) *Archive {
 	return &Archive{
 		catalog:      catalog,
 		installation: installation,
@@ -27,7 +31,7 @@ func New(catalog *catalog.Catalog, installation string) *Archive {
 func (archive *Archive) FindPack(path string) (*pack.Pack, error) {
 	record, ok := archive.catalog.Search(path)
 	if !ok {
-		return nil, ErrNotCatalogued
+		return nil, ErrNotCataloged
 	}
 
 	p, ok := archive.packs[strings.ToLower(record.PackName)]

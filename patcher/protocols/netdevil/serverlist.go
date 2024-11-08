@@ -3,29 +3,22 @@ package netdevil
 import (
 	"encoding/xml"
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/I-Am-Dench/goverbuild/models/boot"
+	"github.com/I-Am-Dench/nimbus-launcher/patcher"
+	"github.com/I-Am-Dench/nimbus-launcher/patcher/resources"
 )
-
-type MasterIndex struct {
-	Authentication string `xml:"Authentication"`
-	Config         struct {
-		XMLName xml.Name `xml:"Config"`
-		Type    string   `xml:"type,attr"`
-		URL     string   `xml:",chardata"`
-	}
-	Status string `xml:"Status"`
-}
 
 type Optional[T any] struct {
 	Exists bool
-	V      T
+	Value  T
 }
 
 func (o *Optional[T]) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	o.Exists = true
-	return d.DecodeElement(&o.V, &start)
+	return d.DecodeElement(&o.Value, &start)
 }
 
 type UGC struct {
@@ -51,9 +44,9 @@ type Server struct {
 	} `xml:"Game"`
 }
 
-func (server *Server) PatchServerUrl(resourceScheme Scheme) string {
-	if resourceScheme == File {
-		return "file:///" + server.Patcher.Host
+func (server *Server) PatcherUrl(resourcesScheme patcher.Scheme) string {
+	if resourcesScheme == resources.FileScheme {
+		return filepath.Join(server.Patcher.Host, server.Patcher.Dir)
 	}
 
 	scheme := "http"
@@ -65,22 +58,17 @@ func (server *Server) PatchServerUrl(resourceScheme Scheme) string {
 		return fmt.Sprint(scheme, "://", server.Patcher.Host)
 	}
 
-	return fmt.Sprint(scheme, "://", server.Patcher.Host, ":", server.Patcher.Port)
+	return fmt.Sprintf(scheme, "://", server.Patcher.Host, ":", server.Patcher.Port)
 }
 
-func (server *Server) BootConfig(resourceScheme Scheme, useCatalog bool) *boot.Config {
+func (server *Server) Boot(locale string, useCatalog bool) *boot.Config {
 	ugc := UGC{
+		Host:         "localhost",
 		Dir:          "3dservices",
 		DataCenterId: 150,
 	}
 	if server.UGC.Exists {
-		ugc = server.UGC.V
-	}
-
-	patchIP := server.Patcher.Host
-	if resourceScheme == File {
-		patchIP = "localhost"
-		ugc.Host = "localhost"
+		ugc = server.UGC.Value
 	}
 
 	patchPort := 80
@@ -90,18 +78,17 @@ func (server *Server) BootConfig(resourceScheme Scheme, useCatalog bool) *boot.C
 
 	return &boot.Config{
 		ServerName:       server.Name,
-		PatchServerIP:    patchIP,
+		PatchServerIP:    server.Patcher.Host,
 		AuthServerIP:     server.Game.AuthIP,
 		PatchServerPort:  int32(patchPort),
 		Logging:          100,
 		DataCenterID:     uint32(ugc.DataCenterId),
-		CPCode:           0,
 		PatchServerDir:   server.Patcher.Dir,
 		UGCUse3dServices: server.UGC.Exists,
 		UGCServerIP:      ugc.Host,
 		UGCServerDir:     ugc.Dir,
 		CrashLogURL:      server.Game.CrashLog,
-		Locale:           server.Lang,
+		Locale:           locale,
 		ManifestFile:     GameFile,
 		UseCatalog:       useCatalog,
 	}
@@ -126,7 +113,7 @@ func (list *ServerList) FindBest(locale string) (*Server, bool) {
 		return nil, false
 	}
 
-	best := (*Server)(nil)
+	var best *Server
 	for _, server := range list.Servers {
 		if server.Online {
 			if strings.EqualFold(server.Lang, locale) {
@@ -137,5 +124,5 @@ func (list *ServerList) FindBest(locale string) (*Server, bool) {
 		}
 	}
 
-	return best, true
+	return best, best != nil
 }
