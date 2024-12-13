@@ -20,8 +20,6 @@ const (
 
 type Resources interface {
 	Scheme() Scheme
-	SetRoot(uri string)
-
 	Get(path string) (io.ReadCloser, error)
 }
 
@@ -42,20 +40,15 @@ func ParseScheme(uri string) (Scheme, string, error) {
 }
 
 type _file struct {
-	ctx  context.Context
-	root string
+	ctx context.Context
 }
 
 func (*_file) Scheme() Scheme {
 	return FileScheme
 }
 
-func (f *_file) SetRoot(uri string) {
-	f.root = uri
-}
-
 func (f *_file) Get(path string) (io.ReadCloser, error) {
-	file, err := os.Open(filepath.FromSlash(filepath.Join(f.root, filepath.Clean(path))))
+	file, err := os.Open(filepath.FromSlash(filepath.Clean(path)))
 	if err != nil {
 		return nil, fmt.Errorf("resources: file: %w", err)
 	}
@@ -70,33 +63,19 @@ func (f *_file) Get(path string) (io.ReadCloser, error) {
 }
 
 func File(ctx context.Context) Resources {
-	return &_file{ctx, ""}
+	return &_file{ctx}
 }
 
 type _http struct {
 	ctx    context.Context
 	client *http.Client
-
-	base string
 }
 
 func (*_http) Scheme() Scheme {
 	return HttpScheme
 }
 
-func (h *_http) SetRoot(uri string) {
-	h.base = uri
-}
-
 func (h *_http) Get(uri string) (io.ReadCloser, error) {
-	if len(h.base) > 0 {
-		var err error
-		uri, err = url.JoinPath(h.base, filepath.ToSlash(uri))
-		if err != nil {
-			return nil, fmt.Errorf("resources: http: %w", err)
-		}
-	}
-
 	request, err := http.NewRequestWithContext(h.ctx, http.MethodGet, uri, nil)
 	if err != nil {
 		return nil, fmt.Errorf("resources: http: %w", err)
@@ -119,5 +98,35 @@ func (h *_http) Get(uri string) (io.ReadCloser, error) {
 }
 
 func Http(ctx context.Context, client *http.Client) Resources {
-	return &_http{ctx, client, ""}
+	return &_http{ctx, client}
+}
+
+type _withRoot struct {
+	Resources
+	root string
+}
+
+func (r *_withRoot) Get(path string) (io.ReadCloser, error) {
+	return r.Resources.Get(filepath.Join(r.root, path))
+}
+
+func WithRoot(r Resources, root string) Resources {
+	return &_withRoot{r, root}
+}
+
+type _withUrl struct {
+	Resources
+	base string
+}
+
+func (r *_withUrl) Get(path string) (io.ReadCloser, error) {
+	uri, err := url.JoinPath(r.base, filepath.ToSlash(path))
+	if err != nil {
+		return nil, fmt.Errorf("resources: %w", err)
+	}
+	return r.Resources.Get(uri)
+}
+
+func WithUrl(r Resources, base string) Resources {
+	return &_withUrl{r, base}
 }

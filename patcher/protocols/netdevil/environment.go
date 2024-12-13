@@ -68,13 +68,13 @@ func (config *Config) NewPatcher(ctx context.Context, masterIndex patcher.Master
 	}
 
 	if opt.Resources.Scheme() == resources.FileScheme {
-		opt.Resources.SetRoot(path.Join(server.Patcher.Host, server.Patcher.Dir))
+		opt.Resources = resources.WithRoot(opt.Resources, path.Join(server.Patcher.Host, server.Patcher.Dir))
 	} else {
 		u, err := url.JoinPath(server.PatcherUrl(opt.Resources.Scheme()), server.Patcher.Dir)
 		if err != nil {
 			return nil, fmt.Errorf("netdevil: %w", err)
 		}
-		opt.Resources.SetRoot(u)
+		opt.Resources = resources.WithUrl(opt.Resources, u)
 	}
 
 	return &Patcher{
