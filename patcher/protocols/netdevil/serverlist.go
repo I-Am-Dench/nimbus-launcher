@@ -58,7 +58,7 @@ func (server *Server) PatcherUrl(resourcesScheme patcher.Scheme) string {
 		return fmt.Sprint(scheme, "://", server.Patcher.Host)
 	}
 
-	return fmt.Sprintf(scheme, "://", server.Patcher.Host, ":", server.Patcher.Port)
+	return fmt.Sprint(scheme, "://", server.Patcher.Host, ":", server.Patcher.Port)
 }
 
 func (server *Server) Boot(locale string, useCatalog bool) *boot.Config {

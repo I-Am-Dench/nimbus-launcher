@@ -2,6 +2,7 @@ package resources
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -18,9 +19,14 @@ const (
 	HttpScheme
 )
 
+var (
+	ErrNotAuthenticated = errors.New("not authenticated")
+)
+
 type Resources interface {
 	Scheme() Scheme
 	Get(path string) (io.ReadCloser, error)
+	Context() context.Context
 }
 
 func ParseScheme(uri string) (Scheme, string, error) {
@@ -62,13 +68,28 @@ func (f *_file) Get(path string) (io.ReadCloser, error) {
 	}
 }
 
+func (f *_file) Context() context.Context {
+	return f.ctx
+}
+
 func File(ctx context.Context) Resources {
 	return &_file{ctx}
+}
+
+type CredentialsFunc func() (username string, password []byte, err error)
+
+type HttpResources interface {
+	Resources
+	Client() *http.Client
 }
 
 type _http struct {
 	ctx    context.Context
 	client *http.Client
+}
+
+func (h *_http) Client() *http.Client {
+	return h.client
 }
 
 func (*_http) Scheme() Scheme {
@@ -94,11 +115,80 @@ func (h *_http) Get(uri string) (io.ReadCloser, error) {
 	io.Copy(io.Discard, response.Body)
 	response.Body.Close()
 
+	if response.StatusCode == http.StatusUnauthorized {
+		return nil, fmt.Errorf("resources: http: %w", ErrNotAuthenticated)
+	}
+
 	return nil, fmt.Errorf("resources: http: unhandled status: %s", response.Status)
+}
+
+func (h *_http) Context() context.Context {
+	return h.ctx
 }
 
 func Http(ctx context.Context, client *http.Client) Resources {
 	return &_http{ctx, client}
+}
+
+type _httpWithAuth struct {
+	HttpResources
+
+	credentials CredentialsFunc
+	authUrl     string
+}
+
+func (h *_httpWithAuth) Authenticate() error {
+	for {
+		username, password, err := h.credentials()
+		if err != nil {
+			return fmt.Errorf("resources: http: authenticate: %w", err)
+		}
+
+		request, err := http.NewRequestWithContext(h.Context(), http.MethodPost, h.authUrl, nil)
+		if err != nil {
+			return fmt.Errorf("resources: http: authenticate: %w", err)
+		}
+
+		request.SetBasicAuth(username, string(password))
+
+		response, err := h.HttpResources.Client().Do(request)
+		if err != nil {
+			return fmt.Errorf("resources: http: authenticate: %w", err)
+		}
+
+		if response.StatusCode >= 200 && response.StatusCode < 300 {
+			return nil
+		}
+
+		if response.StatusCode != http.StatusUnauthorized {
+			return fmt.Errorf("resources: http: authenticate: unhandled status: %s", response.Status)
+		}
+	}
+}
+
+func (h *_httpWithAuth) Get(uri string) (io.ReadCloser, error) {
+	for {
+		reader, err := h.HttpResources.Get(uri)
+		if err == nil {
+			return reader, nil
+		}
+
+		if !errors.Is(err, ErrNotAuthenticated) {
+			return nil, err
+		}
+
+		if err := h.Authenticate(); err != nil {
+			return nil, err
+		}
+	}
+}
+
+func WithAuthentication(r HttpResources, credentials CredentialsFunc, authUrl string) Resources {
+	if credentials == nil {
+		panic(fmt.Errorf("credentials cannot be nil"))
+	}
+
+	return &_httpWithAuth{r, credentials, authUrl}
 }
 
 type _withRoot struct {

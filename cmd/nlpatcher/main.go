@@ -43,6 +43,8 @@ var (
 )
 
 func GetCredentials() (string, []byte, error) {
+	fmt.Println("\n\nEnter credentials:")
+
 	var username string
 	fmt.Print("username: ")
 	if _, err := fmt.Scanln(&username); err != nil {
@@ -156,6 +158,10 @@ func main() {
 	masterIndex, err := patcher.GetMasterIndex(res, env.FormatMasterIndexUrl(config.ServiceUrl, res.Scheme()))
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	if h, ok := res.(resources.HttpResources); ok {
+		res = resources.WithAuthentication(h, GetCredentials, masterIndex.Authentication)
 	}
 
 	patcher, err := env.NewPatcher(ctx, masterIndex, patcher.Options{
