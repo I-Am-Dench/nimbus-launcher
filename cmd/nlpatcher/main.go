@@ -16,10 +16,21 @@ import (
 	"text/tabwriter"
 
 	"github.com/I-Am-Dench/nimbus-launcher/patcher"
+	"github.com/I-Am-Dench/nimbus-launcher/patcher/client"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher/protocols/netdevil"
-	"github.com/I-Am-Dench/nimbus-launcher/patcher/resources"
+	"github.com/I-Am-Dench/nimbus-launcher/patcher/remote"
+	"github.com/I-Am-Dench/nimbus-launcher/patcher/undoer"
 	"golang.org/x/net/publicsuffix"
 	"golang.org/x/term"
+)
+
+var (
+	PatcherPath      string
+	InstallationPath string
+	Packed           bool
+	Summary          bool
+	OnlyUndo         bool
+	NoLocal          bool
 )
 
 type envs map[string]patcher.Environment
@@ -43,15 +54,16 @@ var (
 )
 
 func GetCredentials() (string, []byte, error) {
-	fmt.Println("\n\nEnter credentials:")
+	fmt.Println("\n\nEnter credentials")
+	fmt.Println("=================")
 
 	var username string
-	fmt.Print("username: ")
+	fmt.Print("Username: ")
 	if _, err := fmt.Scanln(&username); err != nil {
 		return "", nil, fmt.Errorf("get credentials: %w", err)
 	}
 
-	fmt.Print("password: ")
+	fmt.Print("Password: ")
 	bpassword, err := term.ReadPassword(int(syscall.Stdin))
 	if err != nil {
 		return "", nil, fmt.Errorf("get credentials: %w", err)
@@ -100,7 +112,6 @@ func PrintSummary(summary []patcher.PatchEntry) {
 	}
 
 	tab.Flush()
-	os.Exit(0)
 }
 
 func main() {
@@ -112,42 +123,48 @@ func main() {
 	}
 
 	flagset := flag.NewFlagSet("nlpatcher", flag.ExitOnError)
-	patcherPath := flagset.String("patcher", "./patcher.json", "Path to the patcher configuration.")
-	installationPath := flagset.String("installation", ".", "Path to installation directory. This directory should contain the client, version, and patcher directories.")
-	packed := flagset.Bool("packed", false, "Whether or not the client is packed.")
-	summary := flagset.Bool("summary", false, "Display a summary of patch instead of installing it.")
-	noLocal := flagset.Bool("nolocal", false, "Disallows using local file paths for resources.")
+	flagset.StringVar(&PatcherPath, "patcher", "patcher.json", "Path to a patcher configuration.")
+	flagset.StringVar(&InstallationPath, "installation", ".", "Patch to installation directory. This directory should contain the client, version, and patcher directories.")
+	flagset.BoolVar(&Packed, "packed", false, "Whether or not the client is packed.")
+	flagset.BoolVar(&Summary, "summary", false, "Display a summary of the patch instead of installing it.")
+	flagset.BoolVar(&OnlyUndo, "onlyundo", false, "Undo a patch only.")
+	flagset.BoolVar(&NoLocal, "nolocal", false, "Disallows using local file paths for resources.")
 	// outputBoot := flagset.Bool("boot", false, "Outputs the raw, marshalled boot.cfg.")
 	flagset.Parse(os.Args[2:])
 
-	config, err := GetEnvironmentConfig(*patcherPath)
+	config, err := GetEnvironmentConfig(PatcherPath)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	scheme, uri, err := resources.ParseScheme(config.ServiceUrl)
+	scheme, uri, err := remote.ParseScheme(config.ServiceUrl)
 	if err != nil {
 		log.Fatal(err)
 	}
 	config.ServiceUrl = uri
 
+	undoer, err := undoer.NewSqlite("changes.db", InstallationPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	var res resources.Resources
+	var resources remote.Resources
 	switch scheme {
-	default:
-		panic(fmt.Errorf("unknown scheme: %v", scheme))
-	case resources.FileScheme:
-		if *noLocal {
+	case remote.FileScheme:
+		if NoLocal {
 			log.Fatal("local file paths are disallowed")
 		}
-		res = resources.File(ctx)
-	case resources.HttpScheme:
-		res = resources.Http(ctx, &http.Client{
+		resources = remote.File()
+	case remote.HttpScheme:
+		resources = remote.Http(&http.Client{
 			Jar:       CookieJar,
 			Transport: http.DefaultTransport,
 		})
+	default:
+		panic(fmt.Errorf("unknown scheme: %v", scheme))
 	}
 
 	env, err := GetEnvironment(os.Args[1], config)
@@ -155,35 +172,56 @@ func main() {
 		log.Fatal(err)
 	}
 
-	masterIndex, err := patcher.GetMasterIndex(res, env.FormatMasterIndexUrl(config.ServiceUrl, res.Scheme()))
+	masterIndex, err := patcher.GetMasterIndex(ctx, resources, env.FormatMasterIndexUrl(config.ServiceUrl, resources.Scheme()))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if h, ok := res.(resources.HttpResources); ok {
-		res = resources.WithAuthentication(h, GetCredentials, masterIndex.Authentication)
+	if h, ok := resources.(remote.HttpResources); ok && len(masterIndex.Authentication) > 0 {
+		resources = remote.WithAuthentication(h, GetCredentials, masterIndex.Authentication)
 	}
 
 	patcher, err := env.NewPatcher(ctx, masterIndex, patcher.Options{
-		InstallDirectory: *installationPath,
+		InstallDirectory: InstallationPath,
 
 		Log:       log.New(os.Stdout, os.Args[1]+": ", 0),
-		Resources: res,
+		Resources: resources,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	patch, err := patcher.GetPatch(ctx, *packed)
+	patch, err := patcher.GetPatch(ctx, Packed)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if *summary {
+	if Summary {
 		PrintSummary(patch.Summary())
+		return
 	}
 
-	if err := patch.Run(ctx); err != nil {
+	var archive *client.Archive
+	if catalog, ok := patch.Catalog(); ok {
+		archive = client.NewArchive(catalog, InstallationPath)
+		defer func() {
+			if err := archive.Close(); err != nil {
+				log.Println(err)
+			}
+		}()
+	}
+
+	log.Println("Running undoer...")
+	// Reset client to original state
+	if err := undoer.Undo(archive); err != nil {
+		log.Println(err)
+	}
+
+	if OnlyUndo {
+		return
+	}
+
+	if err := patch.Run(ctx, undoer); err != nil {
 		log.Fatal(err)
 	}
 

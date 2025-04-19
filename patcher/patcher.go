@@ -6,13 +6,15 @@ import (
 	"encoding/xml"
 	"fmt"
 
+	"github.com/I-Am-Dench/goverbuild/archive/catalog"
 	"github.com/I-Am-Dench/goverbuild/models/boot"
-	"github.com/I-Am-Dench/nimbus-launcher/patcher/resources"
+	"github.com/I-Am-Dench/nimbus-launcher/patcher/remote"
+	"github.com/I-Am-Dench/nimbus-launcher/patcher/undoer"
 )
 
 type (
-	Resources = resources.Resources
-	Scheme    = resources.Scheme
+	Resources = remote.Resources
+	Scheme    = remote.Scheme
 )
 
 type Config struct {
@@ -43,7 +45,8 @@ type PatchEntry struct {
 }
 
 type Patch interface {
-	Run(context.Context) error
+	Catalog() (catalog *catalog.Catalog, ok bool)
+	Run(context.Context, undoer.Undoer) error
 	Summary() []PatchEntry
 }
 
@@ -53,13 +56,13 @@ type Patcher interface {
 }
 
 type Environment interface {
-	FormatMasterIndexUrl(serviceUrl string, scheme resources.Scheme) string
+	FormatMasterIndexUrl(serviceUrl string, scheme remote.Scheme) string
 
 	NewPatcher(ctx context.Context, masterIndex MasterIndex, opt Options) (Patcher, error)
 }
 
-func GetMasterIndex(res Resources, uri string) (MasterIndex, error) {
-	resource, err := res.Get(uri)
+func GetMasterIndex(ctx context.Context, res Resources, uri string) (MasterIndex, error) {
+	resource, err := res.Get(ctx, uri)
 	if err != nil {
 		return MasterIndex{}, fmt.Errorf("patcher: master index: %w", err)
 	}

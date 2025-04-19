@@ -8,7 +8,7 @@ import (
 
 	"github.com/I-Am-Dench/goverbuild/models/boot"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher"
-	"github.com/I-Am-Dench/nimbus-launcher/patcher/resources"
+	"github.com/I-Am-Dench/nimbus-launcher/patcher/remote"
 )
 
 type Optional[T any] struct {
@@ -45,7 +45,7 @@ type Server struct {
 }
 
 func (server *Server) PatcherUrl(resourcesScheme patcher.Scheme) string {
-	if resourcesScheme == resources.FileScheme {
+	if resourcesScheme == remote.FileScheme {
 		return filepath.Join(server.Patcher.Host, server.Patcher.Dir)
 	}
 

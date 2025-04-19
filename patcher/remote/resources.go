@@ -1,4 +1,4 @@
-package resources
+package remote
 
 import (
 	"context"
@@ -10,6 +10,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/I-Am-Dench/nimbus-launcher/version"
 )
 
 type Scheme int
@@ -23,21 +25,15 @@ var (
 	ErrNotAuthenticated = errors.New("not authenticated")
 )
 
-type Resources interface {
-	Scheme() Scheme
-	Get(path string) (io.ReadCloser, error)
-	Context() context.Context
-}
-
 func ParseScheme(uri string) (Scheme, string, error) {
 	url, err := url.ParseRequestURI(uri)
 	if err != nil {
-		return 0, "", fmt.Errorf("resources: invalid uri: %w", err)
+		return 0, "", fmt.Errorf("parse scheme: invalid uri: %w", err)
 	}
 
 	switch url.Scheme {
 	default:
-		return 0, "", fmt.Errorf("resources: unknown scheme: %s", url.Scheme)
+		return 0, "", fmt.Errorf("parse scheme: unknown scheme: %s", url.Scheme)
 	case "file":
 		return FileScheme, filepath.FromSlash(strings.TrimPrefix(url.Path, "/")), nil
 	case "http", "https":
@@ -45,36 +41,37 @@ func ParseScheme(uri string) (Scheme, string, error) {
 	}
 }
 
-type _file struct {
-	ctx context.Context
+type Resources interface {
+	Scheme() Scheme
+	Get(ctx context.Context, path string) (io.ReadCloser, error)
 }
+
+type _file struct{}
 
 func (*_file) Scheme() Scheme {
 	return FileScheme
 }
 
-func (f *_file) Get(path string) (io.ReadCloser, error) {
+func (*_file) Get(ctx context.Context, path string) (io.ReadCloser, error) {
 	file, err := os.Open(filepath.FromSlash(filepath.Clean(path)))
 	if err != nil {
 		return nil, fmt.Errorf("resources: file: %w", err)
 	}
 
 	select {
-	case <-f.ctx.Done():
+	case <-ctx.Done():
 		file.Close()
-		return nil, f.ctx.Err()
+		return nil, ctx.Err()
 	default:
 		return file, nil
 	}
 }
 
-func (f *_file) Context() context.Context {
-	return f.ctx
+func File() Resources {
+	return &_file{}
 }
 
-func File(ctx context.Context) Resources {
-	return &_file{ctx}
-}
+var UserAgent = "NimbusLauncher/" + version.Get().Name()
 
 type CredentialsFunc func() (username string, password []byte, err error)
 
@@ -84,23 +81,25 @@ type HttpResources interface {
 }
 
 type _http struct {
-	ctx    context.Context
 	client *http.Client
-}
-
-func (h *_http) Client() *http.Client {
-	return h.client
 }
 
 func (*_http) Scheme() Scheme {
 	return HttpScheme
 }
 
-func (h *_http) Get(uri string) (io.ReadCloser, error) {
-	request, err := http.NewRequestWithContext(h.ctx, http.MethodGet, uri, nil)
+func (h *_http) Client() *http.Client {
+	return h.client
+}
+
+func (h *_http) Get(ctx context.Context, uri string) (io.ReadCloser, error) {
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, uri, nil)
 	if err != nil {
 		return nil, fmt.Errorf("resources: http: %w", err)
 	}
+
+	request.Header.Set("Connection", "Keep-Alive")
+	request.Header.Set("User-Agent", UserAgent)
 
 	response, err := h.client.Do(request)
 	if err != nil {
@@ -122,12 +121,8 @@ func (h *_http) Get(uri string) (io.ReadCloser, error) {
 	return nil, fmt.Errorf("resources: http: unhandled status: %s", response.Status)
 }
 
-func (h *_http) Context() context.Context {
-	return h.ctx
-}
-
-func Http(ctx context.Context, client *http.Client) Resources {
-	return &_http{ctx, client}
+func Http(client *http.Client) Resources {
+	return &_http{client}
 }
 
 type _httpWithAuth struct {
@@ -137,18 +132,20 @@ type _httpWithAuth struct {
 	authUrl     string
 }
 
-func (h *_httpWithAuth) Authenticate() error {
+func (h *_httpWithAuth) Authenticate(ctx context.Context) error {
 	for {
 		username, password, err := h.credentials()
 		if err != nil {
-			return fmt.Errorf("resources: http: authenticate: %w", err)
+			return fmt.Errorf("resources: http: authenticated: %w", err)
 		}
 
-		request, err := http.NewRequestWithContext(h.Context(), http.MethodPost, h.authUrl, nil)
+		request, err := http.NewRequestWithContext(ctx, http.MethodPost, h.authUrl, nil)
 		if err != nil {
 			return fmt.Errorf("resources: http: authenticate: %w", err)
 		}
 
+		request.Header.Set("Connection", "Keep-Alive")
+		request.Header.Set("User-Agent", UserAgent)
 		request.SetBasicAuth(username, string(password))
 
 		response, err := h.HttpResources.Client().Do(request)
@@ -166,18 +163,18 @@ func (h *_httpWithAuth) Authenticate() error {
 	}
 }
 
-func (h *_httpWithAuth) Get(uri string) (io.ReadCloser, error) {
+func (h *_httpWithAuth) Get(ctx context.Context, uri string) (io.ReadCloser, error) {
 	for {
-		reader, err := h.HttpResources.Get(uri)
+		r, err := h.HttpResources.Get(ctx, uri)
 		if err == nil {
-			return reader, nil
+			return r, nil
 		}
 
 		if !errors.Is(err, ErrNotAuthenticated) {
 			return nil, err
 		}
 
-		if err := h.Authenticate(); err != nil {
+		if err := h.Authenticate(ctx); err != nil {
 			return nil, err
 		}
 	}
@@ -185,9 +182,8 @@ func (h *_httpWithAuth) Get(uri string) (io.ReadCloser, error) {
 
 func WithAuthentication(r HttpResources, credentials CredentialsFunc, authUrl string) Resources {
 	if credentials == nil {
-		panic(fmt.Errorf("credentials cannot be nil"))
+		panic(fmt.Errorf("credentials func cannot be nil"))
 	}
-
 	return &_httpWithAuth{r, credentials, authUrl}
 }
 
@@ -196,8 +192,8 @@ type _withRoot struct {
 	root string
 }
 
-func (r *_withRoot) Get(path string) (io.ReadCloser, error) {
-	return r.Resources.Get(filepath.Join(r.root, path))
+func (r *_withRoot) Get(ctx context.Context, path string) (io.ReadCloser, error) {
+	return r.Resources.Get(ctx, filepath.Join(r.root, path))
 }
 
 func WithRoot(r Resources, root string) Resources {
@@ -209,12 +205,12 @@ type _withUrl struct {
 	base string
 }
 
-func (r *_withUrl) Get(path string) (io.ReadCloser, error) {
+func (r *_withUrl) Get(ctx context.Context, path string) (io.ReadCloser, error) {
 	uri, err := url.JoinPath(r.base, filepath.ToSlash(path))
 	if err != nil {
 		return nil, fmt.Errorf("resources: %w", err)
 	}
-	return r.Resources.Get(uri)
+	return r.Resources.Get(ctx, uri)
 }
 
 func WithUrl(r Resources, base string) Resources {
