@@ -1,9 +1,0 @@
-{
-    "download": {
-        "/boot.cfg": "boot.cfg"
-    },
-    "update": {
-        "boot": "boot.cfg",
-        "protocol": "proto"
-    }
-}

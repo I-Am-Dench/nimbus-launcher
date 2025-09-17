@@ -1,585 +1,201 @@
 package app
 
 import (
+	_ "embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/data/binding"
-	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"github.com/I-Am-Dench/nimbus-launcher/app/nlwidgets"
-	"github.com/I-Am-Dench/nimbus-launcher/app/nlwindows"
-	"github.com/I-Am-Dench/nimbus-launcher/client"
-	"github.com/I-Am-Dench/nimbus-launcher/ldf"
-	"github.com/I-Am-Dench/nimbus-launcher/resource"
-	"github.com/I-Am-Dench/nimbus-launcher/resource/patch"
-	"github.com/I-Am-Dench/nimbus-launcher/resource/server"
+	"github.com/I-Am-Dench/goverbuild/models/boot"
 	"github.com/I-Am-Dench/nimbus-launcher/version"
 )
 
+//go:embed embedded/icon.png
+var iconData []byte
+
 type App struct {
 	fyne.App
-	settings        *resource.Settings
-	rejectedPatches *patch.RejectionList
 
-	client client.Client
+	settingsPath string
+	profilesPath string
 
-	clientResources client.Resources
+	settings SettingsBinding
+	profiles ProfileListBinding
 
-	main           fyne.Window
-	settingsWindow fyne.Window
-	patchWindow    fyne.Window
-	infoWindow     fyne.Window
+	profileSelector *ProfileSelector
 
-	serverList *nlwidgets.ServerList
-
-	playButton           *widget.Button
-	refreshUpdatesButton *widget.Button
-	progressBar          *nlwidgets.BinaryProgressBar
-
-	serverNameBinding binding.String
-	authServerBinding binding.String
-	localeBinding     binding.String
-
-	clientPathBinding binding.String
-
-	signupBinding binding.String
-	signinBinding binding.String
-
-	clientErrorIcon *widget.Icon
+	main fyne.Window
+	info fyne.Window
+	sett fyne.Window
 }
 
-func New(settings *resource.Settings, servers resource.ServerList, rejectedPatches *patch.RejectionList) App {
-	a := App{}
-	a.App = app.New()
+func New(settingsDir string) (*App, error) {
+	a := &App{
+		App: app.NewWithID("com.nimbus-launcher"),
 
-	a.settings = settings
-	a.rejectedPatches = rejectedPatches
+		settingsPath: filepath.Join(settingsDir, "settings.json"),
+		profilesPath: filepath.Join(settingsDir, "profiles.json"),
 
-	a.client = client.NewStandardClient()
-
-	resources, err := resource.ClientResources()
-	if err != nil {
-		log.Panicf("Could not create client cache database: %v", err)
+		settings: SettingsBinding{binding.NewItem(func(_, _ *Settings) bool { return false })},
+		profiles: ProfileListBinding{binding.NewItem(func(_, _ []*Profile) bool { return false })},
 	}
-	a.clientResources = resources
 
-	a.main = a.NewWindow(fmt.Sprintf("Nimbus Launcher (%v)", version.Get().Name()))
+	a.settings.AddListener(binding.NewDataListener(func() {
+		settings := a.settings.Settings()
+		if settings == nil {
+			return
+		}
+
+		if err := a.WriteSettings(settings); err != nil {
+			log.Println(err)
+		}
+	}))
+
+	settings, err := a.ReadSettings()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load settings: %v", err)
+	}
+	a.settings.Set(settings)
+
+	profiles, err := a.ReadProfiles()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load profiles: %v", err)
+	}
+	a.profiles.Set(profiles)
+
+	selector, err := NewProfileSelector(a.profiles, a.ShowSettings)
+	if err != nil {
+		return nil, err
+	}
+	a.profileSelector = selector
+
+	a.main = a.NewWindow(fmt.Sprint("Nimbus Launcher (", version.Get().Name(), ")"))
 	a.main.SetFixedSize(true)
 	a.main.Resize(fyne.NewSize(800, 300))
+	a.main.SetIcon(fyne.NewStaticResource("icon.png", iconData))
 	a.main.SetMaster()
 
-	icon := resource.Icon()
-	if err == nil {
-		a.main.SetIcon(icon)
-	} else {
-		log.Println(fmt.Errorf("unable to load icon: %v", err))
-	}
+	launcher := NewLauncher(a.main, a.settings, selector.ProfileBinding, selector.PlayingBinding)
 
-	a.serverNameBinding = binding.NewString()
-	a.authServerBinding = binding.NewString()
-	a.localeBinding = binding.NewString()
+	heading := canvas.NewText("Launch LEGO Universe", theme.Color(theme.ColorNameForeground))
+	heading.TextSize = 24
 
-	a.clientPathBinding = binding.NewString()
+	infoButton := widget.NewButtonWithIcon("", theme.InfoIcon(), a.ShowInfo)
+	infoButton.Importance = widget.LowImportance
 
-	a.signupBinding = binding.NewString()
-	a.signinBinding = binding.NewString()
-
-	a.InitializeGlobalWidgets(servers)
-
-	a.LoadContent()
-
-	a.main.SetOnClosed(func() {
-		err := a.clientResources.Close()
-		if err != nil {
-			log.Printf("could not properly close clientCache: %v", err)
-		}
-	})
-
-	return a
-}
-
-func (app *App) InitializeGlobalWidgets(servers resource.ServerList) {
-	app.clientErrorIcon = widget.NewIcon(theme.NewErrorThemedResource(theme.ErrorIcon()))
-	app.clientErrorIcon.Hide()
-
-	app.refreshUpdatesButton = widget.NewButtonWithIcon(
-		"Check For Updates", theme.ViewRefreshIcon(),
-		func() {
-			app.CheckForUpdates(app.CurrentServer())
-		},
+	a.main.SetContent(
+		container.NewPadded(
+			container.NewBorder(
+				container.NewHBox(heading, infoButton),
+				launcher.Container,
+				nil, nil,
+				selector.Container,
+			),
+		),
 	)
 
-	app.playButton = widget.NewButtonWithIcon(
-		"Play", theme.MediaPlayIcon(),
-		app.PressPlay,
-	)
-	app.playButton.Importance = widget.HighImportance
-
-	app.progressBar = nlwidgets.NewBinaryProgressBar()
-
-	app.serverList = nlwidgets.NewServerList(servers, app.OnServerChanged)
-	app.serverList.SetSelectedServer(app.settings.SelectedServer)
+	return a, nil
 }
 
-func (app *App) BindServerInfo(serv *server.Server) {
-	if serv == nil {
-		serv = &server.Server{}
-		serv.Config = &ldf.BootConfig{}
+func (a *App) ShowInfo() {
+	if a.info != nil {
+		a.info.Show()
+		return
 	}
 
-	app.serverNameBinding.Set(serv.Config.ServerName)
-	app.authServerBinding.Set(serv.Config.AuthServerIP)
-	app.localeBinding.Set(serv.Config.Locale)
-
-	app.signupBinding.Set(serv.Config.SignupURL)
-	app.signinBinding.Set(serv.Config.SigninURL)
-
-	if len(serv.PatchProtocol) > 0 {
-		app.refreshUpdatesButton.Show()
-	} else {
-		app.refreshUpdatesButton.Hide()
-	}
+	a.info = NewInfoWindow(a)
+	a.info.SetOnClosed(func() { a.info = nil })
+	a.info.Show()
 }
 
-func (app *App) OnServerChanged(server *server.Server) {
-	app.BindServerInfo(server)
-
-	if server != nil {
-		app.settings.SelectedServer = server.ID
-	} else {
-		app.settings.SelectedServer = ""
+func (a *App) ShowSettings() {
+	if a.sett != nil {
+		a.sett.Show()
+		return
 	}
 
-	err := app.settings.Save()
+	a.sett = NewSettingsWindow(a, a.settings, a.profiles, a.profilesPath)
+	a.sett.SetOnClosed(func() { a.sett = nil })
+	a.sett.CenterOnScreen()
+	a.sett.Show()
+}
+
+func (a *App) WriteSettings(settings *Settings) error {
+	data, err := json.MarshalIndent(settings, "", "    ")
 	if err != nil {
-		log.Printf("save settings error: %v\n", err)
+		return fmt.Errorf("write settings: %v", err)
 	}
 
-	if app.IsReady() && app.settings.CheckPatchesAutomatically {
-		app.CheckForUpdates(server)
-	} else if server != nil {
-		if server.CheckingUpdates() {
-			app.SetCheckingUpdatesState()
-		} else if server.PendingUpdate() {
-			app.SetUpdateState()
-		} else {
-			app.SetNormalState()
-		}
-	}
-}
-
-func (app *App) CurrentServer() *server.Server {
-	return app.serverList.SelectedServer()
-}
-
-func (app *App) TransferCachedClientResources() error {
-	defer app.progressBar.Hide()
-	log.Println("Transferring cached client resources...")
-
-	// Reset replaced resources
-	replaced, err := app.clientResources.Replacements().List()
-	if err != nil {
-		return fmt.Errorf("could not query replaced resources: %w", err)
-	}
-	log.Printf("Queried %d replaced resources.", len(replaced))
-
-	app.progressBar.SetMax(float64(len(replaced)))
-	app.progressBar.ShowValue(0, "Transferring resources: $VALUE/$MAX")
-	for i, resource := range replaced {
-		log.Printf("Transferring replaced resource: %s", resource.Path)
-
-		err := client.WriteResource(app.settings.Client.Directory, resource)
-		if err != nil {
-			return fmt.Errorf("could not transfer replaced resource: %w", err)
-		}
-
-		app.progressBar.SetValue(float64(i + 1))
+	if err := os.WriteFile(a.settingsPath, data, 0755); err != nil {
+		return fmt.Errorf("write settings: %v", err)
 	}
 
-	// Delete added resources
-	added, err := app.clientResources.Additions().List()
-	if err != nil {
-		return fmt.Errorf("could not query added resources: %w", err)
-	}
-	log.Printf("Queried %d added resources.", len(added))
-
-	app.progressBar.SetMax(float64(len(replaced)))
-	app.progressBar.ShowValue(0, "Removing added resources: $VALUE/$MAX")
-	for i, resource := range added {
-		log.Printf("Deleting added resource: %s", resource)
-
-		err := client.RemoveResource(app.settings.Client.Directory, resource)
-		if err != nil && !errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("could not remove added resource: %w", err)
-		}
-
-		app.progressBar.SetValue(float64(i + 1))
-	}
-
-	app.progressBar.ShowFormat("Completed transfer(s)!")
-	log.Println("Completed transfer(s)!")
 	return nil
 }
 
-func (app *App) TransferPatchResources(server *server.Server) error {
-	log.Println("Transfer patch resources...")
-	patch, err := server.GetPatch(server.CurrentPatch)
+func (a *App) ReadSettings() (*Settings, error) {
+	data, err := os.ReadFile(a.settingsPath)
+	if errors.Is(err, os.ErrNotExist) {
+		if err := a.WriteSettings(&DefaultSettings); err != nil {
+			return nil, fmt.Errorf("read settings: %v", err)
+		}
+		return &DefaultSettings, nil
+	}
+
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("read settings: %v", err)
 	}
 
-	app.progressBar.ShowIndefinite()
-	err = patch.TransferResourcesWithDependencies(app.settings.Client.Directory, app.clientResources, server)
+	s := &Settings{}
+	if err := json.Unmarshal(data, s); err != nil {
+		return nil, fmt.Errorf("read settings: %v", err)
+	}
+
+	return s, nil
+}
+
+// func (a *App) WriteProfiles(profiles []*Profile) error {
+// 	data, err := json.MarshalIndent(profiles, "", "    ")
+// 	if err != nil {
+// 		return fmt.Errorf("write profiles: %v", err)
+// 	}
+
+// 	if err := os.WriteFile(a.profilesPath, data, 0755); err != nil {
+// 		return fmt.Errorf("write profiles: %v", err)
+// 	}
+
+// 	return nil
+// }
+
+func (a *App) ReadProfiles() ([]*Profile, error) {
+	data, err := os.ReadFile(a.profilesPath)
+	if errors.Is(err, os.ErrNotExist) {
+		return DefaultProfiles(boot.DefaultConfig()), nil
+	}
+
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("read profiles: %v", err)
 	}
 
-	app.progressBar.ShowFormat("Completed transfer(s)!")
-	log.Println("Completed transfer(s)!")
-	return nil
+	profiles := []*Profile{}
+	if err := json.Unmarshal(data, &profiles); err != nil {
+		return nil, fmt.Errorf("read profiles: %v", err)
+	}
+
+	return profiles, nil
 }
 
-func (app *App) CopyBootConfiguration(server *server.Server) error {
-	data, err := os.ReadFile(server.BootPath())
-	if err != nil {
-		return fmt.Errorf("cannot read \"%s\": %w", server.BootPath(), err)
-	}
-
-	configPath := filepath.Join(app.settings.Client.Directory, "boot.cfg")
-	return os.WriteFile(configPath, data, 0755)
-}
-
-func (app *App) PressPlay() {
-	app.SetPlayingState()
-
-	server := app.CurrentServer()
-	if server == nil {
-		dialog.ShowInformation("Select Server", "Please select a server.", app.main)
-		app.SetNormalState()
-		return
-	}
-
-	log.Printf("Selected server: %s\n", server.Name)
-
-	err := app.TransferCachedClientResources()
-	if err != nil {
-		log.Println(err)
-		dialog.ShowError(fmt.Errorf("client resources may be incorrect when running: %v", err), app.main)
-	}
-
-	if app.settings.SelectedServer != app.settings.PreviouslyRunServer {
-		log.Println("Selected server does not match previously run server; Copying over boot.cfg")
-		err := app.CopyBootConfiguration(server)
-		if err != nil {
-			dialog.ShowError(fmt.Errorf("could not copy \"boot.cfg\": %v", err), app.main)
-			app.SetNormalState()
-			return
-		}
-		log.Println("Copy completed.")
-	}
-
-	if len(server.CurrentPatch) > 0 {
-		err := app.TransferPatchResources(server)
-		if err != nil {
-			log.Println(err)
-			dialog.ShowError(fmt.Errorf("patch resources may be incorrect when running: %v", err), app.main)
-		}
-	}
-
-	app.settings.PreviouslyRunServer = app.settings.SelectedServer
-	app.settings.Save()
-
-	log.Println("Launching Lego Universe...")
-	log.Printf("Close launcher when played: %v\n", app.settings.CloseOnPlay)
-
-	cmd, err := app.client.Start()
-	if err != nil {
-		log.Println(err)
-		dialog.ShowError(err, app.main)
-		app.SetNormalState()
-		return
-	}
-
-	if app.settings.CloseOnPlay {
-		app.main.Close()
-		return
-	}
-
-	app.progressBar.Hide()
-	go func(cmd *exec.Cmd) {
-		if err := cmd.Wait(); err != nil {
-			log.Println(err)
-		}
-		log.Println("Client exited.")
-		app.SetNormalState()
-	}(cmd)
-}
-
-func (app *App) PressUpdate() {
-	app.Update(app.CurrentServer())
-}
-
-func (app *App) ShowSettings() {
-	if app.settingsWindow != nil {
-		app.settingsWindow.RequestFocus()
-		return
-	}
-
-	app.settings.PreviouslyRunServer = ""
-	app.settings.Save()
-
-	app.settingsWindow = nlwindows.NewSettingsWindow(app, func(w fyne.Window) []*container.TabItem {
-		return []*container.TabItem{
-			container.NewTabItem("Servers", app.ServerSettings(w)),
-			container.NewTabItem("Launcher", app.LauncherSettings(w)),
-		}
-	})
-
-	app.settingsWindow.SetOnClosed(func() {
-		app.settingsWindow = nil
-
-		if app.client.IsValid() {
-			app.serverList.Enable()
-		}
-	})
-
-	app.serverList.Disable()
-
-	app.settingsWindow.CenterOnScreen()
-	app.settingsWindow.Show()
-
-}
-
-func (app *App) ShowPatch(patch patch.Patch, onConfirmCancel func(nlwindows.PatchAcceptState)) {
-	if app.patchWindow != nil {
-		app.patchWindow.RequestFocus()
-		return
-	}
-
-	app.patchWindow = nlwindows.NewPatchReviewWindow(app, patch, onConfirmCancel)
-	app.patchWindow.SetOnClosed(func() {
-		app.patchWindow = nil
-		onConfirmCancel(nlwindows.PatchCancel)
-	})
-
-	app.patchWindow.CenterOnScreen()
-	app.patchWindow.Show()
-}
-
-func (app *App) ShowInfo() {
-	if app.infoWindow != nil {
-		app.infoWindow.RequestFocus()
-		return
-	}
-
-	app.infoWindow = nlwindows.NewInfoWindow(app)
-	app.infoWindow.SetOnClosed(func() {
-		app.infoWindow = nil
-	})
-
-	app.infoWindow.CenterOnScreen()
-	app.infoWindow.Show()
-}
-
-func (app *App) RunUpdate(server *server.Server, patch patch.Patch) {
-	defer app.serverList.RemoveAsUpdating(server)
-
-	log.Println("Starting update...")
-	err := patch.UpdateResources(server, app.rejectedPatches)
-	if err != nil {
-		log.Println(err)
-		dialog.ShowError(err, app.main)
-		return
-	}
-	log.Println("Update completed.")
-
-	app.serverList.Refresh()
-
-	server.CurrentPatch = patch.Version()
-	app.serverList.Save()
-}
-
-func (app *App) Update(serv *server.Server) {
-	app.SetUpdatingState()
-
-	app.serverList.MarkAsUpdating(serv)
-
-	versions, ok := serv.PatchesSummary()
-	if !ok {
-		log.Printf("Patches missing for \"%s\"\n", serv.Name)
-		return
-	}
-
-	go func(version string, serv *server.Server) {
-		defer serv.SetState(server.Normal)
-		log.Printf("Getting patch \"%s\" for %s\n", version, serv.Name)
-
-		p, err := serv.GetPatch(version)
-		if err != nil {
-			log.Printf("Patch error: %v", err)
-			if !errors.Is(err, patch.ErrPatchesUnavailable) {
-				dialog.ShowError(err, app.main)
-			}
-
-			app.SetNormalState()
-			return
-		}
-
-		log.Printf("Patch received: %s", p.Summary())
-
-		if !app.settings.ReviewPatchBeforeUpdate {
-			app.RunUpdate(serv, p)
-			app.SetNormalState()
-			return
-		}
-
-		app.ShowPatch(p, func(state nlwindows.PatchAcceptState) {
-			defer app.SetNormalState()
-
-			if state == nlwindows.PatchCancel {
-				return
-			}
-
-			if state == nlwindows.PatchReject {
-				err := app.rejectedPatches.Add(serv, p.Version())
-				if err == nil {
-					log.Printf("Rejected patch version \"%s\"\n", p.Version())
-				} else {
-					dialog.ShowError(fmt.Errorf("failed to reject patch: %v", err), app.main)
-				}
-				return
-			}
-
-			app.RunUpdate(serv, p)
-		})
-	}(versions.CurrentVersion, serv)
-}
-
-func (app *App) CheckForUpdates(serv *server.Server) {
-	if serv == nil {
-		return
-	}
-
-	if len(serv.Config.PatchServerIP) == 0 || !app.clientErrorIcon.Hidden {
-		return
-	}
-
-	if _, ok := serv.PatchesSummary(); ok {
-		log.Printf("Patches for \"%s\" already received", serv.Name)
-		return
-	}
-
-	serv.SetState(server.CheckingUpdates)
-	app.SetCheckingUpdatesState()
-	go func(serv *server.Server) {
-		log.Printf("Checking for updates for \"%s\"; Current version: \"%s\"\n", serv.Name, serv.CurrentPatch)
-
-		patches, err := serv.GetPatchesSummary()
-		if err != nil {
-			log.Printf("Patch server error: %v\n", err)
-			if err != patch.ErrPatchesUnavailable && err != patch.ErrPatchesUnsupported {
-				dialog.ShowError(err, app.main)
-			}
-
-			if err != patch.ErrPatchesUnauthorized {
-				serv.SetPatchesSummary(patch.Summary{})
-			}
-
-			serv.SetState(server.Normal)
-			app.SetNormalState()
-			return
-		}
-
-		if serv.CurrentPatch == patches.CurrentVersion {
-			log.Println("Server is already latest version.")
-			serv.SetPatchesSummary(patches)
-			serv.SetState(server.Normal)
-			app.SetNormalState()
-			return
-		}
-
-		if err := patch.ValidateVersionName(patches.CurrentVersion); err != nil {
-			log.Println(err)
-			serv.SetPatchesSummary(patches)
-			serv.SetState(server.Normal)
-			app.SetNormalState()
-			return
-		}
-
-		log.Printf("Patch version \"%s\" is available\n", patches.CurrentVersion)
-
-		if app.rejectedPatches.IsRejected(serv, patches.CurrentVersion) {
-			log.Printf("Patch version \"%s\" is rejected; Aborting update sequence.\n", patches.CurrentVersion)
-			serv.SetState(server.Normal)
-			app.SetNormalState()
-			return
-		}
-
-		serv.SetPatchesSummary(patches)
-		serv.SetState(server.PendingUpdate)
-		app.SetUpdateState()
-	}(serv)
-}
-
-func (app *App) IsReady() bool {
-	return app.playButton != nil
-}
-
-func (app *App) CheckClient() {
-	log.Printf("Using \"%s\" as client directory\n", app.settings.Client.Directory)
-	app.clientPathBinding.Set(app.settings.ClientPath())
-
-	err := app.client.SetPath(app.settings.ClientPath())
-	if err != nil {
-		log.Printf("Cannot find executable \"%s\" in client directory: %v", app.settings.Client.Name, err)
-		app.playButton.Disable()
-		app.serverList.Disable()
-		app.clientErrorIcon.Show()
-	} else {
-		log.Printf("Found valid client \"%s\"\n", app.settings.Client.Name)
-		app.clientErrorIcon.Hide()
-		app.serverList.Enable()
-		app.SetNormalState()
-	}
-}
-
-func (app *App) CheckPrerequisites() {
-	if app.client.MeetsPrerequisites() {
-		app.settings.MeetsPrerequisites = true
-		app.settings.Save()
-		return
-	}
-
-	window := nlwindows.NewPrerequisitesWindow(app, func(b bool) {
-		app.settings.MeetsPrerequisites = b
-		app.settings.Save()
-	})
-
-	window.CenterOnScreen()
-	window.RequestFocus()
-	window.Show()
-}
-
-func (app *App) Start() {
-	app.CheckClient()
-
-	if app.settings.CheckPatchesAutomatically {
-		app.CheckForUpdates(app.CurrentServer())
-	}
-
-	if !app.settings.MeetsPrerequisites {
-		go app.CheckPrerequisites()
-	}
-
-	app.main.CenterOnScreen()
-	app.main.ShowAndRun()
+func (a *App) Start() {
+	a.main.CenterOnScreen()
+	a.main.ShowAndRun()
 }

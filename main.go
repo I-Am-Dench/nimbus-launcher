@@ -1,41 +1,29 @@
 package main
 
 import (
-	"errors"
+	"fmt"
 	"log"
 	"os"
 
 	"github.com/I-Am-Dench/nimbus-launcher/app"
-	"github.com/I-Am-Dench/nimbus-launcher/resource"
 	"github.com/I-Am-Dench/nimbus-launcher/version"
 )
 
+const (
+	SettingsDir = "settings"
+)
+
 func main() {
-	log.Printf("Starting Nimbus Launcher (%v)", version.Get())
+	fmt.Printf("Starting Nimbus Launcher (%v)\n", version.Get())
 
-	err := resource.InitializeSettings()
+	if err := os.MkdirAll(SettingsDir, 0755); err != nil {
+		log.Fatal(err)
+	}
+
+	a, err := app.New(SettingsDir)
 	if err != nil {
-		log.Panicf("Settings initialization error: %v", err)
+		log.Fatal(err)
 	}
 
-	settings, err := resource.LauncherSettings()
-	if err != nil {
-		log.Println(err)
-	}
-	settings.Adjust()
-
-	servers, err := resource.Servers()
-	if err != nil {
-		log.Println(err)
-	}
-	log.Printf("Loaded %d server configuration(s)\n", servers.Size())
-
-	rejectedPatches, err := resource.PatchRejections()
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		log.Println(err)
-	}
-	log.Printf("Loaded %d patch rejection(s)\n", rejectedPatches.Amount())
-
-	app := app.New(&settings, servers, rejectedPatches)
-	app.Start()
+	a.Start()
 }

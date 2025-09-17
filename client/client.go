@@ -1,18 +1,48 @@
 package client
 
 import (
+	"os"
 	"os/exec"
+	"path/filepath"
 )
 
-type Client interface {
-	Path() string
-	SetPath(path string) error
-	IsValid() bool
-	Start() (*exec.Cmd, error)
+const (
+	DefaultDir = "LEGO Software" + string(filepath.Separator) + "LEGO Universe"
+	DefaultExe = "client" + string(filepath.Separator) + "legouniverse.exe"
+)
 
-	MeetsPrerequisites() bool
+type Config struct {
+	Directory string `json:"directory"`
+	Name      string `json:"name"`
 }
 
-func NewStandardClient() Client {
-	return new(standardClient)
+func (c *Config) ClientPath() string {
+	return filepath.Join(c.Directory, c.Name)
+}
+
+func (c *Config) BootPath() string {
+	return filepath.Join(filepath.Dir(c.ClientPath()), "boot.cfg")
+}
+
+func (c *Config) IsValid() bool {
+	stats, err := os.Stat(c.ClientPath())
+	if err != nil {
+		return false
+	}
+
+	return !stats.IsDir()
+}
+
+var DefaultConfig = Config{
+	Directory: filepath.Join(GetDefaultAppDirectory(), DefaultDir),
+	Name:      DefaultExe,
+}
+
+func Start(config Config) (*exec.Cmd, error) {
+	path := config.ClientPath()
+
+	cmd := exec.Command(path)
+	cmd.Dir = filepath.Dir(path)
+
+	return cmd, cmd.Start()
 }
