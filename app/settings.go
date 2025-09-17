@@ -128,7 +128,7 @@ func newProfileSettings(window fyne.Window, profilesBinding ProfileListBinding, 
 			"Remove Server",
 			"Remove",
 			"Cancel",
-			widget.NewLabel(fmt.Sprintf("Remove profile '%s'?", profile.Name)),
+			widget.NewLabel(fmt.Sprintf("Remove profile %q?", profile.Name)),
 			func(ok bool) {
 				if !ok {
 					return
@@ -140,7 +140,7 @@ func newProfileSettings(window fyne.Window, profilesBinding ProfileListBinding, 
 				if err := p.SaveProfiles(profiles); err != nil {
 					dialog.ShowError(err, p.window)
 				} else {
-					dialog.ShowInformation("Remove Profile", fmt.Sprint("Removed ", profile.Name), window)
+					dialog.ShowInformation("Remove Profile", fmt.Sprintf("Removed %q", profile.Name), window)
 				}
 				p.profileSelector.SetSelectedIndex(0)
 			},

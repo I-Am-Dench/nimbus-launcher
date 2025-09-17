@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/url"
 	"os"
+	"strconv"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -199,7 +200,7 @@ func (p *Profile) Locale() string {
 
 func DefaultProfiles(bootConfig boot.Config) []*Profile {
 	profile := &Profile{
-		Id:   fmt.Sprint(time.Now().Unix()),
+		Id:   strconv.FormatInt(time.Now().Unix(), 10),
 		Name: "Localhost",
 
 		Server: ServerInfo{

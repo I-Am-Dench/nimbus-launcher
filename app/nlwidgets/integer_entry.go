@@ -1,7 +1,6 @@
 package nlwidgets
 
 import (
-	"fmt"
 	"strconv"
 
 	"fyne.io/fyne/v2"
@@ -19,7 +18,7 @@ func NewIntegerEntry(initial ...int64) *IntegerEntry {
 	entry.ExtendBaseWidget(entry)
 
 	if len(initial) > 0 {
-		entry.Text = fmt.Sprint(initial[0])
+		entry.Text = strconv.FormatInt(initial[0], 10)
 	}
 
 	entry.PlaceHolder = "#"
@@ -52,5 +51,5 @@ func (e *IntegerEntry) Value() int64 {
 }
 
 func (e *IntegerEntry) SetValue(i int64) {
-	e.SetText(fmt.Sprint(i))
+	e.SetText(strconv.FormatInt(i, 10))
 }
