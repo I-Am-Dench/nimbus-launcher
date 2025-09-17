@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 
@@ -57,7 +57,7 @@ func New(settingsDir string) (*App, error) {
 		}
 
 		if err := a.WriteSettings(settings); err != nil {
-			log.Println(err)
+			slog.Error("Failed to write settings", "error", err)
 		}
 	}))
 
@@ -163,19 +163,6 @@ func (a *App) ReadSettings() (*Settings, error) {
 
 	return s, nil
 }
-
-// func (a *App) WriteProfiles(profiles []*Profile) error {
-// 	data, err := json.MarshalIndent(profiles, "", "    ")
-// 	if err != nil {
-// 		return fmt.Errorf("write profiles: %v", err)
-// 	}
-
-// 	if err := os.WriteFile(a.profilesPath, data, 0755); err != nil {
-// 		return fmt.Errorf("write profiles: %v", err)
-// 	}
-
-// 	return nil
-// }
 
 func (a *App) ReadProfiles() ([]*Profile, error) {
 	data, err := os.ReadFile(a.profilesPath)

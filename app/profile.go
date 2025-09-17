@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/url"
 	"os"
 	"time"
@@ -141,7 +141,7 @@ func (s *ServerInfo) BootConfig() *boot.Config {
 
 	config, err := s.LoadBootConfig()
 	if err != nil {
-		log.Println(err)
+		slog.Error("Failed to load boot config", "error", err)
 		return &boot.Config{}
 	}
 
@@ -219,13 +219,13 @@ func HyperLinkButton(text string, icon fyne.Resource, urlBinding binding.String)
 
 		url, err := url.Parse(rawUrl)
 		if err != nil {
-			log.Printf("cannot parse URL \"%s\": %v", rawUrl, err)
+			slog.Error("Failed to parse URL", "url", rawUrl, "error", err)
 			return
 		}
 
-		log.Printf("Opening link: %v", url)
+		slog.Info("Opening link", "url", url)
 		if err := fyne.CurrentApp().OpenURL(url); err != nil {
-			log.Printf("could not open URL \"%s\": %v", url, err)
+			slog.Error("Could not open URL", "url", url, "error", err)
 		}
 	})
 

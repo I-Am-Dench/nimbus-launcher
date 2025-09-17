@@ -1,7 +1,7 @@
 package app
 
 import (
-	"log"
+	"log/slog"
 	"net/url"
 	"os"
 	"os/exec"
@@ -22,7 +22,7 @@ func init() {
 	var err error
 	RepoUrl, err = url.Parse("https://github.com/I-Am-Dench/nimbus-launcher")
 	if err != nil {
-		log.Println(err)
+		slog.Error(err.Error())
 	}
 }
 
@@ -42,7 +42,7 @@ func OpenLicense() {
 	case "windows":
 		cmd = exec.Command("notepad", path)
 	default:
-		log.Printf("OpenLicense: unsuppored GOOS: %s", runtime.GOOS)
+		slog.Error("OpenLicense: unsupported GOOS", "GOOS", runtime.GOOS)
 		return
 	}
 

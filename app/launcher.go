@@ -3,7 +3,7 @@ package app
 import (
 	"context"
 	"errors"
-	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"sync"
@@ -170,9 +170,8 @@ func (l *Launcher) Play() {
 		return
 	}
 
-	fmt.Println("Copying boot.cfg")
-
 	clientConfig := l.ClientConfig()
+	slog.Info("Copying boot config...")
 
 	bootFile, err := os.Create(clientConfig.BootPath())
 	if err != nil {

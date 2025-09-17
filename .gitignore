@@ -5,3 +5,4 @@ release/launcher
 
 *.exe
 *.zip
+*.log
