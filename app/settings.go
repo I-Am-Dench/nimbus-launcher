@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
@@ -136,6 +137,10 @@ func newProfileSettings(window fyne.Window, profilesBinding ProfileListBinding, 
 
 				profiles = append(profiles[:index], profiles[index+1:]...)
 				profilesBinding.Set(profiles)
+
+				if err := os.Remove(profile.Server.Boot); err != nil {
+					slog.Error("Failed to remove boot config", "boot", profile.Server.Boot, "error", err)
+				}
 
 				if err := p.SaveProfiles(profiles); err != nil {
 					dialog.ShowError(err, p.window)
