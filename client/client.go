@@ -37,12 +37,3 @@ var DefaultConfig = Config{
 	Directory: filepath.Join(GetDefaultAppDirectory(), DefaultDir),
 	Name:      DefaultExe,
 }
-
-// func Start(config Config) (*exec.Cmd, error) {
-// 	path := config.ClientPath()
-
-// 	cmd := exec.Command(path)
-// 	cmd.Dir = filepath.Dir(path)
-
-// 	return cmd, cmd.Start()
-// }

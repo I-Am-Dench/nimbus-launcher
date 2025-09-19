@@ -185,7 +185,6 @@ func Start(config Config) (*exec.Cmd, error) {
 	)
 
 	cmd.Stderr = logger.NewWriter(slog.LevelError)
-	cmd.Stdout = logger.NewWriter(slog.LevelInfo)
 
 	return cmd, cmd.Start()
 }
