@@ -115,5 +115,5 @@ Despite being disabled, patcher settings can still be configured and saved for s
 - [ ] Launcher locales
 - [ ] Launcher themes!
 - [ ] Settings for `lwo_override.xml` configs
-- [ ] Setting for [aspect ratio fix](https://github.com/I-Am-Dench/nimbus-launcher/tree/patching)?
+- [ ] Setting for [aspect ratio fix](https://www.pcgamingwiki.com/wiki/Lego_Universe#Aspect_Ratio_Fix)?
 - [ ] Client version detection (v1.10.64 vs Darkflame Client vs Alpha Client)
