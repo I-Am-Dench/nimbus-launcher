@@ -146,10 +146,11 @@ func (a *App) WriteSettings(settings *Settings) error {
 func (a *App) ReadSettings() (*Settings, error) {
 	data, err := os.ReadFile(a.settingsPath)
 	if errors.Is(err, os.ErrNotExist) {
-		if err := a.WriteSettings(&DefaultSettings); err != nil {
+		defaultSettings := DefaultSettings()
+		if err := a.WriteSettings(defaultSettings); err != nil {
 			return nil, fmt.Errorf("read settings: %v", err)
 		}
-		return &DefaultSettings, nil
+		return defaultSettings, nil
 	}
 
 	if err != nil {
@@ -167,7 +168,18 @@ func (a *App) ReadSettings() (*Settings, error) {
 func (a *App) ReadProfiles() ([]*Profile, error) {
 	data, err := os.ReadFile(a.profilesPath)
 	if errors.Is(err, os.ErrNotExist) {
-		return DefaultProfiles(boot.DefaultConfig()), nil
+		profiles := DefaultProfiles(boot.DefaultConfig(), a.profilesPath)
+
+		data, err := json.MarshalIndent(profiles, "", "    ")
+		if err != nil {
+			return nil, fmt.Errorf("read profiles: %v", err)
+		}
+
+		if err := os.WriteFile(a.profilesPath, data, 0664); err != nil {
+			return nil, fmt.Errorf("read profiles: %v", err)
+		}
+
+		return profiles, nil
 	}
 
 	if err != nil {

@@ -204,6 +204,7 @@ func (l *Launcher) Play() {
 		if err := cmd.Wait(); err != nil {
 			dialog.ShowError(err, l.window)
 		}
+		slog.Info("Client exited.")
 		fyne.Do(l.SetNormal)
 	}(cmd)
 }

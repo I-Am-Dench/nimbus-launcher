@@ -2,7 +2,6 @@ package client
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
 )
 
@@ -14,6 +13,7 @@ const (
 type Config struct {
 	Directory string `json:"directory"`
 	Name      string `json:"name"`
+	Etc       Etc    `json:"etc,omitempty"`
 }
 
 func (c *Config) ClientPath() string {
@@ -38,11 +38,11 @@ var DefaultConfig = Config{
 	Name:      DefaultExe,
 }
 
-func Start(config Config) (*exec.Cmd, error) {
-	path := config.ClientPath()
+// func Start(config Config) (*exec.Cmd, error) {
+// 	path := config.ClientPath()
 
-	cmd := exec.Command(path)
-	cmd.Dir = filepath.Dir(path)
+// 	cmd := exec.Command(path)
+// 	cmd.Dir = filepath.Dir(path)
 
-	return cmd, cmd.Start()
-}
+// 	return cmd, cmd.Start()
+// }

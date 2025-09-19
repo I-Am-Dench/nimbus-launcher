@@ -160,3 +160,16 @@ func (h *Handler) WithGroup(name string) slog.Handler {
 		w:  h.w,
 	}
 }
+
+type logWriter struct {
+	level slog.Level
+}
+
+func NewWriter(level slog.Level) io.Writer {
+	return &logWriter{level: level}
+}
+
+func (w *logWriter) Write(p []byte) (int, error) {
+	slog.Log(context.Background(), w.level, string(p))
+	return len(p), nil
+}

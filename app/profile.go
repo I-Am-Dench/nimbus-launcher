@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -108,7 +109,11 @@ type ServerInfo struct {
 }
 
 func (s *ServerInfo) SaveBootConfig(path string, config *boot.Config) error {
-	data, err := ldf.MarshalText(config)
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return fmt.Errorf("server info: save boot config: %v", err)
+	}
+
+	data, err := ldf.MarshalLines(config)
 	if err != nil {
 		return fmt.Errorf("server info: save boot config: %v", err)
 	}
@@ -198,14 +203,18 @@ func (p *Profile) Locale() string {
 	return locale
 }
 
-func DefaultProfiles(bootConfig boot.Config) []*Profile {
+func (p *Profile) DefaultBootPath(dir string) string {
+	return filepath.Join(dir, BootDir, p.Id+".cfg")
+}
+
+func DefaultProfiles(bootConfig boot.Config, profilesPath string) []*Profile {
 	profile := &Profile{
 		Id:   strconv.FormatInt(time.Now().Unix(), 10),
 		Name: "Localhost",
+	}
 
-		Server: ServerInfo{
-			bootConfig: &bootConfig,
-		},
+	if err := profile.Server.SaveBootConfig(profile.DefaultBootPath(filepath.Dir(profilesPath)), &bootConfig); err != nil {
+		slog.Error(err.Error())
 	}
 
 	return []*Profile{profile}

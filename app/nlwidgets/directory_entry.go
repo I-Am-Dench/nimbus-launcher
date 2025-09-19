@@ -10,7 +10,12 @@ import (
 	"github.com/I-Am-Dench/nimbus-launcher/client"
 )
 
-func NewDirectorySelector(window fyne.Window) *widget.Entry {
+func NewDirectorySelector(window fyne.Window, onSelect ...func(string)) *widget.Entry {
+	var f func(string)
+	if len(onSelect) > 0 {
+		f = onSelect[0]
+	}
+
 	entry := widget.NewEntry()
 	entry.PlaceHolder = client.DefaultDir
 
@@ -26,7 +31,11 @@ func NewDirectorySelector(window fyne.Window) *widget.Entry {
 					return
 				}
 
-				entry.SetText(filepath.Clean(lu.Path()))
+				path := filepath.Clean(lu.Path())
+				entry.SetText(path)
+				if f != nil {
+					f(path)
+				}
 			}, window)
 		},
 	)

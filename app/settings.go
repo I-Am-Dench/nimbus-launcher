@@ -35,14 +35,6 @@ type Settings struct {
 	Launch LaunchConfig `json:"launch"`
 }
 
-var DefaultSettings = Settings{
-	Launch: LaunchConfig{
-		DefaultClient:             client.DefaultConfig,
-		CloseOnPlay:               true,
-		ReviewPatchesBeforeUpdate: true,
-	},
-}
-
 func compareProfiles(a, b *Profile) bool {
 	return a.Id == b.Id
 }
@@ -273,16 +265,12 @@ func (s *profileSettings) SaveProfiles(profiles []*Profile) error {
 }
 
 func (s *profileSettings) SaveProfile(profile *Profile, bootConfig *boot.Config) error {
-	bootDir := filepath.Join(filepath.Dir(s.profilesPath), BootDir)
-	if err := os.MkdirAll(bootDir, 0755); err != nil {
-		return fmt.Errorf("save profile: %v", err)
-	}
-
 	bootPath := profile.Server.Boot
 	if len(bootPath) == 0 { // Allows manually edited boot paths
-		bootPath = filepath.Join(bootDir, profile.Id+".cfg")
+		bootPath = profile.DefaultBootPath(filepath.Dir(s.profilesPath))
 	}
 
+	slog.Debug(bootPath)
 	if err := profile.Server.SaveBootConfig(bootPath, bootConfig); err != nil {
 		return fmt.Errorf("save profile: %v", err)
 	}
@@ -406,6 +394,8 @@ func newLauncherSettings(window fyne.Window, settingsBinding SettingsBinding) *l
 	clientName.PlaceHolder = "client/legouniverse.exe"
 	clientName.SetText(settings.Launch.DefaultClient.Name)
 
+	etcSettings, etcFunc := NewEtcSettings(window, settings)
+
 	saveButton := widget.NewButtonWithIcon("Save", theme.DocumentSaveIcon(), func() {
 		settings := l.Settings()
 
@@ -415,6 +405,7 @@ func newLauncherSettings(window fyne.Window, settingsBinding SettingsBinding) *l
 		settings.Launch.DefaultClient = client.Config{
 			Directory: installDirectory.Text,
 			Name:      clientName.Text,
+			Etc:       etcFunc(),
 		}
 
 		dialog.ShowInformation("Launcher Settings", "Settings saved!", window)
@@ -438,6 +429,7 @@ func newLauncherSettings(window fyne.Window, settingsBinding SettingsBinding) *l
 						widget.NewFormItem("Directory", installDirectory),
 						widget.NewFormItem("Name", clientName),
 					),
+					etcSettings,
 				),
 			),
 		),
