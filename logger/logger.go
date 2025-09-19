@@ -102,7 +102,8 @@ func (h *Handler) Handle(_ context.Context, r slog.Record) error {
 
 	buf := make([]byte, 0, 256)
 	if !r.Time.IsZero() {
-		buf = fmt.Append(buf, r.Time.Format(time.DateTime), " ")
+		buf = r.Time.AppendFormat(buf, time.DateTime)
+		buf = append(buf, ' ')
 	}
 
 	level := r.Level.String()
