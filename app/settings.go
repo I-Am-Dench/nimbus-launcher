@@ -270,7 +270,6 @@ func (s *profileSettings) SaveProfile(profile *Profile, bootConfig *boot.Config)
 		bootPath = profile.DefaultBootPath(filepath.Dir(s.profilesPath))
 	}
 
-	slog.Debug(bootPath)
 	if err := profile.Server.SaveBootConfig(bootPath, bootConfig); err != nil {
 		return fmt.Errorf("save profile: %v", err)
 	}
