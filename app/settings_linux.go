@@ -27,6 +27,7 @@ func DefaultSettings() *Settings {
 	clientConfig.Etc = client.Steam{
 		SteamHome:  filepath.Join(home, ".steam", "steam"),
 		CompatData: "{InstallationDir}/.proton",
+		AppId:      client.DefaultSteamAppId,
 	}
 
 	return &Settings{
@@ -58,6 +59,16 @@ func NewEtcSettings(window fyne.Window, settings *Settings) (*fyne.Container, fu
 	compatData.PlaceHolder = ".proton"
 	compatData.SetText(settings.Launch.DefaultClient.Etc.CompatData)
 
+	steamAppId := nlwidgets.NewIntegerEntry()
+	steamAppId.PlaceHolder = "21140"
+
+	if settings.Launch.DefaultClient.Etc.AppId > 0 {
+		steamAppId.SetValue(settings.Launch.DefaultClient.Etc.AppId)
+	}
+
+	protonLog := widget.NewCheck("Enable Proton logging", func(b bool) {})
+	protonLog.SetChecked(settings.Launch.DefaultClient.Etc.UseLog)
+
 	header := canvas.NewText("Proton", theme.Color(theme.ColorNameForeground))
 	header.TextSize = 16
 
@@ -67,12 +78,16 @@ func NewEtcSettings(window fyne.Window, settings *Settings) (*fyne.Container, fu
 				widget.NewFormItem("Proton", protonSelector),
 				widget.NewFormItem("Steam Home", steamHome),
 				widget.NewFormItem("Compat Data", compatData),
+				widget.NewFormItem("App ID", steamAppId),
+				widget.NewFormItem("Enable Log", protonLog),
 			),
 		), func() client.Etc {
 			return client.Steam{
 				Proton:     protonSelector.Selected,
 				SteamHome:  steamHome.Text,
 				CompatData: compatData.Text,
+				AppId:      steamAppId.Value(),
+				UseLog:     protonLog.Checked,
 			}
 		}
 }

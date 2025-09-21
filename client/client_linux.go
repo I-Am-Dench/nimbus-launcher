@@ -18,6 +18,10 @@ import (
 	"github.com/I-Am-Dench/nimbus-launcher/logger"
 )
 
+const (
+	DefaultSteamAppId = 21140
+)
+
 type Etc = Steam
 
 type ProtonVersion struct {
@@ -56,6 +60,8 @@ type Steam struct {
 	Proton     string `json:"proton"`
 	SteamHome  string `json:"steamHome"`
 	CompatData string `json:"compatdata"`
+	UseLog     bool   `json:"useLog"`
+	AppId      int64  `json:"appId"`
 }
 
 func EvalHomeDir(path string) string {
@@ -183,6 +189,14 @@ func Start(config Config) (*exec.Cmd, error) {
 		"STEAM_COMPAT_DATA_PATH="+compatdata,
 		"STEAM_COMPAT_CLIENT_INSTALL_PATH="+steamApps,
 	)
+
+	if config.Etc.AppId > 0 {
+		cmd.Env = append(cmd.Env, "SteamGameId="+strconv.FormatInt(config.Etc.AppId, 10))
+	}
+
+	if config.Etc.UseLog {
+		cmd.Env = append(cmd.Env, "PROTON_LOG=1")
+	}
 
 	cmd.Stderr = logger.NewWriter(slog.LevelError)
 	cmd.Stdout = logger.NewWriter(slog.LevelInfo)
