@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/I-Am-Dench/nimbus-launcher/logger"
 )
@@ -21,5 +22,6 @@ func Start(config Config) (*exec.Cmd, error) {
 
 	cmd.Stderr = logger.NewWriter(slog.LevelError)
 
+	slog.Info("Starting client", "cmd", strings.Join(cmd.Args, " "))
 	return cmd, cmd.Start()
 }

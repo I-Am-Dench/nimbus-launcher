@@ -178,13 +178,15 @@ func Start(config Config) (*exec.Cmd, error) {
 	cmd.Env = os.Environ()
 
 	cmd.Env = append(cmd.Env,
-		"WINEDLLOVERRIDES=dinput8.dll=n,b",
+		"WINEDLLOVERRIDES=\"dinput8.dll=n,b\"",
 		"PROTON_USE_WINED3D=1",
 		"STEAM_COMPAT_DATA_PATH="+compatdata,
 		"STEAM_COMPAT_CLIENT_INSTALL_PATH="+steamApps,
 	)
 
 	cmd.Stderr = logger.NewWriter(slog.LevelError)
+	cmd.Stdout = logger.NewWriter(slog.LevelInfo)
 
+	slog.Info("Starting client", "cmd", strings.Join(cmd.Args, " "))
 	return cmd, cmd.Start()
 }

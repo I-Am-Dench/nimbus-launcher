@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -111,6 +112,7 @@ func (h *Handler) Handle(_ context.Context, r slog.Record) error {
 	buf = append(buf, padding[:max(len(padding)-len(level), 0)]...)
 	buf = append(buf, ' ')
 	buf = append(buf, r.Message...)
+	buf = bytes.TrimSuffix(buf, []byte{'\n'})
 
 	if r.NumAttrs()+len(h.attrs) > 0 {
 		buf = append(buf, " ~"...)
