@@ -142,6 +142,7 @@ func (p *ProfileForm) SetPatcherForm(config *PatcherConfig) {
 	items, p.patcherFunc = patcher.ProfileForm()
 	p.patcherForm.Items = append(p.patcherForm.Items[:1], items...)
 
+	p.patcherForm.Refresh()
 	p.patcherContainer.Show()
 }
 
