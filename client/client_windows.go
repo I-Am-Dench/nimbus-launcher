@@ -21,6 +21,7 @@ func Start(config Config) (*exec.Cmd, error) {
 	cmd.Dir = filepath.Dir(path)
 
 	cmd.Stderr = logger.NewWriter(slog.LevelError)
+	cmd.Stdout = logger.NewWriter(slog.LevelInfo)
 
 	slog.Info("Starting client", "cmd", strings.Join(cmd.Args, " "))
 	return cmd, cmd.Start()

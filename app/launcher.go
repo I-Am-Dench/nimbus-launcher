@@ -171,7 +171,6 @@ func (l *Launcher) Play() {
 	}
 
 	clientConfig := l.ClientConfig()
-	slog.Info("Copying boot config...")
 
 	bootFile, err := os.Create(clientConfig.BootPath())
 	if err != nil {
@@ -180,21 +179,32 @@ func (l *Launcher) Play() {
 		return
 	}
 
+	settings := l.Settings()
+
+	isPacked := settings.Launch.DefaultClient.IsPacked
+	if profile.Client != nil {
+		isPacked = profile.Client.IsPacked
+	}
+
 	boot := profile.Server.BootConfig()
+	boot.UseCatalog = isPacked
+
+	slog.Info("Writing boot config", "serverName", boot.ServerName, "authIP", boot.AuthServerIP, "useCatalog", boot.UseCatalog, "manifestFile", boot.ManifestFile)
+
 	if err := ldf.NewTextEncoder(bootFile).Encode(boot); err != nil {
 		dialog.ShowError(err, l.window)
 		l.SetNormal()
 		return
 	}
 
-	cmd, err := client.Start(l.ClientConfig())
+	cmd, err := client.Start(clientConfig)
 	if err != nil {
 		dialog.ShowError(err, l.window)
 		l.SetNormal()
 		return
 	}
 
-	if l.Settings().Launch.CloseOnPlay {
+	if settings.Launch.CloseOnPlay {
 		fyne.CurrentApp().Quit()
 		return
 	}
@@ -204,7 +214,7 @@ func (l *Launcher) Play() {
 		if err := cmd.Wait(); err != nil {
 			dialog.ShowError(err, l.window)
 		}
-		slog.Info("Client exited.", "exitCode", cmd.ProcessState.ExitCode())
+		slog.Info("Client exited", "exitCode", cmd.ProcessState.ExitCode())
 		fyne.Do(l.SetNormal)
 	}(cmd)
 }

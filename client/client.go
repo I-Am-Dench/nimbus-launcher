@@ -13,6 +13,7 @@ const (
 type Config struct {
 	Directory string `json:"directory"`
 	Name      string `json:"name"`
+	IsPacked  bool   `json:"packed"`
 	Etc       Etc    `json:"etc,omitempty"`
 }
 

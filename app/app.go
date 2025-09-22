@@ -16,7 +16,6 @@ import (
 	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"github.com/I-Am-Dench/goverbuild/models/boot"
 	"github.com/I-Am-Dench/nimbus-launcher/version"
 )
 
@@ -168,7 +167,7 @@ func (a *App) ReadSettings() (*Settings, error) {
 func (a *App) ReadProfiles() ([]*Profile, error) {
 	data, err := os.ReadFile(a.profilesPath)
 	if errors.Is(err, os.ErrNotExist) {
-		profiles := DefaultProfiles(boot.DefaultConfig(), a.profilesPath)
+		profiles := DefaultProfiles(DefaultBootConfig(), a.profilesPath)
 
 		data, err := json.MarshalIndent(profiles, "", "    ")
 		if err != nil {

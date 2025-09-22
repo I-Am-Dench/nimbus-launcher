@@ -34,6 +34,5 @@ type Options struct {
 
 type Environment interface {
 	Locale() string
-	Packed() bool
 	NewPatcher(ctx context.Context, options Options) (Patcher, error)
 }

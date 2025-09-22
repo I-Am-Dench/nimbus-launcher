@@ -29,6 +29,7 @@ type BootForm struct {
 	signupUrl        *widget.Entry
 	registerUrl      *widget.Entry
 	crashLogUrl      *widget.Entry
+	manifestFile     *widget.Entry
 	trackDiskUsage   *widget.Check
 }
 
@@ -52,6 +53,7 @@ func (b *BootForm) Set(config boot.Config) {
 	b.signupUrl.SetText(config.SignupURL)
 	b.registerUrl.SetText(config.RegisterURL)
 	b.crashLogUrl.SetText(config.CrashLogURL)
+	b.manifestFile.SetText(config.ManifestFile)
 	b.trackDiskUsage.SetChecked(config.TrackDiskUsage)
 }
 
@@ -75,6 +77,7 @@ func (b *BootForm) Get() *boot.Config {
 		RegisterURL:      b.registerUrl.Text,
 		CrashLogURL:      b.crashLogUrl.Text,
 		Locale:           b.locale.Selected,
+		ManifestFile:     b.manifestFile.Text,
 		TrackDiskUsage:   b.trackDiskUsage.Checked,
 	}
 }
@@ -99,6 +102,7 @@ func NewBootForm() *BootForm {
 		signupUrl:        widget.NewEntry(),
 		registerUrl:      widget.NewEntry(),
 		crashLogUrl:      widget.NewEntry(),
+		manifestFile:     widget.NewEntry(),
 		trackDiskUsage:   widget.NewCheck("", func(b bool) {}),
 	}
 
@@ -109,6 +113,7 @@ func NewBootForm() *BootForm {
 	form.patchServerDir.PlaceHolder = "luclient"
 	form.ugcServerIp.PlaceHolder = "127.0.0.1"
 	form.ugcServerDir.PlaceHolder = "3dservices"
+	form.manifestFile.PlaceHolder = "trunk.txt"
 
 	form.Container = container.NewVBox(
 		widget.NewForm(
@@ -137,6 +142,7 @@ func NewBootForm() *BootForm {
 						widget.NewFormItem("Register URL", form.registerUrl),
 						widget.NewFormItem("Crash Log URL", form.crashLogUrl),
 						widget.NewFormItem("Track Disk Usage", form.trackDiskUsage),
+						widget.NewFormItem("Manifest File", form.manifestFile),
 					),
 				),
 			),

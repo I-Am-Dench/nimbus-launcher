@@ -140,18 +140,18 @@ func (s *ServerInfo) LoadBootConfig() (*boot.Config, error) {
 	return config, nil
 }
 
-func (s *ServerInfo) BootConfig() *boot.Config {
+func (s *ServerInfo) BootConfig() boot.Config {
 	if s.bootConfig != nil {
-		return s.bootConfig
+		return *s.bootConfig
 	}
 
 	config, err := s.LoadBootConfig()
 	if err != nil {
 		slog.Error("Failed to load boot config", "error", err)
-		return &boot.Config{}
+		return boot.Config{}
 	}
 
-	return config
+	return *config
 }
 
 func (s *ServerInfo) SignUpUrl() string {
@@ -205,6 +205,12 @@ func (p *Profile) Locale() string {
 
 func (p *Profile) DefaultBootPath(dir string) string {
 	return filepath.Join(dir, BootDir, p.Id+".cfg")
+}
+
+func DefaultBootConfig() boot.Config {
+	config := boot.DefaultConfig()
+	config.ManifestFile = ""
+	return config
 }
 
 func DefaultProfiles(bootConfig boot.Config, profilesPath string) []*Profile {

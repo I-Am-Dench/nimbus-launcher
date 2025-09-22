@@ -217,11 +217,11 @@ func NewProfileForm(profile *Profile, window fyne.Window) *ProfileForm {
 	})
 
 	heading := "New Server"
-	bootConfig := boot.DefaultConfig()
+	bootConfig := DefaultBootConfig()
 
 	if profile != nil {
 		heading = "Edit Server - " + profile.Name
-		bootConfig = *profile.Server.BootConfig()
+		bootConfig = profile.Server.BootConfig()
 		form.Set(*profile)
 	}
 

@@ -72,11 +72,21 @@ func newProfileSettings(window fyne.Window, profilesBinding ProfileListBinding, 
 	clientName := widget.NewEntry()
 	clientName.PlaceHolder = client.DefaultExe
 
+	packed := widget.NewCheck("Client uses a catalog file (i.e. versions/primary.pki)", func(b bool) {})
+	packed.Partial = true
+
+	resetPacked := widget.NewButton("", func() {
+		packed.Partial = true
+		packed.Refresh()
+	})
+	resetPacked.Icon = theme.ViewRefreshIcon()
+
 	clientSettings := widget.NewAccordionItem(
 		"Client (Override Default)",
 		widget.NewForm(
 			widget.NewFormItem("Directory", directory),
 			widget.NewFormItem("Client Name", clientName),
+			widget.NewFormItem("Packed", container.NewBorder(nil, nil, packed, resetPacked)),
 		),
 	)
 
@@ -91,9 +101,11 @@ func newProfileSettings(window fyne.Window, profilesBinding ProfileListBinding, 
 		if profile.Client == nil {
 			directory.SetText("")
 			clientName.SetText("")
+			packed.Partial = true
 		} else {
 			directory.SetText(profile.Client.Directory)
 			clientName.SetText(profile.Client.Name)
+			packed.SetChecked(profile.Client.IsPacked)
 		}
 
 		clientSettings.Open = profile.Client != nil
@@ -170,12 +182,13 @@ func newProfileSettings(window fyne.Window, profilesBinding ProfileListBinding, 
 			return
 		}
 
-		if len(directory.Text) == 0 && len(clientName.Text) == 0 {
+		if len(directory.Text) == 0 && len(clientName.Text) == 0 && packed.Partial {
 			profile.Client = nil
 		} else {
 			profile.Client = &client.Config{
 				Directory: directory.Text,
 				Name:      clientName.Text,
+				IsPacked:  !packed.Partial && packed.Checked,
 			}
 		}
 
@@ -183,7 +196,8 @@ func newProfileSettings(window fyne.Window, profilesBinding ProfileListBinding, 
 			profile.Server.Patcher.Environment = p.patcherFunc()
 		}
 
-		if err := p.SaveProfile(profile, profile.Server.BootConfig()); err != nil {
+		bootConfig := profile.Server.BootConfig()
+		if err := p.SaveProfile(profile, &bootConfig); err != nil {
 			dialog.ShowError(err, p.window)
 		} else {
 			dialog.ShowInformation("Save User Settings", "Saved!", p.window)
@@ -393,6 +407,9 @@ func newLauncherSettings(window fyne.Window, settingsBinding SettingsBinding) *l
 	clientName.PlaceHolder = "client/legouniverse.exe"
 	clientName.SetText(settings.Launch.DefaultClient.Name)
 
+	packed := widget.NewCheck("Client uses a catalog file (i.e. versions/primary.pki)", func(b bool) {})
+	packed.SetChecked(settings.Launch.DefaultClient.IsPacked)
+
 	etcSettings, etcFunc := NewEtcSettings(window, settings)
 
 	saveButton := widget.NewButtonWithIcon("Save", theme.DocumentSaveIcon(), func() {
@@ -404,6 +421,7 @@ func newLauncherSettings(window fyne.Window, settingsBinding SettingsBinding) *l
 		settings.Launch.DefaultClient = client.Config{
 			Directory: installDirectory.Text,
 			Name:      clientName.Text,
+			IsPacked:  packed.Checked,
 			Etc:       etcFunc(),
 		}
 
@@ -427,6 +445,7 @@ func newLauncherSettings(window fyne.Window, settingsBinding SettingsBinding) *l
 					widget.NewForm(
 						widget.NewFormItem("Directory", installDirectory),
 						widget.NewFormItem("Name", clientName),
+						widget.NewFormItem("Packed", packed),
 					),
 					etcSettings,
 				),

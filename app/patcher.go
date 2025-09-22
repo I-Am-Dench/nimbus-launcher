@@ -44,7 +44,6 @@ func (e *NdNimbusPatcher) Default() Patcher {
 			UserConfig: netdevil.UserConfig{
 				Locale:       "en_US",
 				FullDownload: true,
-				Packed:       true,
 			},
 		},
 	}
@@ -72,13 +71,9 @@ func (e *NdNimbusPatcher) UserForm() ([]*widget.FormItem, PatcherFunc) {
 	fullDownload := widget.NewCheck("Download before or during play", func(b bool) {})
 	fullDownload.SetChecked(e.FullDownload)
 
-	packed := widget.NewCheck("Client uses packs", func(b bool) {})
-	packed.SetChecked(e.Packed())
-
 	return []*widget.FormItem{
 			widget.NewFormItem("Locale", locale),
 			widget.NewFormItem("Full Download", fullDownload),
-			widget.NewFormItem("Packed", packed),
 		}, func() Patcher {
 			return &NdNimbusPatcher{
 				netdevil.Environment{
@@ -86,7 +81,6 @@ func (e *NdNimbusPatcher) UserForm() ([]*widget.FormItem, PatcherFunc) {
 					UserConfig: netdevil.UserConfig{
 						Locale:       locale.Selected,
 						FullDownload: fullDownload.Checked,
-						Packed:       packed.Checked,
 					},
 				},
 			}
