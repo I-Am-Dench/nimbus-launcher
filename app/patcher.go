@@ -7,6 +7,7 @@ import (
 	"github.com/I-Am-Dench/nimbus-launcher/app/nlwidgets"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher/protocols/netdevil"
+	"github.com/I-Am-Dench/nimbus-launcher/patcher/protocols/nimbus"
 )
 
 type PatcherFunc = func() Patcher
@@ -21,6 +22,7 @@ type Patcher interface {
 
 var Patchers = map[string]Patcher{
 	"nd-nimbus": &NdNimbusPatcher{},
+	"nimbus":    &NimbusPatcher{},
 }
 
 func PatcherOptions() []string {
@@ -85,4 +87,20 @@ func (e *NdNimbusPatcher) UserForm() ([]*widget.FormItem, PatcherFunc) {
 				},
 			}
 		}
+}
+
+type NimbusPatcher struct {
+	nimbus.Environment
+}
+
+func (e *NimbusPatcher) Default() Patcher {
+	return &NimbusPatcher{}
+}
+
+func (e *NimbusPatcher) ProfileForm() ([]*widget.FormItem, PatcherFunc) {
+	return []*widget.FormItem{}, func() Patcher { return e.Default() }
+}
+
+func (e *NimbusPatcher) UserForm() ([]*widget.FormItem, PatcherFunc) {
+	return e.ProfileForm()
 }

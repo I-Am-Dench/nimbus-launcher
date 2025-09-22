@@ -22,5 +22,5 @@ func (e Environment) Locale() string {
 }
 
 func (e Environment) NewPatcher(ctx context.Context, options patcher.Options) (patcher.Patcher, error) {
-	return nil, errors.New("not implemented")
+	return nil, errors.ErrUnsupported
 }
