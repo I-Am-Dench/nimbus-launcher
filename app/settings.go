@@ -176,7 +176,7 @@ func newProfileSettings(window fyne.Window, profilesBinding ProfileListBinding, 
 	heading := canvas.NewText("Servers", theme.Color(theme.ColorNameForeground))
 	heading.TextSize = 16
 
-	saveButton := widget.NewButton("Save", func() {
+	saveButton := widget.NewButton("Save Profile", func() {
 		profile := p.SelectedProfile()
 		if profile == nil {
 			return
@@ -412,7 +412,7 @@ func newLauncherSettings(window fyne.Window, settingsBinding SettingsBinding) *l
 
 	etcSettings, etcFunc := NewEtcSettings(window, settings)
 
-	saveButton := widget.NewButtonWithIcon("Save", theme.DocumentSaveIcon(), func() {
+	saveButton := widget.NewButtonWithIcon("Save Launcher", theme.DocumentSaveIcon(), func() {
 		settings := l.Settings()
 
 		settings.Launch.CloseOnPlay = closeOnPlay.Checked
