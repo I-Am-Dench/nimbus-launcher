@@ -7,5 +7,6 @@ mkdir launcher
 
 go build -tags release -o ./launcher/nimbus-launcher ..
 cp ../LICENSE ./launcher
+cp ../README.md ./launcher
 
 zip -r ../launcher-linux.zip ./launcher

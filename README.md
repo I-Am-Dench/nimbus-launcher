@@ -1,6 +1,9 @@
 # Nimbus Launcher
 
-The Nimbus Launcher helps players to quickly add, swap, and run variable client configurations for the game LEGO® Universe, which was discontinued as of January 2012. Per-server patch configurations are also available to allow players to automatically update local client configurations. More information can be found [below](#patches).
+> [!WARNING]
+> Nimbus Launcher is current in version 0. Please expect major changes to functionality and saved data schemas without regards for backwards compatibility.
+
+The Nimbus Launcher helps players to quickly add, swap, and run variable client configurations for the game LEGO® Universe, which was discontinued as of January 2012. Patcher configurations are available which enable server owners with the ability to send out new content for the game. More information can be found [below](#patches).
 
 This program DOES NOT include a LEGO® Universe client and/or its contents. Players must already have a client located on their system and configure the launcher to point to the client's directory.
 
@@ -8,70 +11,79 @@ Due to the LEGO Group's wishes, LEGO® Universe servers ARE NOT (and should not 
 
 ## Installation
 
-Binaries for the current version of the launcher will be available under the [Releases](https://github.com/I-Am-Dench/nimbus-launcher/releases) tab. Releases will be labeled with the current launcher version followed by the target platform (i.e. `v1.0.0-win.zip`). The `zip` file will include an `assets` folder and a copy of the compiled executable. The structure of the `zip` file's contents should be as follows:
+Binaries for the current version of the Nimbus Launcher are available under the [Releases](https://github.com/I-Am-Dench/nimbus-launcher/releases) tab. Releases will be labeled with the current launcher version followed by the target platform (i.e. `v1.0.0-win.zip`). The structure of the zip should look something like this:
 
 ```
 launcher/
 |-- LICENSE
+|-- README.md
 |-- nimbus-launcher.exe
 ```
 
-The executable is NOT SIGNED. Your operating system may prompt you that the application is blocked. If you are not comfortable overriding the block, you will need to [Build or Run](#building-or-running-from-source) the application from source.
+The executable is NOT signed. Your operating system may prompt you, letting you know that the application is blocked. If you are not comfortable overriding the block, you will need to [build or run](#building-or-running-from-source) the application from source.
 
-Running the executable will generate a settings folder. If you move the executable to a different folder, make sure to bring the settings folder with it. 
+Running the executable will generate a settings folder in your current working directory. Make sure to bring this folder with you if you move the launcher to another location.
 
-Since the [Client Startup](#2-client-startup) functionality has not yet been implemented for Mac, the only available releases are for Linux and Windows. Building and/or running the launcher from source, however, will still work as normal just with the missing functionality.
-
-If you have Go installed on your system, you may follow the instructions the [Building or Running from Source](#building-or-running-from-source) section.
+Since [startup](#startup) functionality has not been implemented for Mac, the only available releases are for Windows and Linux. Building and/or running the launcher from source, however, will still work as normal but with the missing functionality.
 
 ## Setup
 
-When you first run the launcher, you may need to ensure that your client configurations are properly set. Clicking the gear icon will reveal the Settings window with two tabs: **Servers** and **Launcher**. The **Servers** tab is where you can Add, Edit, and Remove server configurations. The **Launcher** tab includes some launcher specific settings and patching settings, as well as client settings. If your launcher's play button is disabled, make sure that your Client Directory is configured to your client's folder (the folder that contains the `res/` directory and the `exe` file), and your Client Name is configured to the name of the client exectuable (this will most likely be `legouniverse.exe` and will probably never change).
+### Client Files
 
-Once you are happy with your configurations, close the settings window and use the server selector to choose which server you would like to boot into. Server IP info for your currently selected server will be clearly labeled within the launcher. When you are ready, you can press the `Play` button.
+While not required, it is recommended that all of your client files are within a folder called `client`. This fixes an issue where the client will fail to reload the `boot.cfg` file if you logout/return to the login screen. It should look something like this:
 
-## On Play
+```
+client/
+|-- res/
+    |-- ...
+|-- boot.cfg
+|-- legouniverse.exe
+|-- ...
+```
 
-Two main phases occur when you press the `Play` button:
+The "Client Name" setting, is configured to `client/legouniverse.exe` by default. It is recommended that you do not change this setting. The name is prefixed with `client` to make configuring the "Installation Directory" convenient.
 
-1. Client Preparation
-2. Client Startup
+The directory that contains the `client` folder, is call the "Installation Directory". The launcher labels this, "Directory", under your client settings. If you were to run a NetDevil style patch on your client, all resources would be downloaded relative to this path. There is no recommended location for this directory, but you may find the default settings useful:
 
-### 1. Client Preparation
+- Windows: `%LOCALAPPDATA%\LEGO Software\LEGO Universe`
+- Linux: `$HOME/games/LEGO Software/LEGO Universe`
 
-1. The client is effectively reset to its original state before any patches were applied.
-    - Original client resources (cached in the `settings/client_cache.sqlite` database) which were **replaced** through patches, are copied over to their original locations irrespective of whether the resources are original or not.
-    - New client resources (cached in the `settings/client_cache.sqlite` database) which were **added** through patches, are removed.
-2. If the currently selected server is not the same as the previously run server, the `boot.cfg` file for the currently selected server is copied over into the client directory.
-3. Any resources that are a part of the current patch for the selected server are copied over into the client.
-    - Replacement resources will cache the already existing resource ONLY IF the resource does not yet exist in the `settings/client_cache.sqlite` database.
-    - Added resources will cache the path of the resources ONLY IF the resource does not yet exist in the `settings/client_cache.sqlite` database.
+These settings are not universal and may be set independently for each server profile you save.
 
-### 2. Client Startup
+### Packed vs Unpacked
 
-#### Windows
+Clients come in 1 of 2 forms: packed or unpacked. Unpacked clients store each of their files on the file system, while packed clients store the majority of their files (usually compressed) within `.pk` files and a catalog file, typically called `primary.pki`. Configuring the client to start in one of these modes is done through the `USE_CATALOG` field within the `boot.cfg` file. Setting this field to `1` indicates packed, while `0` or the absence of the field indicates unpacked. You can indicate which client you are using through the "Packed" client setting.
 
-- The client is run as `./legouniverse.exe` where the current directory is the configured `Client Directory`.
+If you are not sure which client you have, your client is packed if:
+- Your client comes with a `versions` folder with a `primary.pki` and/or a `trunk.txt` file
+- Or your client has `res/pack` folder with a set of `.pk` files
 
-#### MacOSX (NOT IMPLEMENTED)
+Like the client path settings, the "Packed" setting may be set independently for each server profile you save.
 
-- Intel (x86): Due to Apple dropping support for 32-bit programs, the client will NOT run through the native executable nor the windows executable through external programs such as [wine](https://www.winehq.org/). Playing the game on an Intel based Mac will require the use of an emulator or VM.
-- M1 (ARM): The client may still be able to be launched through [wine](https://www.winehq.org/). This is currently a **work in progress**.
+## Startup
 
-#### Linux
+### Windows
 
-- The launcher uses [https://github.com/ValveSoftware/Proton](https://github.com/ValveSoftware/Proton) to run the client and will return an error if the client is run without Proton installed. Patches, however, are still applied even if the game does not run.
-- While it is possible to build/install Proton from source, it is recommended to install it through Steam as the launcher searches through the Steam directories for the latest version.
-- The client is run as `{latest-proton-version}/proton run ./legouniverse.exe` where the current directory is configured to `Client Directory` and the environment variables are:
+- The client is run as `.\legouniverse.exe` where the current directory is the parent directory of the executable. For example, if your launcher is configured with:
+  - Installation Directory: `.../MyGames/LEGO Universe`
+  - Client Name: `client/legouniverse.exe`
+- then the current directory would be `.../MyGames/LEGO Universe/client`
+
+### Linux
+
+- The launcher uses [https://github.com/ValveSoftware/Proton](https://github.com/ValveSoftware/Proton) to run the client and will return an error if it cannot find an installed Proton version.
+- While it is possible to build/install Proton from source, it is recommended that you install it through Steam as the launcher will search through the Steam directories for the installed versions.
+- The Proton version, the steam directory, and the `compatdata` path (effectively the wine prefix) can be configured under the `Launcher` settings tab.
+- The client is run as `{selected Proton version}/proton run ./legouniverse.exe` where the current directory is the parent directory of the executable with these environment variables:
   - `WINEDLLOVERRIDES="dinput8.dll=n,b"`
   - `PROTON_USE_WINED3D=1`
-  - `STEAM_COMPAT_DATA_PATH="{client-directory}/.proton"`
-  - `STEAM_COMPAT_CLIENT_INSTALL_PATH="{steam-directory}"`
-- See [`client/run_linux.go`](https://github.com/I-Am-Dench/nimbus-launcher/blob/main/client/run_linux.go) for more details.
+  - `STEAM_COMPAT_DATA_PATH={configured compatdata path}/.proton`
+  - `STEAM_COMPAT_CLIENT_INSTALL_PATH={configured steam path}`
+- See [`client/client_linux.go`](https://github.com/I-Am-Dench/nimbus-launcher/blob/main/client/client_linux.go) for more details. 
 
 ## Building or Running from Source
 
-If you would like to build or run the launcher from the source code, you will need both `go` and `gcc` installed on your system. While this program does not directly use `gcc`, its dependency, [fyne.io](https://github.com/fyne-io/fyne), uses it for compiling OpenGL. After these tools have been set up, you can use either the `go run` or `go build` commands to run or compile the launcher.
+If you would like to build or run the launcher from the source code, you will need both `go` and `gcc` installed on your system. While this program does not directly use `gcc`, its dependecy, [fyne.io](https://github.com/fyne-io/fyne), uses it for compiling OpenGL. After these tools have been set up, you can use either the `go run` or `go build` commands to run or compile the launcher.
 
 ```bash
 go run .
@@ -84,7 +96,7 @@ go build .
 ./nimbus-launcher
 ```
 
-### Building or Running for MacOSX
+### Building or Running for MaxOSX
 
 If you build or run the launcher from source on MacOSX, you may run into a compiler issue along the lines of:
 
@@ -92,48 +104,28 @@ If you build or run the launcher from source on MacOSX, you may run into a compi
 error: function does not return NSString
 ```
 
-If this is the case, you can use the `mac_run_fix.sh` or `mac_build_fix.sh` scripts instead of the `go run` or `go build` commands, respectively.
+If this is the case, you can use the `mac_run_fix.sh` or `mac_build_fix.sh` scripts in place of the `go run` or `go build` commands.
 
 ## Patches
 
+> [!IMPORTANT]
+> Patching is currently disabled.
+
 If, as a server owner, you decide to use the patch server capabilities, DO NOT distribute any resources that were used by, or packaged by, the LEGO® Universe client while it was in operation.
 
-Using the patch server functionality allows automatic updating of both launcher configurations and client resources on a server-configuration by server-configuration basis. For example, a local server and a friend's server can be both run with different applied client resources, i.e., having a custom grass texture on the local server and the normal texture on the friend's server. Or for instance, if the AUTHSERVERIP changes for a given server, the launcher can detect a change in patch versions, and then pull and update the `boot.cfg` file for the out of date server.
+Despite being disabled, patcher settings can still be configured and saved for server profiles. Attempting to launch the client with a patcher configured will fail and the launcher will display an error.
 
-For non server owners, always approach patches with EXTREME CAUTION. Never accept an update from a server you do not trust. By default, the `Review Patch Before Update` setting is enabled. While on, this settings will display the fetched `patch.json` file in a separate window with options to **Accept** the update, **Cancel** the update, or **Reject** the update.
-  - **If accepted**, the patch contents will be downloaded and updated as normal.
-  - **If cancelled**, the patch contents will NOT be downloaded nor updated, and the patch will simply be ignored until the next time the updates are refreshed.
-  - **If rejected**, the patch version will be blacklisted and will always be ignored on update refreshes or if it appears as a patch dependency.
+## TODO
 
-### Patch Server Configuration
+### Features required for a v1.0.0 release
 
-> Subject to change with between versions 0.\*.\* and 1.0.0
+- [ ] Functioning patcher implementation (See: [patchers](https://github.com/I-Am-Dench/nimbus-launcher/tree/patchers) branch)
+- [ ] Automatic updater for launcher (Look for recent GitHub releases)
 
-Configuring the launcher to point to a patch server is done through both the `boot.cfg` file and the local server configuration.
+### Future features
 
-When updating or creating a local server configuration within the settings window, select one of the options for the **Patch Protocol** field:
-
-- (None)
-- http
-- https
-
-The selected option will determine which protocol the launcher will make requests to the patch server with. Selecting (None) will disable all patch server configurations.
-
-> Both http and https follow the TPP Protocol
-
-For the `boot.cfg` file, modify the following fields:
-
-- `PATCHSERVERIP`: Configured server IP
-- `PATCHSERVERPORT`: Configured server port
-- `PATCHSERVERDIR`: The patch server directory where patch resources are located
-  - If the patch server host is `http://127.0.0.1:3000` and `PATCHSERVERDIR` is `patches`, the launcher will make requests to `http://127.0.0.1:3000/patches`
-
-### Patch Server Setup
-
-To set up a patch server, you need an HTTP/HTTPS server which complies with the [TPP Protocol](/PATCHING.md).
-
-### Patch Server Authentication (Optional)
-
-Whenever the launcher makes a patch server request, if the `Patch Token` setting is not empty, it will include a custom header which complies with the TPP Protocol. The patch server should verify that the token is valid before sending any patch contents.
-
-The patch token should be included within the exported `server.xml` file, but it can still be changed by editing the local server configuration through the settings window.
+- [ ] Launcher locales
+- [ ] Launcher themes!
+- [ ] Settings for `lwo_override.xml` configs
+- [ ] Setting for [aspect ratio fix](https://www.pcgamingwiki.com/wiki/Lego_Universe#Aspect_Ratio_Fix)?
+- [ ] Client version detection (v1.10.64 vs Darkflame Client vs Alpha Client)
