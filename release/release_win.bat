@@ -5,5 +5,6 @@ if not exist launcher md launcher
 
 go build -tags release -ldflags -H=windowsgui -o .\launcher\nimbus-launcher.exe ..
 copy ..\LICENSE .\launcher
+copy ..\README.md .\launcher
 
 7z a -r ../launcher-win.zip launcher
