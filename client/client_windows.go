@@ -14,14 +14,16 @@ import (
 
 type Etc = struct{}
 
-func Start(config Config) (*exec.Cmd, error) {
+func Start(config Config, logOutput bool) (*exec.Cmd, error) {
 	path := config.ClientPath()
 
 	cmd := exec.Command(path)
 	cmd.Dir = filepath.Dir(path)
 
-	cmd.Stderr = logger.NewWriter(slog.LevelError)
-	cmd.Stdout = logger.NewWriter(slog.LevelInfo)
+	if logOutput {
+		cmd.Stderr = logger.NewWriter(slog.LevelError)
+		cmd.Stdout = logger.NewWriter(slog.LevelInfo)
+	}
 
 	slog.Info("Starting client", "cmd", strings.Join(cmd.Args, " "))
 	return cmd, cmd.Start()

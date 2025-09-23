@@ -197,7 +197,7 @@ func (l *Launcher) Play() {
 		return
 	}
 
-	cmd, err := client.Start(clientConfig)
+	cmd, err := client.Start(clientConfig, !settings.Launch.CloseOnPlay)
 	if err != nil {
 		dialog.ShowError(err, l.window)
 		l.SetNormal()
