@@ -160,7 +160,7 @@ func (s *Steam) ProtonOptions() []string {
 	return options
 }
 
-func Start(config Config) (*exec.Cmd, error) {
+func Start(config Config, logOutput bool) (*exec.Cmd, error) {
 	proton, steamApps, err := config.Etc.GetProton(config.Etc.Proton)
 	if err != nil {
 		return nil, err
@@ -198,8 +198,10 @@ func Start(config Config) (*exec.Cmd, error) {
 		cmd.Env = append(cmd.Env, "PROTON_LOG=1")
 	}
 
-	cmd.Stderr = logger.NewWriter(slog.LevelError)
-	cmd.Stdout = logger.NewWriter(slog.LevelInfo)
+	if logOutput {
+		cmd.Stderr = logger.NewWriter(slog.LevelError)
+		cmd.Stdout = logger.NewWriter(slog.LevelInfo)
+	}
 
 	slog.Info("Starting client", "cmd", strings.Join(cmd.Args, " "))
 	return cmd, cmd.Start()
