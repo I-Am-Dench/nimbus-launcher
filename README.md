@@ -3,7 +3,7 @@
 > [!WARNING]
 > Nimbus Launcher is current in version 0. Please expect major changes to functionality and saved data schemas without regards for backwards compatibility.
 
-The Nimbus Launcher helps players to quickly add, swap, and run variable client configurations for the game LEGO® Universe, which was discontinued as of January 2012. Patcher configurations are also available which enable server owners the ability to send out new content for the game. More information can be found [below](#patches).
+The Nimbus Launcher helps players to quickly add, swap, and run variable client configurations for the game LEGO® Universe, which was discontinued as of January 2012. Patcher configurations are available which enable server owners with the ability to send out new content for the game. More information can be found [below](#patches).
 
 This program DOES NOT include a LEGO® Universe client and/or its contents. Players must already have a client located on their system and configure the launcher to point to the client's directory.
 
@@ -20,13 +20,15 @@ launcher/
 |-- nimbus-launcher.exe
 ```
 
-The executable is NOT signed. Your operating system may prompt you, letting you know that the application is blocked. If you are not comfortable overriding the block, you will need to [Build or Run](#building-or-running-from-source) the application from source.
+The executable is NOT signed. Your operating system may prompt you, letting you know that the application is blocked. If you are not comfortable overriding the block, you will need to [build or run](#building-or-running-from-source) the application from source.
 
 Running the executable will generate a settings folder in your current working directory. Make sure to bring this folder with you if you move the launcher to another location.
 
-Since [Startup](#startup) functionality has not been implemented for Mac, the only available releases are for Windows and Linux. Building and/or running the launcher from source, however, will still work as normal but with the missing functionality.
+Since [startup](#startup) functionality has not been implemented for Mac, the only available releases are for Windows and Linux. Building and/or running the launcher from source, however, will still work as normal but with the missing functionality.
 
 ## Setup
+
+### Client Files
 
 While not required, it is recommended that all of your client files are within a folder called `client`. This fixes an issue where the client will fail to reload the `boot.cfg` file if you logout/return to the login screen. It should look something like this:
 
@@ -48,6 +50,16 @@ The directory that contains the `client` folder, is call the "Installation Direc
 
 These settings are not universal and may be set independently for each server profile you save.
 
+### Packed vs Unpacked
+
+Clients come in 1 of 2 forms: packed or unpacked. Unpacked clients store each of their files on the file system, while packed clients store the majority of their files (usually compressed) within `.pk` files and a catalog file, typically called `primary.pki`. Configuring the client to start in one of these modes is done through the `USE_CATALOG` field within the `boot.cfg` file. Setting this field to `1` indicates packed, while `0` or the absence of the field indicates unpacked. You can indicate which client you are using through the "Packed" client setting.
+
+If you are not sure which client you have, your client is packed if:
+- Your client comes with a `versions` folder with a `primary.pki` and/or a `trunk.txt` file
+- Or your client has `res/pack` folder with a set of `.pk` files
+
+Like the client path settings, the "Packed" setting may be set independently for each server profile you save.
+
 ## Startup
 
 ### Windows
@@ -63,7 +75,7 @@ These settings are not universal and may be set independently for each server pr
 - While it is possible to build/install Proton from source, it is recommended that you install it through Steam as the launcher will search through the Steam directories for the installed versions.
 - The Proton version, the steam directory, and the `compatdata` path (effectively the wine prefix) can be configured under the `Launcher` settings tab.
 - The client is run as `{selected Proton version}/proton run ./legouniverse.exe` where the current directory is the parent directory of the executable with these environment variables:
-  - `WINEDLLOVERRIDES=dinput8.dll=n,b`
+  - `WINEDLLOVERRIDES="dinput8.dll=n,b"`
   - `PROTON_USE_WINED3D=1`
   - `STEAM_COMPAT_DATA_PATH={configured compatdata path}/.proton`
   - `STEAM_COMPAT_CLIENT_INSTALL_PATH={configured steam path}`
@@ -101,7 +113,7 @@ If this is the case, you can use the `mac_run_fix.sh` or `mac_build_fix.sh` scri
 
 If, as a server owner, you decide to use the patch server capabilities, DO NOT distribute any resources that were used by, or packaged by, the LEGO® Universe client while it was in operation.
 
-Despite being disabled, patcher settings can still be configured and saved for server profiles. Attempting to launch the client with a patcher configured will stop the client from starting and the launcher will display an error.
+Despite being disabled, patcher settings can still be configured and saved for server profiles. Attempting to launch the client with a patcher configured will fail and the launcher will display an error.
 
 ## TODO
 
