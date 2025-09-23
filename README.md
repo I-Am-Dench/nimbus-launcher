@@ -79,7 +79,7 @@ Like the client path settings, the "Packed" setting may be set independently for
   - `PROTON_USE_WINED3D=1`
   - `STEAM_COMPAT_DATA_PATH={configured compatdata path}/.proton`
   - `STEAM_COMPAT_CLIENT_INSTALL_PATH={configured steam path}`
-- See [`client/client_linux.go`](./client/client_linux.go) for more details. 
+- See [`client/client_linux.go`](https://github.com/I-Am-Dench/nimbus-launcher/blob/main/client/client_linux.go) for more details. 
 
 ## Building or Running from Source
 
@@ -119,7 +119,7 @@ Despite being disabled, patcher settings can still be configured and saved for s
 
 ### Features required for a v1.0.0 release
 
-- [ ] Functioning patcher implementation (See: [patching](https://github.com/I-Am-Dench/nimbus-launcher/tree/patching) branch)
+- [ ] Functioning patcher implementation (See: [patchers](https://github.com/I-Am-Dench/nimbus-launcher/tree/patchers) branch)
 - [ ] Automatic updater for launcher (Look for recent GitHub releases)
 
 ### Future features
