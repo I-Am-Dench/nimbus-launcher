@@ -2,8 +2,12 @@ package patcher
 
 import (
 	"context"
+	"encoding/xml"
 
+	"github.com/I-Am-Dench/goverbuild/archive"
 	"github.com/I-Am-Dench/goverbuild/models/boot"
+	"github.com/I-Am-Dench/nimbus-launcher/patcher/origin"
+	"github.com/I-Am-Dench/nimbus-launcher/patcher/undoer"
 )
 
 type PatchEntry struct {
@@ -11,7 +15,10 @@ type PatchEntry struct {
 }
 
 type Patch interface {
+	Archive() *archive.Archive
 	Summary() []PatchEntry
+	Run(context.Context, undoer.Undoer) error
+	Close() error
 }
 
 type Patcher interface {
@@ -26,13 +33,27 @@ type Logger interface {
 }
 
 type Options struct {
-	Log Logger
+	Resources origin.Resources
+	Log       Logger
 
-	InstallDirectory string
-	ServerId         string
+	ConfigUrl         string
+	AuthenticationUrl string
+	InstallDirectory  string
+	ServerId          string
+}
+
+type MasterIndex struct {
+	Authentication string `xml:"Authentication"`
+	Config         struct {
+		XMLName xml.Name `xml:"Config"`
+		Type    string   `xml:"type,attr"`
+		URL     string   `xml:",chardata"`
+	}
+	Status string `xml:"Status"`
 }
 
 type Environment interface {
 	Locale() string
+	GetMasterIndex(ctx context.Context, serviceUrl string, resources origin.Resources) (MasterIndex, error)
 	NewPatcher(ctx context.Context, options Options) (Patcher, error)
 }
