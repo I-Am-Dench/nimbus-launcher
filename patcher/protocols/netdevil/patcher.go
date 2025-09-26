@@ -41,6 +41,9 @@ type Patcher struct {
 
 	server    Server
 	cacheFile *cache.Cache
+
+	index  *manifest.Manifest
+	hotfix *manifest.Manifest
 }
 
 func (p *Patcher) GetBoot(packed bool) *boot.Config {
@@ -219,7 +222,7 @@ func (p *Patcher) FetchManifest(ctx context.Context, name string, manifestFile *
 	return fetchedManifest, nil
 }
 
-func (p *Patcher) needsPackedDownload(ctx context.Context, path string, entry *manifest.Entry, arch archive.Archive) (bool, error) {
+func (p *Patcher) needsPackedDownload(ctx context.Context, path string, entry *manifest.Entry, arch *archive.Archive) (bool, error) {
 	record, err := arch.Load(path)
 	if errors.Is(err, archive.ErrNotCataloged) {
 		return false, nil
@@ -276,7 +279,7 @@ func (p *Patcher) needsUnpackedDownload(ctx context.Context, path string, entry 
 	return false, nil
 }
 
-func (p *Patcher) NeedsDownload(ctx context.Context, path string, entry *manifest.Entry, archive ...archive.Archive) (needsDownload bool, err error) {
+func (p *Patcher) NeedsDownload(ctx context.Context, path string, entry *manifest.Entry, archive ...*archive.Archive) (needsDownload bool, err error) {
 	defer func() {
 		if err != nil {
 			return
@@ -317,7 +320,7 @@ func (p *Patcher) shouldIgnore(name string) bool {
 	return false
 }
 
-func (p *Patcher) collectEntries(ctx context.Context, name string, index, hotfix *manifest.Manifest, archive ...archive.Archive) ([]*manifest.Entry, error) {
+func (p *Patcher) collectEntries(ctx context.Context, name string, index, hotfix *manifest.Manifest, archive ...*archive.Archive) ([]*manifest.Entry, error) {
 	manifestFile, err := p.FetchManifest(ctx, name, index, true)
 	if err != nil {
 		return nil, err
@@ -351,7 +354,7 @@ func (p *Patcher) collectEntries(ctx context.Context, name string, index, hotfix
 		}
 	}
 
-	// Added hotfix entries not present in trunk.txt
+	// Add hotfix entries not present in trunk.txt
 	if hotfix != nil {
 		for _, hotfixEntry := range hotfix.Entries {
 			if cancelled(ctx) {
@@ -376,59 +379,18 @@ func (p *Patcher) collectEntries(ctx context.Context, name string, index, hotfix
 	return entries, nil
 }
 
-func (p *Patcher) fetchCatalog(ctx context.Context, index *manifest.Manifest) (*archive.Catalog, error) {
-	catalogPath := p.versions(CatalogFile, true)
-
-	file, err := p.Fetch(ctx, CatalogFile, catalogPath, index)
-	if err != nil {
-		return nil, err
-	}
-	file.Close()
-
-	catalog, err := archive.OpenCatalog(filepath.Join(p.Root, catalogPath))
-	if err != nil {
-		return nil, err
-	}
-
-	return catalog, nil
-}
-
-func (p *Patcher) doPacked(ctx context.Context, index, hotfix *manifest.Manifest) (patcher.Patch, error) {
-	if cancelled(ctx) {
-		return nil, ctx.Err()
-	}
-
-	catalog, err := p.fetchCatalog(ctx, index)
-	if err != nil {
-		return nil, fmt.Errorf("patcher: packed: %w", err)
-	}
-
-	if cancelled(ctx) {
-		return nil, ctx.Err()
-	}
-
-	arch := archive.New(p.Root, catalog)
-	defer func() {
-		if err := arch.Close(); err != nil {
-			p.Log.Print(err)
-		}
-	}()
-
-	entries, err := p.collectEntries(ctx, GameFile, index, hotfix, arch)
+func (p *Patcher) doPacked(ctx context.Context, index, hotfix *manifest.Manifest, archive *archive.Archive) (patcher.Patch, error) {
+	entries, err := p.collectEntries(ctx, GameFile, index, hotfix, archive)
 	if err != nil {
 		return nil, fmt.Errorf("patcher: packed: %w", err)
 	}
 
 	p.Log.Printf("Found %d entries that need patching", len(entries))
 
-	patchArchive := archive.New(p.Root, catalog)
 	return &Patch{
 		Downloader: p.Downloader,
-
-		catalog: catalog,
-		archive: &patchArchive,
-
-		entries: entries,
+		archive:    archive,
+		entries:    entries,
 	}, nil
 }
 
@@ -454,7 +416,19 @@ func (p *Patcher) doUnpacked(ctx context.Context, index, hotfix *manifest.Manife
 	}, nil
 }
 
-func (p *Patcher) GetPatch(ctx context.Context, packed bool) (patcher.Patch, error) {
+func (p *Patcher) fetchCatalog(ctx context.Context, index *manifest.Manifest) (string, error) {
+	catalogPath := p.versions(CatalogFile, true)
+
+	file, err := p.Fetch(ctx, CatalogFile, catalogPath, index)
+	if err != nil {
+		return "", err
+	}
+	file.Close()
+
+	return filepath.Join(p.Root, catalogPath), nil
+}
+
+func (p *Patcher) GetVersion(ctx context.Context, packed bool) (*archive.Archive, error) {
 	if cancelled(ctx) {
 		return nil, ctx.Err()
 	}
@@ -470,18 +444,13 @@ func (p *Patcher) GetPatch(ctx context.Context, packed bool) (patcher.Patch, err
 	if err != nil {
 		return nil, fmt.Errorf("patcher: %v", err)
 	}
-	defer func() {
-		if err := cache.WriteFile(cacheFileName, p.cacheFile); err != nil {
-			p.Log.Print(err)
-		}
-	}()
 
 	version, err := p.DownloadManifest(ctx, VersionFile)
 	if err != nil {
 		return nil, fmt.Errorf("patcher: %w", err)
 	}
 
-	hotfix, err := p.DownloadManifest(ctx, HotFixFile, true)
+	p.hotfix, err = p.DownloadManifest(ctx, HotFixFile, true)
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		return nil, fmt.Errorf("patcher: %w", err)
 	}
@@ -490,14 +459,14 @@ func (p *Patcher) GetPatch(ctx context.Context, packed bool) (patcher.Patch, err
 		os.Remove(filepath.Join(p.Root, p.versions(HotFixFile, true)))
 	}
 
-	index, err := p.FetchManifest(ctx, IndexFile, version)
+	p.index, err = p.FetchManifest(ctx, IndexFile, version)
 	if err != nil {
 		return nil, fmt.Errorf("patcher: %w", err)
 	}
 
 	for _, entry := range version.Entries {
 		if cancelled(ctx) {
-			return nil, fmt.Errorf("patcher: %w", ctx.Err())
+			return nil, ctx.Err()
 		}
 
 		if entry.Path == IndexFile || strings.Contains(entry.Path, "patcher.ini") || strings.Contains(entry.Path, "lego_universe_install.exe") {
@@ -511,13 +480,39 @@ func (p *Patcher) GetPatch(ctx context.Context, packed bool) (patcher.Patch, err
 		reader.Close()
 	}
 
+	if !packed {
+		return nil, nil
+	}
+
+	catalogPath, err := p.fetchCatalog(ctx, p.index)
+	if err != nil {
+		return nil, fmt.Errorf("patcher: %w", err)
+	}
+
+	if cancelled(ctx) {
+		return nil, ctx.Err()
+	}
+
+	archive, err := archive.Open(p.Root, catalogPath)
+	if err != nil {
+		return nil, fmt.Errorf("patcher: %v", err)
+	}
+
+	return &archive, nil
+}
+
+func (p *Patcher) GetPatch(ctx context.Context, archive *archive.Archive) (patcher.Patch, error) {
+	if cancelled(ctx) {
+		return nil, ctx.Err()
+	}
+
 	if !p.FullDownload {
 		return &Patch{entries: []*manifest.Entry{}}, nil
 	}
 
-	if packed {
-		return p.doPacked(ctx, index, hotfix)
+	if archive != nil {
+		return p.doPacked(ctx, p.index, p.hotfix, archive)
 	} else {
-		return p.doUnpacked(ctx, index, hotfix)
+		return p.doUnpacked(ctx, p.index, p.hotfix)
 	}
 }

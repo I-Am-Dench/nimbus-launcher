@@ -14,14 +14,9 @@ import (
 type Patch struct {
 	Downloader
 
-	catalog *archive.Catalog
 	archive *archive.Archive
 
 	entries []*manifest.Entry
-}
-
-func (p *Patch) Archive() *archive.Archive {
-	return p.archive
 }
 
 func (p *Patch) Summary() []patcher.PatchEntry {
@@ -36,18 +31,18 @@ func (p *Patch) Summary() []patcher.PatchEntry {
 	return summary
 }
 
-func (p *Patch) runPacked(ctx context.Context, undoer undoer.Undoer) error {
+func (p *Patch) runPacked(ctx context.Context, undoer undoer.Undoer, archive *archive.Archive) error {
 	errs := []error{}
 	for _, entry := range p.entries {
 		if cancelled(ctx) {
 			return ctx.Err()
 		}
 
-		if err := undoer.Track(entry.Path, p.archive); err != nil {
+		if err := undoer.Track(entry.Path, archive); err != nil {
 			errs = append(errs, err)
 		}
 
-		if err := p.DownloadPacked(ctx, entry.Path, entry, p.archive); err != nil {
+		if err := p.DownloadPacked(ctx, entry.Path, entry, archive); err != nil {
 			errs = append(errs, err)
 		}
 	}
@@ -93,19 +88,9 @@ func (p *Patch) Run(ctx context.Context, undoer undoer.Undoer) error {
 		return ctx.Err()
 	}
 
-	if p.catalog != nil {
-		return p.runPacked(ctx, undoer)
+	if p.archive != nil {
+		return p.runPacked(ctx, undoer, p.archive)
 	} else {
 		return p.runUnpacked(ctx, undoer)
 	}
-}
-
-func (p *Patch) Close() error {
-	if p.archive != nil {
-		if err := p.archive.Close(); err != nil {
-			return err
-		}
-		return p.catalog.Close()
-	}
-	return nil
 }

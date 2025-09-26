@@ -15,15 +15,14 @@ type PatchEntry struct {
 }
 
 type Patch interface {
-	Archive() *archive.Archive
 	Summary() []PatchEntry
 	Run(context.Context, undoer.Undoer) error
-	Close() error
 }
 
 type Patcher interface {
 	GetBoot(packed bool) *boot.Config
-	GetPatch(ctx context.Context, packed bool) (Patch, error)
+	GetVersion(ctx context.Context, packed bool) (*archive.Archive, error)
+	GetPatch(context.Context, *archive.Archive) (Patch, error)
 }
 
 type Logger interface {

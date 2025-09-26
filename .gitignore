@@ -6,3 +6,4 @@ release/launcher
 *.exe
 *.zip
 *.log
+*.db
