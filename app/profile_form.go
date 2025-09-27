@@ -16,6 +16,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"github.com/I-Am-Dench/goverbuild/encoding/ldf"
 	"github.com/I-Am-Dench/goverbuild/models/boot"
+	"github.com/I-Am-Dench/nimbus-launcher/client"
 )
 
 type ServerXml struct {
@@ -37,6 +38,8 @@ type ProfileForm struct {
 	patcherFunc func() Patcher
 	bootForm    *BootForm
 
+	client *client.Config
+
 	patcherContainer *fyne.Container
 	patcherForm      *widget.Form
 }
@@ -44,6 +47,8 @@ type ProfileForm struct {
 func (p *ProfileForm) Set(profile Profile) {
 	p.id = profile.Id
 	p.name.SetText(profile.Name)
+
+	p.client = profile.Client
 
 	if profile.Server.Patcher != nil {
 		p.patcherType.SetSelected(profile.Server.Patcher.Id)
@@ -70,8 +75,9 @@ func (p *ProfileForm) Get() (*Profile, *boot.Config) {
 	}
 
 	return &Profile{
-		Id:   id,
-		Name: p.name.Text,
+		Id:     id,
+		Name:   p.name.Text,
+		Client: p.client,
 		Server: ServerInfo{
 			Patcher: patcherConfig,
 		},
