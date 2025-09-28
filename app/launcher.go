@@ -3,9 +3,14 @@ package app
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
+	"net/http"
+	"net/http/cookiejar"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 	"sync"
 
 	"fyne.io/fyne/v2"
@@ -15,13 +20,78 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/I-Am-Dench/goverbuild/encoding/ldf"
+	"github.com/I-Am-Dench/goverbuild/models/boot"
+	"github.com/I-Am-Dench/nimbus-launcher/app/nlwidgets"
 	"github.com/I-Am-Dench/nimbus-launcher/client"
+	"github.com/I-Am-Dench/nimbus-launcher/patcher"
+	"github.com/I-Am-Dench/nimbus-launcher/patcher/origin"
+	"github.com/I-Am-Dench/nimbus-launcher/patcher/undoer"
+	"golang.org/x/net/publicsuffix"
 )
 
 type LaunchConfig struct {
 	DefaultClient             client.Config `json:"defaultClient"`
 	CloseOnPlay               bool          `json:"closeOnPlay"`
 	ReviewPatchesBeforeUpdate bool          `json:"reviewPatchesBeforeUpdate"`
+}
+
+type ProgressBar struct {
+	*nlwidgets.ProgressBar
+}
+
+func (p *ProgressBar) SetValue(f float64) {
+	fyne.DoAndWait(func() {
+		p.ProgressBar.SetValue(f)
+	})
+}
+
+func (p *ProgressBar) HideProgress() {
+	fyne.DoAndWait(p.ProgressBar.HideProgress)
+}
+
+func (p *ProgressBar) Infinite() {
+	fyne.DoAndWait(p.ProgressBar.Infinite)
+}
+
+func (p *ProgressBar) Progress() {
+	fyne.DoAndWait(p.ProgressBar.Progress)
+}
+
+func (p *ProgressBar) SetText(s string) {
+	// NOTE: Having the fyne.DoAndWait here causes a small, but noticeable,
+	// slowdown during patching since (from what I've seen) fyne handles
+	// its event queue every 15ms. Just calling SetText will cause fyne to
+	// yell at you since it's not being called from the main goroutine, and
+	// using fyne.Do doesn't change much since fyne still has to catch up
+	// with all of the events when it makes calls to hiding and show the
+	// progress bars at the end of patcher setup.
+	//
+	// Thought about maybe showing every other or every 5 logs, but for
+	// slow patches (i.e. checking a non-cached unpacked client) we actually
+	// DO want to show every message, so we would need some kind of toggle
+	// to indicate how we want to handle showing logged messages.
+	//
+	// May revisit this one day, but for the time being, I think this it's
+	// a better user experience to have everything logged in sync.
+	fyne.DoAndWait(func() { p.ProgressBar.SetText(s) })
+}
+
+func (p *ProgressBar) Print(a ...any) {
+	text := fmt.Sprint(a...)
+	p.SetText(text)
+	slog.Info(text)
+}
+
+func (p *ProgressBar) Printf(format string, a ...any) {
+	text := fmt.Sprintf(format, a...)
+	p.SetText(text)
+	slog.Info(text)
+}
+
+func (p *ProgressBar) Println(a ...any) {
+	text := fmt.Sprint(a...) // Don't added newlines. Makes progress bar look weird
+	p.SetText(text)
+	slog.Info(text)
 }
 
 type Launcher struct {
@@ -40,8 +110,7 @@ type Launcher struct {
 
 	playingBinding binding.Bool
 
-	progress *widget.ProgressBar
-	infinite *widget.ProgressBarInfinite
+	ProgressBar
 
 	cancelFunc func()
 	playWg     sync.WaitGroup
@@ -59,12 +128,8 @@ func NewLauncher(window fyne.Window, settingsBinding SettingsBinding, profileBin
 
 		playingBinding: playingBinding,
 
-		progress: widget.NewProgressBar(),
-		infinite: widget.NewProgressBarInfinite(),
+		ProgressBar: ProgressBar{nlwidgets.NewProgressBar()},
 	}
-
-	l.progress.Hide()
-	l.infinite.Hide()
 
 	l.playButton = widget.NewButtonWithIcon("Play", theme.MediaPlayIcon(), l.Play)
 	l.playButton.Importance = widget.HighImportance
@@ -77,7 +142,7 @@ func NewLauncher(window fyne.Window, settingsBinding SettingsBinding, profileBin
 	clientLabel.Truncation = fyne.TextTruncateEllipsis
 
 	l.Container = container.NewBorder(
-		container.NewStack(l.progress, l.infinite), nil, l.clientErrorIcon, l.playButton,
+		l.ProgressBar.Container, nil, l.clientErrorIcon, l.playButton,
 		clientLabel,
 	)
 
@@ -87,19 +152,12 @@ func NewLauncher(window fyne.Window, settingsBinding SettingsBinding, profileBin
 	return l
 }
 
-func (l *Launcher) HideProgress() {
-	l.progress.Hide()
-	l.infinite.Hide()
-}
-
-func (l *Launcher) Infinite() {
-	l.progress.Hide()
-	l.infinite.Show()
-}
-
-func (l *Launcher) Progress() {
-	l.progress.Show()
-	l.infinite.Hide()
+func GetAbs(path string) (string, error) {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return "", err
+	}
+	return strings.ToUpper(abs[:1]) + abs[1:], nil // Capitalizes drive name on Windows
 }
 
 func (l *Launcher) ClientConfig() client.Config {
@@ -115,6 +173,15 @@ func (l *Launcher) ClientConfig() client.Config {
 		if len(profile.Client.Name) > 0 {
 			c.Name = profile.Client.Name
 		}
+
+		c.IsPacked = profile.Client.IsPacked
+	}
+
+	installDir, err := GetAbs(c.Directory)
+	if err != nil {
+		slog.Error(err.Error())
+	} else {
+		c.Directory = installDir
 	}
 
 	return c
@@ -140,20 +207,60 @@ func (l *Launcher) DataChanged() {
 	}
 }
 
-func (l *Launcher) Patch(ctx context.Context, serverInfo ServerInfo) error {
+func (l *Launcher) getPatcher(ctx context.Context, client client.Config, profile *Profile) (patcher.Patcher, error) {
+	resources, serviceUrl, err := origin.NewResources(profile.Server.Patcher.ServiceUrl)
+	if err != nil {
+		return nil, err
+	}
+
+	jar, _ := cookiejar.New(&cookiejar.Options{
+		PublicSuffixList: publicsuffix.List,
+	})
+
+	if h, ok := resources.(*origin.Http); ok {
+		h.Client = &http.Client{
+			Jar:       jar,
+			Transport: http.DefaultTransport,
+		}
+	}
+
+	masterIndex, err := profile.Server.Patcher.Environment.GetMasterIndex(ctx, serviceUrl, resources)
+	if err != nil {
+		return nil, err
+	}
+
+	if masterIndex.Config.Type != profile.Server.Patcher.Id {
+		return nil, fmt.Errorf("expected patcher %s but Master Index returned %s", profile.Server.Patcher.Id, masterIndex.Config.Type)
+	}
+
+	if h, ok := resources.(*origin.Http); ok && len(masterIndex.Authentication) > 0 {
+		resources = origin.WithAuthentication(h, AskForCredentials, masterIndex.Authentication)
+	}
+
+	return profile.Server.Patcher.Environment.NewPatcher(ctx, patcher.Options{
+		Resources: resources,
+		Log:       &l.ProgressBar,
+
+		ConfigUrl:         masterIndex.Config.URL,
+		AuthenticationUrl: masterIndex.Authentication,
+		InstallDirectory:  client.Directory,
+		ServerId:          profile.Id,
+	})
+}
+
+func (l *Launcher) GetBoot(client client.Config, profile *Profile) (boot.Config, error) {
+	if profile.Server.Patcher == nil || len(profile.Server.Patcher.Id) == 0 {
+		return profile.Server.BootConfig(), nil
+	}
+
 	l.SetPatching()
 	defer l.HideProgress()
 
 	l.Infinite()
 
-	return errors.New("patches are currently disabled")
-}
-
-func (l *Launcher) Play() {
-	l.SetLaunching()
-
 	ctx, cancel := context.WithCancel(context.Background())
 	l.cancelFunc = cancel
+
 	l.playWg.Add(1)
 	defer func() {
 		cancel()
@@ -161,66 +268,130 @@ func (l *Launcher) Play() {
 		l.playWg.Done()
 	}()
 
-	profile := l.currentProfile
-	if profile.Server.Patcher != nil && len(profile.Server.Patcher.Id) > 0 {
-		if err := l.Patch(ctx, profile.Server); err != nil {
-			dialog.ShowError(err, l.window)
-		}
+	patcher, err := l.getPatcher(ctx, client, profile)
+	if err != nil {
+		return boot.Config{}, err
+	}
 
+	archive, err := patcher.GetVersion(ctx, profile.Client.IsPacked)
+	if err != nil {
+		return boot.Config{}, err
+	}
+	defer func() {
+		if archive != nil {
+			if err := archive.Close(); err != nil {
+				slog.Error(err.Error())
+			}
+		}
+	}()
+
+	undoer, err := undoer.NewSqlite("changes.db", client.Directory)
+	if err != nil {
+		return boot.Config{}, err
+	}
+
+	slog.Info("Running undoer...")
+	if err := undoer.Undo(archive); err != nil {
+		return boot.Config{}, err
+	}
+
+	patch, err := patcher.GetPatch(ctx, archive)
+	if err != nil {
+		return boot.Config{}, err
+	}
+
+	l.SetMax(float64(patch.Total()))
+	patch.SetProgress(func(n int) {
+		l.SetValue(float64(n))
+	})
+
+	l.Progress()
+	if err := patch.Run(ctx, undoer); err != nil {
+		return boot.Config{}, err
+	}
+	l.Print("Patcher completed!")
+
+	storedConfig := profile.Server.BootConfig()
+
+	bootConfig := patcher.GetBoot(client.IsPacked)
+	bootConfig.SigninURL = storedConfig.SigninURL
+	bootConfig.SignupURL = storedConfig.SignupURL
+	bootConfig.PasswordURL = storedConfig.PasswordURL
+	bootConfig.RegisterURL = storedConfig.RegisterURL
+
+	return *bootConfig, nil
+}
+
+func (l *Launcher) ShowError(err error) {
+	slog.Error(err.Error())
+	fyne.DoAndWait(func() { dialog.ShowError(err, l.window) })
+	l.SetNormal()
+}
+
+func (l *Launcher) play() {
+	l.SetLaunching()
+
+	clientConfig := l.ClientConfig()
+	profile := l.currentProfile
+
+	bootConfig, err := l.GetBoot(clientConfig, profile)
+	if errors.Is(err, context.Canceled) {
+		slog.Info("Launch cancelled")
+		l.SetNormal()
 		return
 	}
 
-	clientConfig := l.ClientConfig()
+	if err != nil {
+		slog.Error("Failed to get boot configuration", "error", err)
+		fyne.DoAndWait(l.playButton.Disable)
+		if !AskContinueOnError(err) {
+			l.SetNormal()
+			return
+		}
+		bootConfig = profile.Server.BootConfig()
+	}
 
 	bootFile, err := os.Create(clientConfig.BootPath())
 	if err != nil {
-		dialog.ShowError(err, l.window)
-		l.SetNormal()
+		l.ShowError(err)
+		return
+	}
+
+	slog.Info("Writing boot config", "serverName", bootConfig.ServerName, "authIP", bootConfig.AuthServerIP, "useCatalog", bootConfig.UseCatalog, "manifestFile", bootConfig.ManifestFile)
+
+	if err := ldf.NewTextEncoder(bootFile).Encode(bootConfig); err != nil {
+		l.ShowError(err)
 		return
 	}
 
 	settings := l.Settings()
 
-	isPacked := settings.Launch.DefaultClient.IsPacked
-	if profile.Client != nil {
-		isPacked = profile.Client.IsPacked
-	}
-
-	boot := profile.Server.BootConfig()
-	boot.UseCatalog = isPacked
-
-	slog.Info("Writing boot config", "serverName", boot.ServerName, "authIP", boot.AuthServerIP, "useCatalog", boot.UseCatalog, "manifestFile", boot.ManifestFile)
-
-	if err := ldf.NewTextEncoder(bootFile).Encode(boot); err != nil {
-		dialog.ShowError(err, l.window)
-		l.SetNormal()
-		return
-	}
-
 	cmd, err := client.Start(clientConfig, !settings.Launch.CloseOnPlay)
 	if err != nil {
-		dialog.ShowError(err, l.window)
-		l.SetNormal()
+		l.ShowError(err)
 		return
 	}
 
 	if settings.Launch.CloseOnPlay {
-		fyne.CurrentApp().Quit()
+		fyne.DoAndWait(fyne.CurrentApp().Quit)
 		return
 	}
 
 	l.SetPlaying()
 	go func(cmd *exec.Cmd) {
 		if err := cmd.Wait(); err != nil {
-			dialog.ShowError(err, l.window)
+			l.ShowError(err)
 		}
 		slog.Info("Client exited", "exitCode", cmd.ProcessState.ExitCode())
-		fyne.Do(l.SetNormal)
+		l.SetNormal()
 	}(cmd)
 }
 
-func (l *Launcher) Cancel() {
-	l.playButton.Disable()
+func (l *Launcher) Play() {
+	go l.play()
+}
+
+func (l *Launcher) cancel() {
 	if l.cancelFunc != nil {
 		l.cancelFunc()
 		l.playWg.Wait()
@@ -228,36 +399,48 @@ func (l *Launcher) Cancel() {
 	l.SetNormal()
 }
 
-func (l *Launcher) SetNormal() {
-	l.playButton.SetText("Play")
-	l.playButton.SetIcon(theme.MediaPlayIcon())
-	l.playButton.Importance = widget.HighImportance
-	l.playButton.OnTapped = l.Play
-	l.playButton.Refresh()
-	l.playButton.Enable()
+func (l *Launcher) Cancel() {
+	l.playButton.Disable()
+	go l.cancel()
+}
 
-	l.playingBinding.Set(false)
+func (l *Launcher) SetNormal() {
+	fyne.DoAndWait(func() {
+		l.playButton.SetText("Play")
+		l.playButton.SetIcon(theme.MediaPlayIcon())
+		l.playButton.Importance = widget.HighImportance
+		l.playButton.OnTapped = l.Play
+		l.playButton.Refresh()
+		l.playButton.Enable()
+
+		l.playingBinding.Set(false)
+	})
 }
 
 func (l *Launcher) SetLaunching() {
-	l.playingBinding.Set(true)
-
-	l.playButton.SetText("Launching...")
-	l.playButton.SetIcon(nil)
-	l.playButton.Disable()
+	fyne.DoAndWait(func() {
+		l.playingBinding.Set(true)
+		l.playButton.SetText("Launching...")
+		l.playButton.SetIcon(nil)
+		l.playButton.Disable()
+	})
 }
 
 func (l *Launcher) SetPlaying() {
-	l.playButton.SetText("Playing")
-	l.playButton.SetIcon(nil)
-	l.playButton.Disable()
+	fyne.DoAndWait(func() {
+		l.playButton.SetText("Playing")
+		l.playButton.SetIcon(nil)
+		l.playButton.Disable()
+	})
 }
 
 func (l *Launcher) SetPatching() {
-	l.playButton.SetText("Cancel")
-	l.playButton.SetIcon(theme.CancelIcon())
-	l.playButton.Importance = widget.DangerImportance
-	l.playButton.OnTapped = l.Cancel
-	l.playButton.Refresh()
-	l.playButton.Enable()
+	fyne.DoAndWait(func() {
+		l.playButton.SetText("Cancel")
+		l.playButton.SetIcon(theme.CancelIcon())
+		l.playButton.Importance = widget.DangerImportance
+		l.playButton.OnTapped = l.Cancel
+		l.playButton.Refresh()
+		l.playButton.Enable()
+	})
 }

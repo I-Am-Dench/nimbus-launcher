@@ -40,6 +40,7 @@ type Patcher struct {
 	serverId string
 
 	server    Server
+	cachePath string
 	cacheFile *cache.Cache
 
 	index  *manifest.Manifest
@@ -437,10 +438,10 @@ func (p *Patcher) GetVersion(ctx context.Context, packed bool) (*archive.Archive
 		return nil, fmt.Errorf("patcher: %v", err)
 	}
 
-	cacheFileName := filepath.Join(p.Root, p.versions(CacheFile, true))
+	p.cachePath = filepath.Join(p.Root, p.versions(CacheFile, true))
 
 	var err error
-	p.cacheFile, err = p.readCacheFile(cacheFileName)
+	p.cacheFile, err = p.readCacheFile(p.cachePath)
 	if err != nil {
 		return nil, fmt.Errorf("patcher: %v", err)
 	}
@@ -505,6 +506,13 @@ func (p *Patcher) GetPatch(ctx context.Context, archive *archive.Archive) (patch
 	if cancelled(ctx) {
 		return nil, ctx.Err()
 	}
+	defer func() {
+		if p.cacheFile != nil {
+			if err := cache.WriteFile(p.cachePath, p.cacheFile); err != nil {
+				p.Log.Print(err)
+			}
+		}
+	}()
 
 	if !p.FullDownload {
 		return &Patch{entries: []*manifest.Entry{}}, nil

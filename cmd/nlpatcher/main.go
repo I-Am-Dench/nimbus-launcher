@@ -83,7 +83,11 @@ var CookieJar, _ = cookiejar.New(&cookiejar.Options{
 	PublicSuffixList: publicsuffix.List,
 })
 
-func GetCredentials() (string, []byte, error) {
+func GetCredentials(authMessage string) (string, []byte, error) {
+	if len(authMessage) > 0 {
+		fmt.Println(authMessage)
+	}
+
 	fmt.Println("\n\nEnter credentials")
 	fmt.Println("=================")
 

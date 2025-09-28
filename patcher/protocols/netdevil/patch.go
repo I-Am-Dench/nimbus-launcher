@@ -14,7 +14,8 @@ import (
 type Patch struct {
 	Downloader
 
-	archive *archive.Archive
+	archive  *archive.Archive
+	progress func(int)
 
 	entries []*manifest.Entry
 }
@@ -31,11 +32,23 @@ func (p *Patch) Summary() []patcher.PatchEntry {
 	return summary
 }
 
+func (p *Patch) Total() int {
+	return len(p.entries)
+}
+
+func (p *Patch) SetProgress(progress func(n int)) {
+	p.progress = progress
+}
+
 func (p *Patch) runPacked(ctx context.Context, undoer undoer.Undoer, archive *archive.Archive) error {
 	errs := []error{}
-	for _, entry := range p.entries {
+	for i, entry := range p.entries {
 		if cancelled(ctx) {
 			return ctx.Err()
+		}
+
+		if p.progress != nil {
+			p.progress(i + 1)
 		}
 
 		if err := undoer.Track(entry.Path, archive); err != nil {

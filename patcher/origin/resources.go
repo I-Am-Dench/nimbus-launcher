@@ -2,6 +2,8 @@ package origin
 
 import (
 	"context"
+	"encoding/json"
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"io"
@@ -87,10 +89,14 @@ func (h *Http) Get(ctx context.Context, uri string) (io.ReadCloser, error) {
 		return nil, fmt.Errorf("origin: http: %w", ErrNotAuthenticated)
 	}
 
-	return nil, fmt.Errorf("origin: http: unhandled status: %s", response.Status)
+	return nil, fmt.Errorf("origin: http: Get %s: unhandled status: %s", uri, response.Status)
 }
 
-type CredentialsFunc = func() (username string, password []byte, err error)
+type ResponseMessage struct {
+	Message string `json:"error" xml:"error"`
+}
+
+type CredentialsFunc = func(authMessage string) (username string, password []byte, err error)
 
 type HttpWithAuth struct {
 	*Http
@@ -99,9 +105,34 @@ type HttpWithAuth struct {
 	authUrl     string
 }
 
+func (h *HttpWithAuth) extractResponseMessage(response *http.Response) string {
+	message := struct {
+		Message string `json:"error" xml:"error"`
+	}{}
+
+	switch response.Header.Get("Content-Type") {
+	case "application/json":
+		json.NewDecoder(response.Body).Decode(&message)
+	case "application/xml", "text/xml":
+		xml.NewDecoder(response.Body).Decode(&message)
+	case "text/plain", "":
+		data, err := io.ReadAll(response.Body)
+		if err != nil {
+			return response.Status
+		}
+		return string(data)
+	}
+
+	if len(message.Message) == 0 {
+		return response.Status
+	}
+	return message.Message
+}
+
 func (h *HttpWithAuth) Authenticate(ctx context.Context) error {
+	var lastMessage string
 	for {
-		username, password, err := h.credentials()
+		username, password, err := h.credentials(lastMessage)
 		if err != nil {
 			return fmt.Errorf("origin: http with auth: %w", err)
 		}
@@ -124,9 +155,11 @@ func (h *HttpWithAuth) Authenticate(ctx context.Context) error {
 			return nil
 		}
 
-		if response.StatusCode != http.StatusUnauthorized {
+		if response.StatusCode != http.StatusUnauthorized && response.StatusCode != http.StatusForbidden {
 			return fmt.Errorf("origin: http with auth: unhandled status: %s", response.Status)
 		}
+
+		lastMessage = h.extractResponseMessage(response)
 	}
 }
 

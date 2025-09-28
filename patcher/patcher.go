@@ -16,6 +16,8 @@ type PatchEntry struct {
 
 type Patch interface {
 	Summary() []PatchEntry
+	Total() int
+	SetProgress(func(n int))
 	Run(context.Context, undoer.Undoer) error
 }
 
