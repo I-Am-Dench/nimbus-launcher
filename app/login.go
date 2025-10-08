@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"log/slog"
 	"sync"
 
 	"fyne.io/fyne/v2"
@@ -12,6 +13,10 @@ import (
 )
 
 func AskForCredentials(authMessage string) (username string, password []byte, err error) {
+	if len(authMessage) > 0 {
+		slog.Error("Failed to authenticate", "message", authMessage)
+	}
+
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
@@ -23,7 +28,7 @@ func AskForCredentials(authMessage string) (username string, password []byte, er
 
 	submitted := false
 
-	fyne.DoAndWait(func() {
+	fyne.Do(func() {
 		window := fyne.CurrentApp().NewWindow("Authenticate")
 		window.SetIcon(theme.AccountIcon())
 		window.SetOnClosed(func() {

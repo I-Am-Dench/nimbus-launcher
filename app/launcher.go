@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
-	"net/http/cookiejar"
+	http_jar "net/http/cookiejar"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -21,6 +22,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"github.com/I-Am-Dench/goverbuild/encoding/ldf"
 	"github.com/I-Am-Dench/goverbuild/models/boot"
+	"github.com/I-Am-Dench/nimbus-launcher/app/cookiejar"
 	"github.com/I-Am-Dench/nimbus-launcher/app/nlwidgets"
 	"github.com/I-Am-Dench/nimbus-launcher/client"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher"
@@ -63,7 +65,7 @@ func (p *ProgressBar) SetText(s string) {
 	// its event queue every 15ms. Just calling SetText will cause fyne to
 	// yell at you since it's not being called from the main goroutine, and
 	// using fyne.Do doesn't change much since fyne still has to catch up
-	// with all of the events when it makes calls to hiding and show the
+	// with all of the events when it makes the calls for hiding and showing the
 	// progress bars at the end of patcher setup.
 	//
 	// Thought about maybe showing every other or every 5 logs, but for
@@ -207,15 +209,15 @@ func (l *Launcher) DataChanged() {
 	}
 }
 
-func (l *Launcher) getPatcher(ctx context.Context, client client.Config, profile *Profile) (patcher.Patcher, error) {
+func (l *Launcher) getPatcher(ctx context.Context, client client.Config, profile *Profile, jar http.CookieJar) (patcher.Patcher, error) {
 	resources, serviceUrl, err := origin.NewResources(profile.Server.Patcher.ServiceUrl)
 	if err != nil {
 		return nil, err
 	}
 
-	jar, _ := cookiejar.New(&cookiejar.Options{
-		PublicSuffixList: publicsuffix.List,
-	})
+	// jar, _ := cookiejar.New(&cookiejar.Options{
+	// 	PublicSuffixList: publicsuffix.List,
+	// })
 
 	if h, ok := resources.(*origin.Http); ok {
 		h.Client = &http.Client{
@@ -268,7 +270,19 @@ func (l *Launcher) GetBoot(client client.Config, profile *Profile) (boot.Config,
 		l.playWg.Done()
 	}()
 
-	patcher, err := l.getPatcher(ctx, client, profile)
+	var jar http.CookieJar
+	jar, err := cookiejar.New("cookies.json", &cookiejar.Options{PublicSuffixList: publicsuffix.List})
+	if err != nil {
+		slog.Error("Failed to open cookie jar", "error", err)
+		jar, _ = http_jar.New(&http_jar.Options{PublicSuffixList: publicsuffix.List})
+	}
+	defer func() {
+		if closer, ok := jar.(io.Closer); ok {
+			closer.Close()
+		}
+	}()
+
+	patcher, err := l.getPatcher(ctx, client, profile, jar)
 	if err != nil {
 		return boot.Config{}, err
 	}

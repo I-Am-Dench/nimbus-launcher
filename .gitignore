@@ -7,3 +7,4 @@ release/launcher
 *.zip
 *.log
 *.db
+*.json
