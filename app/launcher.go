@@ -20,6 +20,7 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"github.com/I-Am-Dench/goverbuild/archive"
 	"github.com/I-Am-Dench/goverbuild/encoding/ldf"
 	"github.com/I-Am-Dench/goverbuild/models/boot"
 	"github.com/I-Am-Dench/nimbus-launcher/app/cookiejar"
@@ -29,6 +30,10 @@ import (
 	"github.com/I-Am-Dench/nimbus-launcher/patcher/origin"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher/undoer"
 	"golang.org/x/net/publicsuffix"
+)
+
+const (
+	UndoerName = "changes.db"
 )
 
 type LaunchConfig struct {
@@ -250,7 +255,51 @@ func (l *Launcher) getPatcher(ctx context.Context, client client.Config, profile
 	})
 }
 
+func (l *Launcher) UndoPatches(client client.Config, packed bool) error {
+	var arch *archive.Archive
+	if packed {
+		catalogPath := filepath.Join(client.Directory, patcher.VersionsDir, patcher.CatalogName)
+
+		a, err := archive.Open(client.Directory, catalogPath)
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+
+		if err != nil {
+			return err
+		}
+		arch = &a
+	}
+	defer func() {
+		if arch != nil {
+			if err := arch.Close(); err != nil {
+				slog.Error(err.Error())
+			}
+		}
+	}()
+
+	undoer, err := undoer.NewSqlite(UndoerName, client.Directory)
+	if err != nil {
+		return err
+	}
+
+	slog.Info("Running undoer...")
+	if err := undoer.Undo(arch); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (l *Launcher) GetBoot(client client.Config, profile *Profile) (boot.Config, error) {
+	// We want to run the undoer regardless of whether the profile
+	// contains a patcher configuration. This ensures that switching
+	// to a profile which doesn't use a patcher will reset the client
+	// back to a vanilla state.
+	if err := l.UndoPatches(client, client.IsPacked); err != nil {
+		slog.Error("Failed to run undoer", "error", err)
+	}
+
 	if profile.Server.Patcher == nil || len(profile.Server.Patcher.Id) == 0 {
 		return profile.Server.BootConfig(), nil
 	}
@@ -299,13 +348,8 @@ func (l *Launcher) GetBoot(client client.Config, profile *Profile) (boot.Config,
 		}
 	}()
 
-	undoer, err := undoer.NewSqlite("changes.db", client.Directory)
+	undoer, err := undoer.NewSqlite(UndoerName, client.Directory)
 	if err != nil {
-		return boot.Config{}, err
-	}
-
-	slog.Info("Running undoer...")
-	if err := undoer.Undo(archive); err != nil {
 		return boot.Config{}, err
 	}
 

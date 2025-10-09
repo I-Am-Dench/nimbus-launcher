@@ -22,7 +22,7 @@ import (
 const (
 	PatcherVersion = 10000
 
-	VersionsDir = "versions"
+	VersionsDir = patcher.VersionsDir
 
 	CacheFile   = "quickcheck.txt"
 	VersionFile = "version.txt"
@@ -30,7 +30,7 @@ const (
 	IndexFile   = "index.txt"
 	GameFile    = "trunk.txt"
 
-	CatalogFile = "primary.pki"
+	CatalogFile = patcher.CatalogName
 )
 
 type Patcher struct {

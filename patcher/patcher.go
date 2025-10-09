@@ -10,6 +10,11 @@ import (
 	"github.com/I-Am-Dench/nimbus-launcher/patcher/undoer"
 )
 
+const (
+	VersionsDir = "versions"
+	CatalogName = "primary.pki"
+)
+
 type PatchEntry struct {
 	Source, Destination string
 }
