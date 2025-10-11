@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -34,6 +35,8 @@ import (
 
 const (
 	UndoerName = "changes.db"
+
+	logThreshold = time.Second / 60
 )
 
 type LaunchConfig struct {
@@ -44,6 +47,7 @@ type LaunchConfig struct {
 
 type ProgressBar struct {
 	*nlwidgets.ProgressBar
+	lastLog time.Time
 }
 
 func (p *ProgressBar) SetValue(f float64) {
@@ -83,21 +87,36 @@ func (p *ProgressBar) SetText(s string) {
 	fyne.DoAndWait(func() { p.ProgressBar.SetText(s) })
 }
 
+func (p *ProgressBar) canLog() bool {
+	now := time.Now()
+	if now.Sub(p.lastLog) < logThreshold {
+		return false
+	}
+	p.lastLog = now
+	return true
+}
+
 func (p *ProgressBar) Print(a ...any) {
 	text := fmt.Sprint(a...)
-	p.SetText(text)
+	if p.canLog() {
+		p.SetText(text)
+	}
 	slog.Info(text)
 }
 
 func (p *ProgressBar) Printf(format string, a ...any) {
 	text := fmt.Sprintf(format, a...)
-	p.SetText(text)
+	if p.canLog() {
+		p.SetText(text)
+	}
 	slog.Info(text)
 }
 
 func (p *ProgressBar) Println(a ...any) {
 	text := fmt.Sprint(a...) // Don't added newlines. Makes progress bar look weird
-	p.SetText(text)
+	if p.canLog() {
+		p.SetText(text)
+	}
 	slog.Info(text)
 }
 
@@ -135,7 +154,7 @@ func NewLauncher(window fyne.Window, settingsBinding SettingsBinding, profileBin
 
 		playingBinding: playingBinding,
 
-		ProgressBar: ProgressBar{nlwidgets.NewProgressBar()},
+		ProgressBar: ProgressBar{ProgressBar: nlwidgets.NewProgressBar()},
 	}
 
 	l.playButton = widget.NewButtonWithIcon("Play", theme.MediaPlayIcon(), l.Play)
