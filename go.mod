@@ -6,12 +6,12 @@ toolchain go1.24.7
 
 require (
 	fyne.io/fyne/v2 v2.6.3
-	github.com/I-Am-Dench/goverbuild v0.10.1
+	github.com/I-Am-Dench/goverbuild v0.11.0
 )
 
 require (
 	github.com/mattn/go-sqlite3 v1.14.32
-	golang.org/x/term v0.35.0
+	golang.org/x/term v0.36.0
 )
 
 require github.com/snksoft/crc v1.1.0 // indirect
@@ -44,9 +44,9 @@ require (
 	github.com/srwiley/rasterx v0.0.0-20220730225603-2ab79fcdd4ef // indirect
 	github.com/stretchr/testify v1.11.1 // indirect
 	github.com/yuin/goldmark v1.7.13 // indirect
-	golang.org/x/image v0.31.0 // indirect
-	golang.org/x/net v0.44.0
-	golang.org/x/sys v0.36.0 // indirect
-	golang.org/x/text v0.29.0 // indirect
+	golang.org/x/image v0.32.0 // indirect
+	golang.org/x/net v0.46.0
+	golang.org/x/sys v0.37.0 // indirect
+	golang.org/x/text v0.30.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

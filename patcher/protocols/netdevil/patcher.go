@@ -499,7 +499,7 @@ func (p *Patcher) GetVersion(ctx context.Context, packed bool) (*archive.Archive
 		return nil, fmt.Errorf("patcher: %v", err)
 	}
 
-	return &archive, nil
+	return archive, nil
 }
 
 func (p *Patcher) GetPatch(ctx context.Context, archive *archive.Archive) (patcher.Patch, error) {

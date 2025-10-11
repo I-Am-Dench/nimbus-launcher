@@ -255,12 +255,12 @@ func (l *Launcher) getPatcher(ctx context.Context, client client.Config, profile
 	})
 }
 
-func (l *Launcher) UndoPatches(client client.Config, packed bool) error {
+func (l *Launcher) UndoPatches(client client.Config, packed bool) (err error) {
 	var arch *archive.Archive
 	if packed {
 		catalogPath := filepath.Join(client.Directory, patcher.VersionsDir, patcher.CatalogName)
 
-		a, err := archive.Open(client.Directory, catalogPath)
+		arch, err = archive.Open(client.Directory, catalogPath)
 		if errors.Is(err, os.ErrNotExist) {
 			return nil
 		}
@@ -268,7 +268,6 @@ func (l *Launcher) UndoPatches(client client.Config, packed bool) error {
 		if err != nil {
 			return err
 		}
-		arch = &a
 	}
 	defer func() {
 		if arch != nil {
