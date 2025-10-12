@@ -20,13 +20,13 @@ type Patch struct {
 	entries []*manifest.Entry
 }
 
-func (p *Patch) Summary() []patcher.PatchEntry {
-	summary := []patcher.PatchEntry{}
+func (p *Patch) Summary() patcher.Summary {
+	summary := patcher.Summary{
+		Header: []string{"Source"},
+	}
 
 	for _, entry := range p.entries {
-		summary = append(summary, patcher.PatchEntry{
-			Source: entry.Path,
-		})
+		summary.Rows = append(summary.Rows, []string{entry.Path})
 	}
 
 	return summary

@@ -381,6 +381,12 @@ func (l *Launcher) GetBoot(client client.Config, profile *Profile) (boot.Config,
 		l.SetValue(float64(n))
 	})
 
+	settings := l.Settings()
+
+	if settings.Launch.ReviewPatchesBeforeUpdate && !nlwidgets.AskContinuePatch(patch.Summary()) {
+		return boot.Config{}, errors.New("patch rejected")
+	}
+
 	l.Progress()
 	if err := patch.Run(ctx, undoer); err != nil {
 		return boot.Config{}, err

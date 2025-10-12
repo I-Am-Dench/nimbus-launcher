@@ -15,12 +15,13 @@ const (
 	CatalogName = "primary.pki"
 )
 
-type PatchEntry struct {
-	Source, Destination string
+type Summary struct {
+	Header []string
+	Rows   [][]string
 }
 
 type Patch interface {
-	Summary() []PatchEntry
+	Summary() Summary
 	Total() int
 	SetProgress(func(n int))
 	Run(context.Context, undoer.Undoer) error

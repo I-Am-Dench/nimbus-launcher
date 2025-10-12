@@ -106,12 +106,12 @@ func GetCredentials(authMessage string) (string, []byte, error) {
 	return strings.TrimSpace(username), bpassword, nil
 }
 
-func PrintSummary(summary []patcher.PatchEntry) {
+func PrintSummary(summary patcher.Summary) {
 	tab := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 
-	fmt.Fprintln(tab, "source\tdestination")
-	for _, entry := range summary {
-		fmt.Fprintf(tab, "%s\t%s\n", entry.Source, entry.Destination)
+	fmt.Fprintln(tab, strings.Join(summary.Header, "\t"))
+	for _, entry := range summary.Rows {
+		fmt.Fprintf(tab, "%s\n", strings.Join(entry, "\t"))
 	}
 
 	tab.Flush()
