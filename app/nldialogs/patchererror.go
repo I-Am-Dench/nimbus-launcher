@@ -1,4 +1,4 @@
-package app
+package nldialogs
 
 import (
 	"sync"
@@ -15,7 +15,7 @@ func AskContinueOnError(err error) (ok bool) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
-	fyne.DoAndWait(func() {
+	fyne.Do(func() {
 		window := fyne.CurrentApp().NewWindow("Patcher Error")
 		window.SetIcon(theme.ErrorIcon())
 		window.SetOnClosed(func() {

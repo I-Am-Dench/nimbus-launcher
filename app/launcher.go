@@ -25,6 +25,7 @@ import (
 	"github.com/I-Am-Dench/goverbuild/encoding/ldf"
 	"github.com/I-Am-Dench/goverbuild/models/boot"
 	"github.com/I-Am-Dench/nimbus-launcher/app/cookiejar"
+	"github.com/I-Am-Dench/nimbus-launcher/app/nldialogs"
 	"github.com/I-Am-Dench/nimbus-launcher/app/nlwidgets"
 	"github.com/I-Am-Dench/nimbus-launcher/client"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher"
@@ -260,7 +261,7 @@ func (l *Launcher) getPatcher(ctx context.Context, client client.Config, profile
 	}
 
 	if h, ok := resources.(*origin.Http); ok && len(masterIndex.Authentication) > 0 {
-		resources = origin.WithAuthentication(h, AskForCredentials, masterIndex.Authentication)
+		resources = origin.WithAuthentication(h, nldialogs.AskForCredentials, masterIndex.Authentication)
 	}
 
 	return profile.Server.Patcher.Environment.NewPatcher(ctx, patcher.Options{
@@ -383,7 +384,7 @@ func (l *Launcher) GetBoot(client client.Config, profile *Profile) (boot.Config,
 
 	settings := l.Settings()
 
-	if settings.Launch.ReviewPatchesBeforeUpdate && !nlwidgets.AskContinuePatch(patch.Summary()) {
+	if settings.Launch.ReviewPatchesBeforeUpdate && !nldialogs.AskContinuePatch(patch.Summary()) {
 		return boot.Config{}, errors.New("patch rejected")
 	}
 
@@ -426,7 +427,7 @@ func (l *Launcher) play() {
 	if err != nil {
 		slog.Error("Failed to get boot configuration", "error", err)
 		fyne.DoAndWait(l.playButton.Disable)
-		if !AskContinueOnError(err) {
+		if !nldialogs.AskContinueOnError(err) {
 			l.SetNormal()
 			return
 		}

@@ -1,4 +1,4 @@
-package nlwidgets
+package nldialogs
 
 import (
 	"sync"
