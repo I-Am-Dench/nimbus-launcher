@@ -3,6 +3,8 @@ package client
 import (
 	"os"
 	"path/filepath"
+
+	"github.com/I-Am-Dench/nimbus-launcher/client/disk"
 )
 
 const (
@@ -23,6 +25,20 @@ func (c *Config) ClientPath() string {
 
 func (c *Config) BootPath() string {
 	return filepath.Join(filepath.Dir(c.ClientPath()), "boot.cfg")
+}
+
+func (c *Config) DiskSpace() (free, used uint64, err error) {
+	free, err = disk.FreeSpace(c.Directory)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	used, err = disk.UsedSpace(filepath.Dir(c.ClientPath()))
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return free, used, nil
 }
 
 func (c *Config) IsValid() bool {

@@ -434,6 +434,18 @@ func (l *Launcher) play() {
 		bootConfig = profile.Server.BootConfig()
 	}
 
+	const mebibyte = 1024 * 1024
+
+	free, used, err := clientConfig.DiskSpace()
+	if err != nil {
+		slog.Error("Failed to get disk space info", "error", err)
+	} else {
+		bootConfig.TrackDiskUsage = true
+		bootConfig.HDSpaceFree = uint32(free / mebibyte)
+		bootConfig.HDSpaceUsed = uint32(used / mebibyte)
+		slog.Info("Found disk space info", "freeMB", bootConfig.HDSpaceFree, "usedMB", bootConfig.HDSpaceUsed)
+	}
+
 	bootFile, err := os.Create(clientConfig.BootPath())
 	if err != nil {
 		l.ShowError(err)
