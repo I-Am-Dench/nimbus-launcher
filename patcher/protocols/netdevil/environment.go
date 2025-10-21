@@ -3,7 +3,6 @@ package netdevil
 import (
 	"context"
 	"encoding/xml"
-	"errors"
 	"fmt"
 	"net/url"
 	"path"
@@ -72,7 +71,7 @@ func (e *Environment) getServerList(ctx context.Context, options patcher.Options
 	return serverList, nil
 }
 
-func (e *Environment) NewPatcher(ctx context.Context, options patcher.Options) (patcher.Patcher, error) {
+func (e *Environment) GetServers(ctx context.Context, options patcher.Options) ([]patcher.Server, error) {
 	serverList, err := e.getServerList(ctx, options)
 	if err != nil {
 		return nil, fmt.Errorf("nd-nimbus: %w", err)
@@ -82,33 +81,35 @@ func (e *Environment) NewPatcher(ctx context.Context, options patcher.Options) (
 		return nil, ctx.Err()
 	}
 
-	server, ok := serverList.FindBest(e.UserConfig.Locale)
-	if !ok {
-		return nil, errors.New("nd-nimbus: no servers available")
-	}
+	servers := []patcher.Server{}
+	for _, server := range serverList.Servers {
+		resources := options.Resources
 
-	switch v := options.Resources.(type) {
-	case *origin.FS:
-		options.Resources = origin.WithRoot(v, path.Join(server.Patcher.Host, server.Patcher.Dir))
-	case *origin.Http, *origin.HttpWithAuth:
-		u, err := url.JoinPath(server.PatcherUrl(v), server.Patcher.Dir)
-		if err != nil {
-			return nil, fmt.Errorf("nd-nimbus: %v", err)
+		switch v := resources.(type) {
+		case *origin.FS:
+			resources = origin.WithRoot(v, path.Join(server.Patcher.Host, server.Patcher.Dir))
+		case *origin.Http, *origin.HttpWithAuth:
+			u, err := url.JoinPath(server.PatcherUrl(v), server.Patcher.Dir)
+			if err != nil {
+				return nil, fmt.Errorf("nd-nimbus: %v", err)
+			}
+			resources = origin.WithUrl(resources, u)
 		}
-		options.Resources = origin.WithUrl(options.Resources, u)
+
+		servers = append(servers, &Patcher{
+			UserConfig: e.UserConfig,
+			Downloader: Downloader{
+				Resources: resources,
+				Log:       options.Log,
+				Root:      options.InstallDirectory,
+				TempDir:   VersionsDir,
+			},
+			serverId: options.ServerId,
+			server:   server,
+		})
 	}
 
-	return &Patcher{
-		UserConfig: e.UserConfig,
-		Downloader: Downloader{
-			Resources: options.Resources,
-			Log:       options.Log,
-			Root:      options.InstallDirectory,
-			TempDir:   VersionsDir,
-		},
-		serverId: options.ServerId,
-		server:   server,
-	}, nil
+	return servers, nil
 }
 
 func cancelled(ctx context.Context) bool {

@@ -234,15 +234,11 @@ func (l *Launcher) DataChanged() {
 	}
 }
 
-func (l *Launcher) getPatcher(ctx context.Context, client client.Config, profile *Profile, jar http.CookieJar) (patcher.Patcher, error) {
+func (l *Launcher) getServer(ctx context.Context, client client.Config, profile *Profile, jar http.CookieJar) (patcher.Server, error) {
 	resources, serviceUrl, err := origin.NewResources(profile.Server.Patcher.ServiceUrl)
 	if err != nil {
 		return nil, err
 	}
-
-	// jar, _ := cookiejar.New(&cookiejar.Options{
-	// 	PublicSuffixList: publicsuffix.List,
-	// })
 
 	if h, ok := resources.(*origin.Http); ok {
 		h.Client = &http.Client{
@@ -256,23 +252,29 @@ func (l *Launcher) getPatcher(ctx context.Context, client client.Config, profile
 		return nil, err
 	}
 
-	if masterIndex.Config.Type != profile.Server.Patcher.Id {
-		return nil, fmt.Errorf("expected patcher %s but Master Index returned %s", profile.Server.Patcher.Id, masterIndex.Config.Type)
+	if masterIndex.UniverseConfig.Type != profile.Server.Patcher.Id {
+		return nil, fmt.Errorf("expected patcher %s but Master Index returned %s", profile.Server.Patcher.Id, masterIndex.UniverseConfig.Type)
 	}
 
 	if h, ok := resources.(*origin.Http); ok && len(masterIndex.Authentication) > 0 {
 		resources = origin.WithAuthentication(h, nldialogs.AskForCredentials, masterIndex.Authentication)
 	}
 
-	return profile.Server.Patcher.Environment.NewPatcher(ctx, patcher.Options{
+	servers, err := profile.Server.Patcher.Environment.GetServers(ctx, patcher.Options{
 		Resources: resources,
 		Log:       &l.ProgressBar,
 
-		ConfigUrl:         masterIndex.Config.URL,
+		ConfigUrl:         masterIndex.UniverseConfig.URL,
 		AuthenticationUrl: masterIndex.Authentication,
 		InstallDirectory:  client.Directory,
 		ServerId:          profile.Id,
 	})
+
+	if len(servers) == 0 {
+		return nil, fmt.Errorf("universe config '%s' has no servers", masterIndex.UniverseConfig.URL)
+	}
+
+	return servers[0], nil
 }
 
 func (l *Launcher) UndoPatches(client client.Config, packed bool) (err error) {
@@ -350,12 +352,12 @@ func (l *Launcher) GetBoot(client client.Config, profile *Profile) (boot.Config,
 		}
 	}()
 
-	patcher, err := l.getPatcher(ctx, client, profile, jar)
+	server, err := l.getServer(ctx, client, profile, jar)
 	if err != nil {
 		return boot.Config{}, err
 	}
 
-	archive, err := patcher.GetVersion(ctx, profile.Client.IsPacked)
+	archive, err := server.GetVersion(ctx, profile.Client.IsPacked)
 	if err != nil {
 		return boot.Config{}, err
 	}
@@ -372,7 +374,7 @@ func (l *Launcher) GetBoot(client client.Config, profile *Profile) (boot.Config,
 		return boot.Config{}, err
 	}
 
-	patch, err := patcher.GetPatch(ctx, archive)
+	patch, err := server.GetPatch(ctx, archive)
 	if err != nil {
 		return boot.Config{}, err
 	}
@@ -396,7 +398,7 @@ func (l *Launcher) GetBoot(client client.Config, profile *Profile) (boot.Config,
 
 	storedConfig := profile.Server.BootConfig()
 
-	bootConfig := patcher.GetBoot(client.IsPacked)
+	bootConfig := server.GetBoot(client.IsPacked)
 	bootConfig.SigninURL = storedConfig.SigninURL
 	bootConfig.SignupURL = storedConfig.SignupURL
 	bootConfig.PasswordURL = storedConfig.PasswordURL

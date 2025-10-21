@@ -27,7 +27,9 @@ type Patch interface {
 	Run(context.Context, undoer.Undoer) error
 }
 
-type Patcher interface {
+type Server interface {
+	Name() string
+
 	GetBoot(packed bool) *boot.Config
 	GetVersion(ctx context.Context, packed bool) (*archive.Archive, error)
 	GetPatch(context.Context, *archive.Archive) (Patch, error)
@@ -51,7 +53,7 @@ type Options struct {
 
 type MasterIndex struct {
 	Authentication string `xml:"Authentication"`
-	Config         struct {
+	UniverseConfig struct {
 		XMLName xml.Name `xml:"Config"`
 		Type    string   `xml:"type,attr"`
 		URL     string   `xml:",chardata"`
@@ -62,5 +64,5 @@ type MasterIndex struct {
 type Environment interface {
 	Locale() string
 	GetMasterIndex(ctx context.Context, serviceUrl string, resources origin.Resources) (MasterIndex, error)
-	NewPatcher(ctx context.Context, options Options) (Patcher, error)
+	GetServers(ctx context.Context, options Options) ([]Server, error)
 }

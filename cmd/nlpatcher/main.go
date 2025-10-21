@@ -117,7 +117,7 @@ func PrintSummary(summary patcher.Summary) {
 	tab.Flush()
 }
 
-func GetPatcher(ctx context.Context, patcherId string, config Config) (patcher.Patcher, error) {
+func GetServers(ctx context.Context, patcherId string, config Config) ([]patcher.Server, error) {
 	resources, serviceUrl, err := origin.NewResources(config.ServiceUrl)
 	if err != nil {
 		return nil, err
@@ -140,24 +140,85 @@ func GetPatcher(ctx context.Context, patcherId string, config Config) (patcher.P
 		return nil, err
 	}
 
-	if masterIndex.Config.Type != patcherId {
-		return nil, fmt.Errorf("expected patcher %s but Master Index returned %s", patcherId, masterIndex.Config.Type)
+	if masterIndex.UniverseConfig.Type != patcherId {
+		return nil, fmt.Errorf("expected patcher %s but Master Index returned %s", patcherId, masterIndex.UniverseConfig.Type)
 	}
 
 	if h, ok := resources.(*origin.Http); ok && len(masterIndex.Authentication) > 0 {
 		resources = origin.WithAuthentication(h, GetCredentials, masterIndex.Authentication)
 	}
 
-	return env.NewPatcher(ctx, patcher.Options{
+	return env.GetServers(ctx, patcher.Options{
 		Resources: resources,
 		Log:       log.New(os.Stdout, patcherId+": ", 0),
 
-		ConfigUrl:         masterIndex.Config.URL,
+		ConfigUrl:         masterIndex.UniverseConfig.URL,
 		AuthenticationUrl: masterIndex.Authentication,
 		InstallDirectory:  InstallationPath,
 		ServerId:          ServerId,
 	})
 }
+
+func SelectServer(servers []patcher.Server) patcher.Server {
+	fmt.Println("\n\nSelect Server")
+	fmt.Println("=============")
+	for i, server := range servers {
+		fmt.Printf("[%d] %s\n", i, server.Name())
+	}
+	fmt.Println()
+
+	var index int
+	for {
+		fmt.Print("Enter server index: ")
+		fmt.Scan(&index)
+
+		if index >= 0 && index < len(servers) {
+			return servers[index]
+		}
+	}
+}
+
+// func GetPatcher(ctx context.Context, patcherId string, config Config) (patcher.Patcher, error) {
+// 	resources, serviceUrl, err := origin.NewResources(config.ServiceUrl)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	if h, ok := resources.(*origin.Http); ok {
+// 		h.Client = &http.Client{
+// 			Jar:       CookieJar,
+// 			Transport: http.DefaultTransport,
+// 		}
+// 	}
+
+// 	env, err := config.GetEnvironment(patcherId)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	masterIndex, err := env.GetMasterIndex(ctx, serviceUrl, resources)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	if masterIndex.UniverseConfig.Type != patcherId {
+// 		return nil, fmt.Errorf("expected patcher %s but Master Index returned %s", patcherId, masterIndex.UniverseConfig.Type)
+// 	}
+
+// 	if h, ok := resources.(*origin.Http); ok && len(masterIndex.Authentication) > 0 {
+// 		resources = origin.WithAuthentication(h, GetCredentials, masterIndex.Authentication)
+// 	}
+
+// 	return env.NewPatcher(ctx, patcher.Options{
+// 		Resources: resources,
+// 		Log:       log.New(os.Stdout, patcherId+": ", 0),
+
+// 		ConfigUrl:         masterIndex.UniverseConfig.URL,
+// 		AuthenticationUrl: masterIndex.Authentication,
+// 		InstallDirectory:  InstallationPath,
+// 		ServerId:          ServerId,
+// 	})
+// }
 
 func GetAbs(path string) string {
 	abs, err := filepath.Abs(path)
@@ -195,12 +256,21 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
 	defer cancel()
 
-	patcher, err := GetPatcher(ctx, os.Args[1], config)
+	servers, err := GetServers(ctx, os.Args[1], config)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	archive, err := patcher.GetVersion(ctx, Packed)
+	if len(servers) == 0 {
+		log.Fatal("Environment has no servers")
+	}
+
+	server := servers[0]
+	if len(servers) > 1 {
+		server = SelectServer(servers)
+	}
+
+	archive, err := server.GetVersion(ctx, Packed)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -227,7 +297,7 @@ func main() {
 		return
 	}
 
-	patch, err := patcher.GetPatch(ctx, archive)
+	patch, err := server.GetPatch(ctx, archive)
 	if err != nil {
 		log.Println(err)
 		return

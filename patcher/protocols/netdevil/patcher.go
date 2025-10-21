@@ -47,6 +47,10 @@ type Patcher struct {
 	hotfix *manifest.Manifest
 }
 
+func (p *Patcher) Name() string {
+	return p.server.Name
+}
+
 func (p *Patcher) GetBoot(packed bool) *boot.Config {
 	bootConfig := p.server.Boot(p.Locale, packed)
 	if _, ok := p.Resources.(*origin.FS); ok {
