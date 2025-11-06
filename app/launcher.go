@@ -29,7 +29,6 @@ import (
 	"github.com/I-Am-Dench/nimbus-launcher/app/nlwidgets"
 	"github.com/I-Am-Dench/nimbus-launcher/client"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher"
-	"github.com/I-Am-Dench/nimbus-launcher/patcher/origin"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher/undoer"
 	"golang.org/x/net/publicsuffix"
 )
@@ -234,49 +233,6 @@ func (l *Launcher) DataChanged() {
 	}
 }
 
-func (l *Launcher) getServer(ctx context.Context, client client.Config, profile *Profile, jar http.CookieJar) (patcher.Server, error) {
-	resources, serviceUrl, err := origin.NewResources(profile.Server.Patcher.ServiceUrl)
-	if err != nil {
-		return nil, err
-	}
-
-	if h, ok := resources.(*origin.Http); ok {
-		h.Client = &http.Client{
-			Jar:       jar,
-			Transport: http.DefaultTransport,
-		}
-	}
-
-	masterIndex, err := profile.Server.Patcher.Environment.GetMasterIndex(ctx, serviceUrl, resources)
-	if err != nil {
-		return nil, err
-	}
-
-	if masterIndex.UniverseConfig.Type != profile.Server.Patcher.Id {
-		return nil, fmt.Errorf("expected patcher %s but Master Index returned %s", profile.Server.Patcher.Id, masterIndex.UniverseConfig.Type)
-	}
-
-	if h, ok := resources.(*origin.Http); ok && len(masterIndex.Authentication) > 0 {
-		resources = origin.WithAuthentication(h, nldialogs.AskForCredentials, masterIndex.Authentication)
-	}
-
-	servers, err := profile.Server.Patcher.Environment.GetServers(ctx, patcher.Options{
-		Resources: resources,
-		Log:       &l.ProgressBar,
-
-		ConfigUrl:         masterIndex.UniverseConfig.URL,
-		AuthenticationUrl: masterIndex.Authentication,
-		InstallDirectory:  client.Directory,
-		ServerId:          profile.Id,
-	})
-
-	if len(servers) == 0 {
-		return nil, fmt.Errorf("universe config '%s' has no servers", masterIndex.UniverseConfig.URL)
-	}
-
-	return servers[0], nil
-}
-
 func (l *Launcher) UndoPatches(client client.Config, packed bool) (err error) {
 	var arch *archive.Archive
 	if packed {
@@ -321,10 +277,6 @@ func (l *Launcher) GetBoot(client client.Config, profile *Profile) (boot.Config,
 		slog.Error("Failed to run undoer", "error", err)
 	}
 
-	if profile.Server.Patcher == nil || len(profile.Server.Patcher.Id) == 0 {
-		return profile.Server.BootConfig(), nil
-	}
-
 	l.SetPatching()
 	defer l.HideProgress()
 
@@ -352,12 +304,14 @@ func (l *Launcher) GetBoot(client client.Config, profile *Profile) (boot.Config,
 		}
 	}()
 
-	server, err := l.getServer(ctx, client, profile, jar)
+	servers, err := profile.ServerList(ctx, client, &l.ProgressBar, jar)
 	if err != nil {
 		return boot.Config{}, err
 	}
 
-	archive, err := server.GetVersion(ctx, profile.Client.IsPacked)
+	server := servers[0]
+
+	archive, err := server.GetVersion(ctx, client.IsPacked)
 	if err != nil {
 		return boot.Config{}, err
 	}
@@ -386,7 +340,7 @@ func (l *Launcher) GetBoot(client client.Config, profile *Profile) (boot.Config,
 
 	settings := l.Settings()
 
-	if settings.Launch.ReviewPatchesBeforeUpdate && !nldialogs.AskContinuePatch(patch.Summary()) {
+	if len(patch.Summary().Rows) > 0 && settings.Launch.ReviewPatchesBeforeUpdate && !nldialogs.AskContinuePatch(patch.Summary()) {
 		return boot.Config{}, errors.New("patch rejected")
 	}
 
@@ -435,6 +389,7 @@ func (l *Launcher) play() {
 		}
 		bootConfig = profile.Server.BootConfig()
 	}
+	fyne.DoAndWait(l.playButton.Disable)
 
 	const mebibyte = 1024 * 1024
 

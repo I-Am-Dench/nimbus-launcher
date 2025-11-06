@@ -1,10 +1,12 @@
 package app
 
 import (
+	"context"
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -18,9 +20,13 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"github.com/I-Am-Dench/goverbuild/encoding/ldf"
 	"github.com/I-Am-Dench/goverbuild/models/boot"
+	"github.com/I-Am-Dench/nimbus-launcher/app/internal/defaultserver"
+	"github.com/I-Am-Dench/nimbus-launcher/app/nldialogs"
 	"github.com/I-Am-Dench/nimbus-launcher/app/nlwidgets"
 	"github.com/I-Am-Dench/nimbus-launcher/client"
 	"github.com/I-Am-Dench/nimbus-launcher/locale"
+	"github.com/I-Am-Dench/nimbus-launcher/patcher"
+	"github.com/I-Am-Dench/nimbus-launcher/patcher/origin"
 )
 
 const (
@@ -207,6 +213,58 @@ func (p *Profile) DefaultBootPath(dir string) string {
 	return filepath.Join(dir, BootDir, p.Id+".cfg")
 }
 
+func (p *Profile) ServerList(ctx context.Context, client client.Config, logger patcher.Logger, jar http.CookieJar) ([]patcher.Server, error) {
+	patcherConfig := p.Server.Patcher
+	if patcherConfig == nil || patcherConfig.Environment == nil {
+		return []patcher.Server{
+			defaultserver.Server{BootConfig: p.Server.BootConfig()},
+		}, nil
+	}
+
+	resources, serviceUrl, err := origin.NewResources(patcherConfig.ServiceUrl)
+	if err != nil {
+		return nil, err
+	}
+
+	if h, ok := resources.(*origin.Http); ok {
+		h.Client = &http.Client{
+			Jar:       jar,
+			Transport: http.DefaultTransport,
+		}
+	}
+
+	masterIndex, err := patcherConfig.Environment.GetMasterIndex(ctx, serviceUrl, resources)
+	if err != nil {
+		return nil, err
+	}
+
+	if masterIndex.UniverseConfig.Type != patcherConfig.Id {
+		return nil, fmt.Errorf("expected patcher %s but Master Index returned %s", patcherConfig.Id, masterIndex.UniverseConfig.Type)
+	}
+
+	if h, ok := resources.(*origin.Http); ok && len(masterIndex.Authentication) > 0 {
+		resources = origin.WithAuthentication(h, nldialogs.AskForCredentials, masterIndex.Authentication)
+	}
+
+	servers, err := patcherConfig.Environment.GetServers(ctx, patcher.Options{
+		Resources: resources,
+		Log:       logger,
+
+		Index:            masterIndex,
+		InstallDirectory: client.Directory,
+		ServerId:         p.Id,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(servers) == 0 {
+		return nil, fmt.Errorf("universe config '%s' has no servers", masterIndex.UniverseConfig.URL)
+	}
+
+	return servers, nil
+}
+
 func DefaultBootConfig() boot.Config {
 	config := boot.DefaultConfig()
 	config.ManifestFile = ""
@@ -299,7 +357,7 @@ type ProfileSelector struct {
 	selector *nlwidgets.ItemSelector[*Profile]
 }
 
-func NewProfileSelector(profiles ProfileListBinding, onTapSettings func()) (*ProfileSelector, error) {
+func NewProfileSelector(window fyne.Window, profiles ProfileListBinding, onTapSettings func()) (*ProfileSelector, error) {
 	s := &ProfileSelector{
 		ProfileListBinding: profiles,
 
@@ -330,18 +388,29 @@ func NewProfileSelector(profiles ProfileListBinding, onTapSettings func()) (*Pro
 		),
 	)
 
+	serverList := widget.NewButtonWithIcon("Servers", theme.ListIcon(), func() {
+		nldialogs.ShowServerList(window, []string{
+			"Overbuild Universe (US)",
+			"Overbuild Universe - Hardcore (US)",
+			"Dev Server",
+			"Test Server",
+			"Staging Server",
+			"Overbuild Universe - Experimental",
+		})
+	})
+	serverList.Importance = widget.LowImportance
+
 	accountInfo := container.NewBorder(
 		nil, nil,
 		container.NewVBox(
 			HyperLinkButton("Signup", theme.AccountIcon(), s.signupBinding),
 			HyperLinkButton("Signin", theme.LoginIcon(), s.signinBinding),
-			HyperLinkButton("Register", theme.DocumentCreateIcon(), s.registerBinding),
+			serverList,
 		),
 		nil,
 		container.NewVBox(
 			AddEllipsis(widget.NewLabelWithData(s.signupBinding)),
 			AddEllipsis(widget.NewLabelWithData(s.signinBinding)),
-			AddEllipsis(widget.NewLabelWithData(s.registerBinding)),
 		),
 	)
 

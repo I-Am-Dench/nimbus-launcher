@@ -152,10 +152,9 @@ func GetServers(ctx context.Context, patcherId string, config Config) ([]patcher
 		Resources: resources,
 		Log:       log.New(os.Stdout, patcherId+": ", 0),
 
-		ConfigUrl:         masterIndex.UniverseConfig.URL,
-		AuthenticationUrl: masterIndex.Authentication,
-		InstallDirectory:  InstallationPath,
-		ServerId:          ServerId,
+		Index:            masterIndex,
+		InstallDirectory: InstallationPath,
+		ServerId:         ServerId,
 	})
 }
 
@@ -177,48 +176,6 @@ func SelectServer(servers []patcher.Server) patcher.Server {
 		}
 	}
 }
-
-// func GetPatcher(ctx context.Context, patcherId string, config Config) (patcher.Patcher, error) {
-// 	resources, serviceUrl, err := origin.NewResources(config.ServiceUrl)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	if h, ok := resources.(*origin.Http); ok {
-// 		h.Client = &http.Client{
-// 			Jar:       CookieJar,
-// 			Transport: http.DefaultTransport,
-// 		}
-// 	}
-
-// 	env, err := config.GetEnvironment(patcherId)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	masterIndex, err := env.GetMasterIndex(ctx, serviceUrl, resources)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	if masterIndex.UniverseConfig.Type != patcherId {
-// 		return nil, fmt.Errorf("expected patcher %s but Master Index returned %s", patcherId, masterIndex.UniverseConfig.Type)
-// 	}
-
-// 	if h, ok := resources.(*origin.Http); ok && len(masterIndex.Authentication) > 0 {
-// 		resources = origin.WithAuthentication(h, GetCredentials, masterIndex.Authentication)
-// 	}
-
-// 	return env.NewPatcher(ctx, patcher.Options{
-// 		Resources: resources,
-// 		Log:       log.New(os.Stdout, patcherId+": ", 0),
-
-// 		ConfigUrl:         masterIndex.UniverseConfig.URL,
-// 		AuthenticationUrl: masterIndex.Authentication,
-// 		InstallDirectory:  InstallationPath,
-// 		ServerId:          ServerId,
-// 	})
-// }
 
 func GetAbs(path string) string {
 	abs, err := filepath.Abs(path)

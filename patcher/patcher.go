@@ -2,7 +2,6 @@ package patcher
 
 import (
 	"context"
-	"encoding/xml"
 
 	"github.com/I-Am-Dench/goverbuild/archive"
 	"github.com/I-Am-Dench/goverbuild/models/boot"
@@ -45,20 +44,9 @@ type Options struct {
 	Resources origin.Resources
 	Log       Logger
 
-	ConfigUrl         string
-	AuthenticationUrl string
-	InstallDirectory  string
-	ServerId          string
-}
-
-type MasterIndex struct {
-	Authentication string `xml:"Authentication"`
-	UniverseConfig struct {
-		XMLName xml.Name `xml:"Config"`
-		Type    string   `xml:"type,attr"`
-		URL     string   `xml:",chardata"`
-	}
-	Status string `xml:"Status"`
+	Index            MasterIndex
+	InstallDirectory string
+	ServerId         string
 }
 
 type Environment interface {

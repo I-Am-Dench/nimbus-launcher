@@ -66,23 +66,23 @@ func New(settingsDir string) (*App, error) {
 	}
 	a.settings.Set(settings)
 
+	a.main = a.NewWindow(fmt.Sprint("Nimbus Launcher (", version.Get().Name(), ")"))
+	a.main.SetFixedSize(true)
+	a.main.Resize(fyne.NewSize(800, 300))
+	a.main.SetIcon(fyne.NewStaticResource("icon.png", iconData))
+	a.main.SetMaster()
+
 	profiles, err := a.ReadProfiles()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load profiles: %v", err)
 	}
 	a.profiles.Set(profiles)
 
-	selector, err := NewProfileSelector(a.profiles, a.ShowSettings)
+	selector, err := NewProfileSelector(a.main, a.profiles, a.ShowSettings)
 	if err != nil {
 		return nil, err
 	}
 	a.profileSelector = selector
-
-	a.main = a.NewWindow(fmt.Sprint("Nimbus Launcher (", version.Get().Name(), ")"))
-	a.main.SetFixedSize(true)
-	a.main.Resize(fyne.NewSize(800, 300))
-	a.main.SetIcon(fyne.NewStaticResource("icon.png", iconData))
-	a.main.SetMaster()
 
 	launcher := NewLauncher(a.main, a.settings, selector.ProfileBinding, selector.PlayingBinding)
 

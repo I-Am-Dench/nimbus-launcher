@@ -56,8 +56,8 @@ func (e *Environment) GetMasterIndex(ctx context.Context, serviceUrl string, res
 	return masterIndex, nil
 }
 
-func (e *Environment) getServerList(ctx context.Context, options patcher.Options) (ServerList, error) {
-	reader, err := options.Resources.Get(ctx, options.ConfigUrl)
+func (e Environment) getServerList(ctx context.Context, options patcher.Options) (ServerList, error) {
+	reader, err := options.Resources.Get(ctx, options.Index.UniverseConfig.URL)
 	if err != nil {
 		return ServerList{}, fmt.Errorf("server list: %w", err)
 	}
@@ -71,7 +71,7 @@ func (e *Environment) getServerList(ctx context.Context, options patcher.Options
 	return serverList, nil
 }
 
-func (e *Environment) GetServers(ctx context.Context, options patcher.Options) ([]patcher.Server, error) {
+func (e Environment) GetServers(ctx context.Context, options patcher.Options) ([]patcher.Server, error) {
 	serverList, err := e.getServerList(ctx, options)
 	if err != nil {
 		return nil, fmt.Errorf("nd-nimbus: %w", err)
