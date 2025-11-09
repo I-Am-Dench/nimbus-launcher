@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"sync"
 	"time"
@@ -442,6 +443,10 @@ func NewProfileSelector(window fyne.Window, jar http.CookieJar, profiles Profile
 		s.Bind(profile, server)
 
 		s.ProfileBinding.Set(profile)
+
+		if profile != nil && server != nil {
+			fyne.CurrentApp().Preferences().SetString("profile-"+profile.Id, server.Info().Name)
+		}
 	})
 
 	s.serverListButton = widget.NewButtonWithIcon("Servers", theme.ListIcon(), func() {
@@ -508,6 +513,18 @@ func (s *ProfileSelector) StopLoadServers() {
 	s.activity.Hide()
 }
 
+// This can become more sophisticated later on.
+// The original patcher would choose the server
+// based on the selected locale and the CLOSEST
+// server name match (not the exact match).
+func (s ProfileSelector) findBestServer(profile *Profile, options []string) string {
+	selected := fyne.CurrentApp().Preferences().String("profile-" + profile.Id)
+	if slices.Contains(options, selected) {
+		return selected
+	}
+	return options[0]
+}
+
 func (s *ProfileSelector) SetServerList(profile *Profile) {
 	once, seq := profile.ServerListOnce(s.window, context.Background(), s.jar)
 	s.serverListSeq = seq
@@ -521,7 +538,7 @@ func (s *ProfileSelector) SetServerList(profile *Profile) {
 
 	fyne.DoAndWait(func() {
 		if len(s.serverList.Options) > 0 {
-			s.serverList.SetSelected(s.serverList.Options[0])
+			s.serverList.SetSelected(s.findBestServer(profile, s.serverList.Options))
 		}
 		s.StopLoadServers()
 	})
