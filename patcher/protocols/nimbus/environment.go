@@ -18,6 +18,6 @@ func (e *Environment) GetMasterIndex(ctx context.Context, serviceUrl string, res
 	return patcher.MasterIndex{}, nil
 }
 
-func (e Environment) GetServers(ctx context.Context, options patcher.Options) ([]patcher.Server, error) {
+func (e Environment) GetServerList(ctx context.Context, r origin.Resources, masterIndex patcher.MasterIndex) ([]patcher.Server, error) {
 	return nil, errors.ErrUnsupported
 }

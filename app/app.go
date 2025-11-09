@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"path/filepath"
 
@@ -38,7 +39,7 @@ type App struct {
 	sett fyne.Window
 }
 
-func New(settingsDir string) (*App, error) {
+func New(settingsDir string, jar http.CookieJar) (*App, error) {
 	a := &App{
 		App: app.NewWithID("com.nimbus-launcher"),
 
@@ -78,7 +79,7 @@ func New(settingsDir string) (*App, error) {
 	}
 	a.profiles.Set(profiles)
 
-	selector, err := NewProfileSelector(a.main, a.profiles, a.ShowSettings)
+	selector, err := NewProfileSelector(a.main, jar, a.profiles, a.ShowSettings)
 	if err != nil {
 		return nil, err
 	}

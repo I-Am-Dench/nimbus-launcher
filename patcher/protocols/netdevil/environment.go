@@ -56,34 +56,21 @@ func (e *Environment) GetMasterIndex(ctx context.Context, serviceUrl string, res
 	return masterIndex, nil
 }
 
-func (e Environment) getServerList(ctx context.Context, options patcher.Options) (ServerList, error) {
-	reader, err := options.Resources.Get(ctx, options.Index.UniverseConfig.URL)
+func (e Environment) GetServerList(ctx context.Context, r origin.Resources, masterIndex patcher.MasterIndex) ([]patcher.Server, error) {
+	reader, err := r.Get(ctx, masterIndex.UniverseConfig.URL)
 	if err != nil {
-		return ServerList{}, fmt.Errorf("server list: %w", err)
+		return nil, fmt.Errorf("server list: %w", err)
 	}
 	defer reader.Close()
 
 	serverList := ServerList{}
 	if err := xml.NewDecoder(reader).Decode(&serverList); err != nil {
-		return ServerList{}, fmt.Errorf("server list: %v", err)
+		return nil, fmt.Errorf("server list: %v", err)
 	}
 
-	return serverList, nil
-}
-
-func (e Environment) GetServers(ctx context.Context, options patcher.Options) ([]patcher.Server, error) {
-	serverList, err := e.getServerList(ctx, options)
-	if err != nil {
-		return nil, fmt.Errorf("nd-nimbus: %w", err)
-	}
-
-	if cancelled(ctx) {
-		return nil, ctx.Err()
-	}
-
-	servers := []patcher.Server{}
+	servers := make([]patcher.Server, 0, len(serverList.Servers))
 	for _, server := range serverList.Servers {
-		resources := options.Resources
+		resources := r
 
 		switch v := resources.(type) {
 		case *origin.FS:
@@ -96,17 +83,9 @@ func (e Environment) GetServers(ctx context.Context, options patcher.Options) ([
 			resources = origin.WithUrl(resources, u)
 		}
 
-		servers = append(servers, &Patcher{
-			UserConfig: e.UserConfig,
-			Downloader: Downloader{
-				Resources: resources,
-				Log:       options.Log,
-				Root:      options.InstallDirectory,
-				TempDir:   VersionsDir,
-			},
-			serverId: options.ServerId,
-			server:   server,
-		})
+		server.resources = resources
+		server.userConfig = e.UserConfig
+		servers = append(servers, server)
 	}
 
 	return servers, nil

@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/I-Am-Dench/goverbuild/models/boot"
+	"github.com/I-Am-Dench/nimbus-launcher/patcher"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher/origin"
 )
 
@@ -41,9 +41,12 @@ type Server struct {
 		AuthIP   string `xml:"AuthIP"`
 		CrashLog string `xml:"CrashLog"`
 	} `xml:"Game"`
+
+	resources  origin.Resources `xml:"-"`
+	userConfig UserConfig       `xml:"-"`
 }
 
-func (s *Server) PatcherUrl(resources origin.Resources) string {
+func (s Server) PatcherUrl(resources origin.Resources) string {
 	if _, ok := resources.(*origin.FS); ok {
 		return filepath.Join(s.Patcher.Host, s.Patcher.Dir)
 	}
@@ -60,36 +63,25 @@ func (s *Server) PatcherUrl(resources origin.Resources) string {
 	return scheme + "://" + s.Patcher.Host + ":" + strconv.FormatUint(uint64(s.Patcher.Port), 10)
 }
 
-func (s *Server) Boot(locale string, useCatalog bool) *boot.Config {
-	ugc := UGC{
-		Host:         "localhost",
-		Dir:          "3dservices",
-		DataCenterId: 150,
+func (s Server) Info() patcher.ServerInfo {
+	return patcher.ServerInfo{
+		Name:   s.Name,
+		Lang:   s.Lang,
+		AuthIP: s.Game.AuthIP,
 	}
-	if s.UGC.Exists {
-		ugc = s.UGC.Value
-	}
+}
 
-	patchPort := 80
-	if s.Patcher.Port > 0 {
-		patchPort = int(s.Patcher.Port)
-	}
-
-	return &boot.Config{
-		ServerName:       s.Name,
-		PatchServerIP:    s.Patcher.Host,
-		AuthServerIP:     s.Game.AuthIP,
-		PatchServerPort:  int32(patchPort),
-		Logging:          100,
-		DataCenterID:     uint32(ugc.DataCenterId),
-		PatchServerDir:   s.Patcher.Dir,
-		UGCUse3dServices: s.UGC.Exists,
-		UGCServerIP:      ugc.Host,
-		UGCServerDir:     ugc.Dir,
-		CrashLogURL:      s.Game.CrashLog,
-		Locale:           locale,
-		ManifestFile:     GameFile,
-		UseCatalog:       useCatalog,
+func (s Server) GetPatcher(options patcher.Options) patcher.Patcher {
+	return &Patcher{
+		UserConfig: s.userConfig,
+		Downloader: Downloader{
+			Resources: s.resources,
+			Log:       options.Log,
+			Root:      options.InstallDirectory,
+			TempDir:   VersionsDir,
+		},
+		serverId: options.ServerId,
+		server:   s,
 	}
 }
 

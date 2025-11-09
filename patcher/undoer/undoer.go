@@ -48,6 +48,7 @@ const (
 type Undoer interface {
 	Track(path string, archive *archive.Archive) error
 	Undo(archive *archive.Archive) error
+	Close() error
 }
 
 type sqliteUndoer struct {

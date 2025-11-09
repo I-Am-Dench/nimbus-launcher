@@ -11,11 +11,13 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"sync"
 	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/data/binding"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/I-Am-Dench/goverbuild/encoding/ldf"
@@ -194,6 +196,12 @@ type Profile struct {
 
 	Client *client.Config `json:"client,omitempty" xml:"client,omitempty"`
 	Server ServerInfo     `json:"server" xml:"server"`
+
+	ServerList struct {
+		seq      int64
+		once     func() []patcher.Server
+		selected patcher.Server
+	} `json:"-" xml:"-"`
 }
 
 func (p *Profile) Locale() string {
@@ -213,7 +221,7 @@ func (p *Profile) DefaultBootPath(dir string) string {
 	return filepath.Join(dir, BootDir, p.Id+".cfg")
 }
 
-func (p *Profile) ServerList(ctx context.Context, client client.Config, logger patcher.Logger, jar http.CookieJar) ([]patcher.Server, error) {
+func (p Profile) getServerList(ctx context.Context, jar http.CookieJar) ([]patcher.Server, error) {
 	patcherConfig := p.Server.Patcher
 	if patcherConfig == nil || patcherConfig.Environment == nil {
 		return []patcher.Server{
@@ -233,6 +241,8 @@ func (p *Profile) ServerList(ctx context.Context, client client.Config, logger p
 		}
 	}
 
+	slog.Info("Requesting master index", "profile", p.Name, "serviceUrl", serviceUrl)
+
 	masterIndex, err := patcherConfig.Environment.GetMasterIndex(ctx, serviceUrl, resources)
 	if err != nil {
 		return nil, err
@@ -246,23 +256,36 @@ func (p *Profile) ServerList(ctx context.Context, client client.Config, logger p
 		resources = origin.WithAuthentication(h, nldialogs.AskForCredentials, masterIndex.Authentication)
 	}
 
-	servers, err := patcherConfig.Environment.GetServers(ctx, patcher.Options{
-		Resources: resources,
-		Log:       logger,
-
-		Index:            masterIndex,
-		InstallDirectory: client.Directory,
-		ServerId:         p.Id,
-	})
+	servers, err := patcherConfig.Environment.GetServerList(ctx, resources, masterIndex)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(servers) == 0 {
-		return nil, fmt.Errorf("universe config '%s' has no servers", masterIndex.UniverseConfig.URL)
-	}
+	slog.Debug("Found universe config", "profile", p.Name, "numServers", len(servers))
 
 	return servers, nil
+}
+
+func (p *Profile) ServerListOnce(window fyne.Window, ctx context.Context, jar http.CookieJar) (func() []patcher.Server, int64) {
+	if p.ServerList.once == nil {
+		p.ServerList.seq = time.Now().Unix()
+		p.ServerList.once = sync.OnceValue(func() []patcher.Server {
+			servers, err := p.getServerList(ctx, jar)
+			if err != nil {
+				slog.Error("Failed to fetch server list", "profile", p.Name, "error", err)
+				dialog.ShowError(err, window)
+				return []patcher.Server{defaultserver.Server{BootConfig: p.Server.BootConfig()}}
+			}
+
+			return servers
+		})
+	}
+
+	return p.ServerList.once, p.ServerList.seq
+}
+
+func (p *Profile) SelectedServer() (patcher.Server, bool) {
+	return p.ServerList.selected, p.ServerList.selected != nil
 }
 
 func DefaultBootConfig() boot.Config {
@@ -339,41 +362,66 @@ func (b *ProfileListBinding) Options() []string {
 
 type ProfileBinding = binding.Item[*Profile]
 
+func NewServerRadioGroup(changed func(patcher.Server)) *nlwidgets.ItemRadioGroup[patcher.Server] {
+	g := nlwidgets.NewItemRadioGroup(
+		[]patcher.Server{},
+		func(s patcher.Server) string { return s.Info().Name },
+		changed,
+	)
+	g.Required = true
+	return g
+}
+
 type ProfileSelector struct {
 	*fyne.Container
 	ProfileListBinding
+
+	window fyne.Window
+	jar    http.CookieJar
 
 	nameBinding   binding.String
 	authIpBinding binding.String
 	localeBinding binding.String
 
-	signupBinding   binding.String
-	signinBinding   binding.String
-	registerBinding binding.String
+	signupBinding binding.String
+	signinBinding binding.String
+
+	activity *widget.Activity
 
 	ProfileBinding ProfileBinding
 	PlayingBinding binding.Bool
 
+	serverList       *nlwidgets.ItemRadioGroup[patcher.Server]
+	serverListButton *widget.Button
+	serverListSeq    int64
+
 	selector *nlwidgets.ItemSelector[*Profile]
 }
 
-func NewProfileSelector(window fyne.Window, profiles ProfileListBinding, onTapSettings func()) (*ProfileSelector, error) {
+func NewProfileSelector(window fyne.Window, jar http.CookieJar, profiles ProfileListBinding, onTapSettings func()) (*ProfileSelector, error) {
 	s := &ProfileSelector{
 		ProfileListBinding: profiles,
+
+		window: window,
+		jar:    jar,
 
 		nameBinding:   binding.NewString(),
 		authIpBinding: binding.NewString(),
 		localeBinding: binding.NewString(),
 
-		signupBinding:   binding.NewString(),
-		signinBinding:   binding.NewString(),
-		registerBinding: binding.NewString(),
+		signupBinding: binding.NewString(),
+		signinBinding: binding.NewString(),
+
+		activity: widget.NewActivity(),
 
 		ProfileBinding: binding.NewItem(func(_, _ *Profile) bool { return false }),
 		PlayingBinding: binding.NewBool(),
 	}
 
-	s.selector = nlwidgets.NewItemSelector(s.Profiles(), profileName, compareProfiles, s.Bind)
+	s.activity.Start()
+	s.activity.Hide()
+
+	s.selector = nlwidgets.NewItemSelector(s.Profiles(), profileName, compareProfiles, s.SelectServer)
 	s.selector.PlaceHolder = "(Select server)"
 
 	serverInfo := widget.NewForm(
@@ -388,29 +436,34 @@ func NewProfileSelector(window fyne.Window, profiles ProfileListBinding, onTapSe
 		),
 	)
 
-	serverList := widget.NewButtonWithIcon("Servers", theme.ListIcon(), func() {
-		nldialogs.ShowServerList(window, []string{
-			"Overbuild Universe (US)",
-			"Overbuild Universe - Hardcore (US)",
-			"Dev Server",
-			"Test Server",
-			"Staging Server",
-			"Overbuild Universe - Experimental",
-		})
+	s.serverList = NewServerRadioGroup(func(server patcher.Server) {
+		profile := s.selector.Selected
+		profile.ServerList.selected = server
+		s.Bind(profile, server)
+
+		s.ProfileBinding.Set(profile)
 	})
-	serverList.Importance = widget.LowImportance
+
+	s.serverListButton = widget.NewButtonWithIcon("Servers", theme.ListIcon(), func() {
+		list := container.NewVScroll(s.serverList)
+		list.SetMinSize(list.MinSize().AddWidthHeight(128, 128))
+
+		dialog.ShowCustom("Server List", "Ok", list, window)
+	})
+	s.serverListButton.Importance = widget.LowImportance
 
 	accountInfo := container.NewBorder(
 		nil, nil,
 		container.NewVBox(
 			HyperLinkButton("Signup", theme.AccountIcon(), s.signupBinding),
 			HyperLinkButton("Signin", theme.LoginIcon(), s.signinBinding),
-			serverList,
+			s.serverListButton,
 		),
 		nil,
 		container.NewVBox(
 			AddEllipsis(widget.NewLabelWithData(s.signupBinding)),
 			AddEllipsis(widget.NewLabelWithData(s.signinBinding)),
+			container.NewBorder(nil, nil, container.NewStack(widget.NewLabel(""), s.activity), nil),
 		),
 	)
 
@@ -445,20 +498,61 @@ func (s *ProfileSelector) DataChanged() {
 	}
 }
 
-func (s *ProfileSelector) Bind(profile *Profile) {
-	if profile != nil {
-		config := profile.Server.BootConfig()
+func (s *ProfileSelector) StartLoadServers() {
+	s.serverListButton.Disable()
+	s.activity.Show()
+}
 
-		s.nameBinding.Set(profile.Name)
-		s.authIpBinding.Set(config.AuthServerIP)
-		s.localeBinding.Set(locale.GetName(profile.Locale()))
+func (s *ProfileSelector) StopLoadServers() {
+	s.serverListButton.Enable()
+	s.activity.Hide()
+}
 
-		s.signupBinding.Set(profile.Server.SignUpUrl())
-		s.signinBinding.Set(profile.Server.SignInUrl())
-		s.registerBinding.Set(profile.Server.RegisterUrl())
+func (s *ProfileSelector) SetServerList(profile *Profile) {
+	once, seq := profile.ServerListOnce(s.window, context.Background(), s.jar)
+	s.serverListSeq = seq
 
-		fyne.CurrentApp().Preferences().SetString(PreferenceSelectProfile, profile.Id)
+	servers := once()
+	if s.serverListSeq != seq {
+		return
 	}
 
-	s.ProfileBinding.Set(profile)
+	s.serverList.SetOptions(servers)
+
+	fyne.DoAndWait(func() {
+		if len(s.serverList.Options) > 0 {
+			s.serverList.SetSelected(s.serverList.Options[0])
+		}
+		s.StopLoadServers()
+	})
+}
+
+func (s *ProfileSelector) SelectServer(profile *Profile) {
+	s.Bind(nil, nil)
+
+	if profile == nil {
+		s.ProfileBinding.Set(nil)
+		return
+	}
+	fyne.CurrentApp().Preferences().SetString(PreferenceSelectProfile, profile.Id)
+
+	s.StartLoadServers()
+	go s.SetServerList(profile)
+}
+
+func (s ProfileSelector) Bind(profile *Profile, server patcher.Server) {
+	var info patcher.ServerInfo
+	if server != nil {
+		info = server.Info()
+	}
+
+	s.nameBinding.Set(info.Name)
+	s.authIpBinding.Set(info.AuthIP)
+	s.localeBinding.Set(locale.GetName(info.Lang))
+
+	if profile != nil {
+		bootConfig := profile.Server.BootConfig()
+		s.signinBinding.Set(bootConfig.SigninURL)
+		s.signupBinding.Set(bootConfig.SignupURL)
+	}
 }

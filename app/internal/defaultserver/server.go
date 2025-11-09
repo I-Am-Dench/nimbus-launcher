@@ -13,28 +13,43 @@ import (
 var _ patcher.Server = (*Server)(nil)
 
 type Server struct {
+	BootConfig boot.Config
+}
+
+func (s Server) Info() patcher.ServerInfo {
+	return patcher.ServerInfo{
+		Name:   s.BootConfig.ServerName,
+		Lang:   s.BootConfig.Locale,
+		AuthIP: s.BootConfig.AuthServerIP,
+	}
+}
+
+func (s Server) GetPatcher(o patcher.Options) patcher.Patcher {
+	return Patcher{
+		InstallDirectory: o.InstallDirectory,
+		BootConfig:       s.BootConfig,
+	}
+}
+
+type Patcher struct {
 	InstallDirectory string
 	BootConfig       boot.Config
 }
 
-func (s Server) Name() string {
-	return s.BootConfig.ServerName
+func (p Patcher) GetBoot(packed bool) boot.Config {
+	config := p.BootConfig
+	config.UseCatalog = packed
+	return config
 }
 
-func (s Server) GetBoot(packed bool) *boot.Config {
-	boot := s.BootConfig
-	boot.UseCatalog = packed
-	return &boot
-}
-
-func (s Server) GetVersion(_ context.Context, packed bool) (*archive.Archive, error) {
+func (p Patcher) GetVersion(_ context.Context, packed bool) (*archive.Archive, error) {
 	if !packed {
 		return nil, nil
 	}
-	return archive.Open(s.InstallDirectory, filepath.Join(s.InstallDirectory, patcher.VersionsDir, patcher.CatalogName))
+	return archive.Open(p.InstallDirectory, filepath.Join(p.InstallDirectory, patcher.VersionsDir, patcher.CatalogName))
 }
 
-func (s Server) GetPatch(_ context.Context, _ *archive.Archive) (patcher.Patch, error) {
+func (p Patcher) GetPatch(_ context.Context, _ *archive.Archive) (patcher.Patch, error) {
 	return Patch{}, nil
 }
 

@@ -4,10 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
-	"net/http"
-	http_jar "net/http/cookiejar"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -24,13 +21,11 @@ import (
 	"github.com/I-Am-Dench/goverbuild/archive"
 	"github.com/I-Am-Dench/goverbuild/encoding/ldf"
 	"github.com/I-Am-Dench/goverbuild/models/boot"
-	"github.com/I-Am-Dench/nimbus-launcher/app/cookiejar"
 	"github.com/I-Am-Dench/nimbus-launcher/app/nldialogs"
 	"github.com/I-Am-Dench/nimbus-launcher/app/nlwidgets"
 	"github.com/I-Am-Dench/nimbus-launcher/client"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher/undoer"
-	"golang.org/x/net/publicsuffix"
 )
 
 const (
@@ -226,7 +221,12 @@ func (l *Launcher) DataChanged() {
 		l.clientErrorIcon.Show()
 	}
 
-	if playing, _ := l.playingBinding.Get(); !playing && l.currentProfile != nil && valid {
+	var serverSelected bool
+	if l.currentProfile != nil {
+		_, serverSelected = l.currentProfile.SelectedServer()
+	}
+
+	if playing, _ := l.playingBinding.Get(); !playing && l.currentProfile != nil && valid && serverSelected {
 		l.playButton.Enable()
 	} else {
 		l.playButton.Disable()
@@ -259,6 +259,7 @@ func (l *Launcher) UndoPatches(client client.Config, packed bool) (err error) {
 	if err != nil {
 		return err
 	}
+	defer undoer.Close()
 
 	slog.Info("Running undoer...")
 	if err := undoer.Undo(arch); err != nil {
@@ -269,6 +270,11 @@ func (l *Launcher) UndoPatches(client client.Config, packed bool) (err error) {
 }
 
 func (l *Launcher) GetBoot(client client.Config, profile *Profile) (boot.Config, error) {
+	server, ok := profile.SelectedServer()
+	if !ok {
+		return boot.Config{}, errors.New("attempted to launch client without a selected server")
+	}
+
 	// We want to run the undoer regardless of whether the profile
 	// contains a patcher configuration. This ensures that switching
 	// to a profile which doesn't use a patcher will reset the client
@@ -292,26 +298,14 @@ func (l *Launcher) GetBoot(client client.Config, profile *Profile) (boot.Config,
 		l.playWg.Done()
 	}()
 
-	var jar http.CookieJar
-	jar, err := cookiejar.New("cookies.json", &cookiejar.Options{PublicSuffixList: publicsuffix.List})
-	if err != nil {
-		slog.Error("Failed to open cookie jar", "error", err)
-		jar, _ = http_jar.New(&http_jar.Options{PublicSuffixList: publicsuffix.List})
-	}
-	defer func() {
-		if closer, ok := jar.(io.Closer); ok {
-			closer.Close()
-		}
-	}()
+	patcher := server.GetPatcher(patcher.Options{
+		Log: &l.ProgressBar,
 
-	servers, err := profile.ServerList(ctx, client, &l.ProgressBar, jar)
-	if err != nil {
-		return boot.Config{}, err
-	}
+		InstallDirectory: client.Directory,
+		ServerId:         profile.Id,
+	})
 
-	server := servers[0]
-
-	archive, err := server.GetVersion(ctx, client.IsPacked)
+	archive, err := patcher.GetVersion(ctx, client.IsPacked)
 	if err != nil {
 		return boot.Config{}, err
 	}
@@ -327,8 +321,9 @@ func (l *Launcher) GetBoot(client client.Config, profile *Profile) (boot.Config,
 	if err != nil {
 		return boot.Config{}, err
 	}
+	defer undoer.Close()
 
-	patch, err := server.GetPatch(ctx, archive)
+	patch, err := patcher.GetPatch(ctx, archive)
 	if err != nil {
 		return boot.Config{}, err
 	}
@@ -340,7 +335,7 @@ func (l *Launcher) GetBoot(client client.Config, profile *Profile) (boot.Config,
 
 	settings := l.Settings()
 
-	if len(patch.Summary().Rows) > 0 && settings.Launch.ReviewPatchesBeforeUpdate && !nldialogs.AskContinuePatch(patch.Summary()) {
+	if patch.Total() > 0 && settings.Launch.ReviewPatchesBeforeUpdate && !nldialogs.AskContinuePatch(patch.Summary()) {
 		return boot.Config{}, errors.New("patch rejected")
 	}
 
@@ -352,13 +347,13 @@ func (l *Launcher) GetBoot(client client.Config, profile *Profile) (boot.Config,
 
 	storedConfig := profile.Server.BootConfig()
 
-	bootConfig := server.GetBoot(client.IsPacked)
+	bootConfig := patcher.GetBoot(client.IsPacked)
 	bootConfig.SigninURL = storedConfig.SigninURL
 	bootConfig.SignupURL = storedConfig.SignupURL
 	bootConfig.PasswordURL = storedConfig.PasswordURL
 	bootConfig.RegisterURL = storedConfig.RegisterURL
 
-	return *bootConfig, nil
+	return bootConfig, nil
 }
 
 func (l *Launcher) ShowError(err error) {

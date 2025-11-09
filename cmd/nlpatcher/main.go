@@ -148,21 +148,14 @@ func GetServers(ctx context.Context, patcherId string, config Config) ([]patcher
 		resources = origin.WithAuthentication(h, GetCredentials, masterIndex.Authentication)
 	}
 
-	return env.GetServers(ctx, patcher.Options{
-		Resources: resources,
-		Log:       log.New(os.Stdout, patcherId+": ", 0),
-
-		Index:            masterIndex,
-		InstallDirectory: InstallationPath,
-		ServerId:         ServerId,
-	})
+	return env.GetServerList(ctx, resources, masterIndex)
 }
 
 func SelectServer(servers []patcher.Server) patcher.Server {
 	fmt.Println("\n\nSelect Server")
 	fmt.Println("=============")
 	for i, server := range servers {
-		fmt.Printf("[%d] %s\n", i, server.Name())
+		fmt.Printf("[%d] %s\n", i, server.Info().Name)
 	}
 	fmt.Println()
 
@@ -227,7 +220,14 @@ func main() {
 		server = SelectServer(servers)
 	}
 
-	archive, err := server.GetVersion(ctx, Packed)
+	patcher := server.GetPatcher(patcher.Options{
+		Log: log.New(os.Stdout, os.Args[1]+": ", 0),
+
+		InstallDirectory: InstallationPath,
+		ServerId:         ServerId,
+	})
+
+	archive, err := patcher.GetVersion(ctx, Packed)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -254,7 +254,7 @@ func main() {
 		return
 	}
 
-	patch, err := server.GetPatch(ctx, archive)
+	patch, err := patcher.GetPatch(ctx, archive)
 	if err != nil {
 		log.Println(err)
 		return

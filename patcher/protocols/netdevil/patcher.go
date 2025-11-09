@@ -16,7 +16,6 @@ import (
 	"github.com/I-Am-Dench/goverbuild/archive/manifest"
 	"github.com/I-Am-Dench/goverbuild/models/boot"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher"
-	"github.com/I-Am-Dench/nimbus-launcher/patcher/origin"
 )
 
 const (
@@ -47,21 +46,42 @@ type Patcher struct {
 	hotfix *manifest.Manifest
 }
 
-func (p *Patcher) Name() string {
-	return p.server.Name
-}
-
-func (p *Patcher) GetBoot(packed bool) *boot.Config {
-	bootConfig := p.server.Boot(p.Locale, packed)
-	if _, ok := p.Resources.(*origin.FS); ok {
-		bootConfig.PatchServerIP = "localhost"
+func (p Patcher) GetBoot(packed bool) boot.Config {
+	ugc := UGC{
+		Host:         "localhost",
+		Dir:          "3dservices",
+		DataCenterId: 150,
+	}
+	if p.server.UGC.Exists {
+		ugc = p.server.UGC.Value
 	}
 
-	if p.FullDownload {
-		bootConfig.ManifestFile = ""
+	patchPort := int32(80)
+	if p.server.Patcher.Port > 0 {
+		patchPort = int32(p.server.Patcher.Port)
 	}
 
-	return bootConfig
+	manifestFile := ""
+	if !p.FullDownload {
+		manifestFile = GameFile
+	}
+
+	return boot.Config{
+		ServerName:       p.server.Name,
+		PatchServerIP:    p.server.Patcher.Host,
+		AuthServerIP:     p.server.Game.AuthIP,
+		PatchServerPort:  patchPort,
+		Logging:          100,
+		DataCenterID:     uint32(ugc.DataCenterId),
+		PatchServerDir:   p.server.Patcher.Dir,
+		UGCUse3dServices: p.server.UGC.Exists,
+		UGCServerIP:      ugc.Host,
+		UGCServerDir:     ugc.Dir,
+		CrashLogURL:      p.server.Game.CrashLog,
+		Locale:           p.server.Lang,
+		ManifestFile:     manifestFile,
+		UseCatalog:       packed,
+	}
 }
 
 func (p *Patcher) versions(name string, atRoot ...bool) string {

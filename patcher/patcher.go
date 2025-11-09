@@ -26,12 +26,28 @@ type Patch interface {
 	Run(context.Context, undoer.Undoer) error
 }
 
-type Server interface {
-	Name() string
+type Options struct {
+	Log Logger
 
-	GetBoot(packed bool) *boot.Config
+	InstallDirectory string
+	ServerId         string
+}
+
+type Patcher interface {
+	GetBoot(packed bool) boot.Config
 	GetVersion(ctx context.Context, packed bool) (*archive.Archive, error)
 	GetPatch(context.Context, *archive.Archive) (Patch, error)
+}
+
+type ServerInfo struct {
+	Name   string
+	Lang   string
+	AuthIP string
+}
+
+type Server interface {
+	Info() ServerInfo
+	GetPatcher(Options) Patcher
 }
 
 type Logger interface {
@@ -40,17 +56,17 @@ type Logger interface {
 	Println(v ...any)
 }
 
-type Options struct {
-	Resources origin.Resources
-	Log       Logger
+// type Options struct {
+// 	Resources origin.Resources
+// 	Log       Logger
 
-	Index            MasterIndex
-	InstallDirectory string
-	ServerId         string
-}
+// 	Index            MasterIndex
+// 	InstallDirectory string
+// 	ServerId         string
+// }
 
 type Environment interface {
 	Locale() string
 	GetMasterIndex(ctx context.Context, serviceUrl string, resources origin.Resources) (MasterIndex, error)
-	GetServers(ctx context.Context, options Options) ([]Server, error)
+	GetServerList(context.Context, origin.Resources, MasterIndex) ([]Server, error)
 }

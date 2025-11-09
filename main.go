@@ -4,11 +4,15 @@ import (
 	"io"
 	"log"
 	"log/slog"
+	"net/http"
+	http_jar "net/http/cookiejar"
 	"os"
 
 	"github.com/I-Am-Dench/nimbus-launcher/app"
+	"github.com/I-Am-Dench/nimbus-launcher/app/cookiejar"
 	"github.com/I-Am-Dench/nimbus-launcher/logger"
 	"github.com/I-Am-Dench/nimbus-launcher/version"
+	"golang.org/x/net/publicsuffix"
 )
 
 const (
@@ -37,7 +41,19 @@ func main() {
 		slog.Error("Failed to create settings directory", "error", err)
 	}
 
-	a, err := app.New(SettingsDir)
+	var jar http.CookieJar
+	jar, err = cookiejar.New("cookies.json", &cookiejar.Options{PublicSuffixList: publicsuffix.List})
+	if err != nil {
+		slog.Error("Failed to open cookie jar", "error", err)
+		jar, _ = http_jar.New(&http_jar.Options{PublicSuffixList: publicsuffix.List})
+	}
+	defer func() {
+		if closer, ok := jar.(io.Closer); ok {
+			closer.Close()
+		}
+	}()
+
+	a, err := app.New(SettingsDir, jar)
 	if err != nil {
 		slog.Error("Failed to create app", "error", err)
 	}
