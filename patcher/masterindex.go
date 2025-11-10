@@ -34,7 +34,7 @@ type MasterIndex struct {
 func (m MasterIndex) GetStatusList(ctx context.Context, resources origin.Resources) ([]Status, error) {
 	statuses := struct {
 		XMLName    xml.Name `xml:"ArrayOfServerStatus"`
-		StatusList []Status
+		StatusList []Status `xml:"ServerStatus"`
 	}{}
 
 	reader, err := resources.Get(ctx, m.Status)

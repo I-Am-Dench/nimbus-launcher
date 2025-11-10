@@ -56,6 +56,21 @@ func (e *Environment) GetMasterIndex(ctx context.Context, serviceUrl string, res
 	return masterIndex, nil
 }
 
+func (e Environment) GetStatusList(ctx context.Context, r origin.Resources, masterIndex patcher.MasterIndex) map[string]*patcher.Status {
+	statuses := map[string]*patcher.Status{}
+
+	s, err := masterIndex.GetStatusList(ctx, r)
+	if err != nil {
+		return statuses
+	}
+
+	for _, status := range s {
+		statuses[status.Name] = &status
+	}
+
+	return statuses
+}
+
 func (e Environment) GetServerList(ctx context.Context, r origin.Resources, masterIndex patcher.MasterIndex) ([]patcher.Server, error) {
 	reader, err := r.Get(ctx, masterIndex.UniverseConfig.URL)
 	if err != nil {
@@ -67,6 +82,8 @@ func (e Environment) GetServerList(ctx context.Context, r origin.Resources, mast
 	if err := xml.NewDecoder(reader).Decode(&serverList); err != nil {
 		return nil, fmt.Errorf("server list: %v", err)
 	}
+
+	statuses := e.GetStatusList(ctx, r, masterIndex)
 
 	servers := make([]patcher.Server, 0, len(serverList.Servers))
 	for _, server := range serverList.Servers {
@@ -83,6 +100,7 @@ func (e Environment) GetServerList(ctx context.Context, r origin.Resources, mast
 			resources = origin.WithUrl(resources, u)
 		}
 
+		server.status = statuses[server.Name]
 		server.resources = resources
 		server.userConfig = e.UserConfig
 		servers = append(servers, server)

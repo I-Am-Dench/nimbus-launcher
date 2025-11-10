@@ -42,6 +42,7 @@ type Server struct {
 		CrashLog string `xml:"CrashLog"`
 	} `xml:"Game"`
 
+	status     *patcher.Status
 	resources  origin.Resources `xml:"-"`
 	userConfig UserConfig       `xml:"-"`
 }
@@ -69,6 +70,10 @@ func (s Server) Info() patcher.ServerInfo {
 		Lang:   s.Lang,
 		AuthIP: s.Game.AuthIP,
 	}
+}
+
+func (s Server) Status() *patcher.Status {
+	return s.status
 }
 
 func (s Server) GetPatcher(options patcher.Options) patcher.Patcher {

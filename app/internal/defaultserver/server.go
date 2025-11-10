@@ -24,6 +24,10 @@ func (s Server) Info() patcher.ServerInfo {
 	}
 }
 
+func (s Server) Status() *patcher.Status {
+	return nil
+}
+
 func (s Server) GetPatcher(o patcher.Options) patcher.Patcher {
 	return Patcher{
 		InstallDirectory: o.InstallDirectory,

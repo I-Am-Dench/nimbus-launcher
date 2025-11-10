@@ -392,6 +392,9 @@ type ProfileSelector struct {
 	ProfileBinding ProfileBinding
 	PlayingBinding binding.Bool
 
+	statusLabel   *fyne.Container
+	statusBinding StatusBinding
+
 	serverList       *nlwidgets.ItemRadioGroup[patcher.Server]
 	serverListButton *widget.Button
 	serverListSeq    int64
@@ -417,6 +420,8 @@ func NewProfileSelector(window fyne.Window, jar http.CookieJar, profiles Profile
 
 		ProfileBinding: binding.NewItem(func(_, _ *Profile) bool { return false }),
 		PlayingBinding: binding.NewBool(),
+
+		statusBinding: binding.NewItem(func(_, _ *patcher.Status) bool { return false }),
 	}
 
 	s.activity.Start()
@@ -457,6 +462,8 @@ func NewProfileSelector(window fyne.Window, jar http.CookieJar, profiles Profile
 	})
 	s.serverListButton.Importance = widget.LowImportance
 
+	s.statusLabel = NewStatusLabel(s.statusBinding)
+
 	accountInfo := container.NewBorder(
 		nil, nil,
 		container.NewVBox(
@@ -468,7 +475,7 @@ func NewProfileSelector(window fyne.Window, jar http.CookieJar, profiles Profile
 		container.NewVBox(
 			AddEllipsis(widget.NewLabelWithData(s.signupBinding)),
 			AddEllipsis(widget.NewLabelWithData(s.signinBinding)),
-			container.NewBorder(nil, nil, container.NewStack(widget.NewLabel(""), s.activity), nil),
+			container.NewBorder(nil, nil, container.NewStack(widget.NewLabel(""), s.activity, s.statusLabel), nil),
 		),
 	)
 
@@ -506,11 +513,13 @@ func (s *ProfileSelector) DataChanged() {
 func (s *ProfileSelector) StartLoadServers() {
 	s.serverListButton.Disable()
 	s.activity.Show()
+	s.statusLabel.Hide()
 }
 
 func (s *ProfileSelector) StopLoadServers() {
 	s.serverListButton.Enable()
 	s.activity.Hide()
+	s.statusLabel.Show()
 }
 
 // This can become more sophisticated later on.
@@ -558,9 +567,13 @@ func (s *ProfileSelector) SelectServer(profile *Profile) {
 }
 
 func (s ProfileSelector) Bind(profile *Profile, server patcher.Server) {
-	var info patcher.ServerInfo
+	var (
+		info   patcher.ServerInfo
+		status *patcher.Status
+	)
 	if server != nil {
 		info = server.Info()
+		status = server.Status()
 	}
 
 	s.nameBinding.Set(info.Name)
@@ -572,4 +585,6 @@ func (s ProfileSelector) Bind(profile *Profile, server patcher.Server) {
 		s.signinBinding.Set(bootConfig.SigninURL)
 		s.signupBinding.Set(bootConfig.SignupURL)
 	}
+
+	s.statusBinding.Set(status)
 }

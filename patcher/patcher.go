@@ -47,6 +47,7 @@ type ServerInfo struct {
 
 type Server interface {
 	Info() ServerInfo
+	Status() *Status
 	GetPatcher(Options) Patcher
 }
 
@@ -55,15 +56,6 @@ type Logger interface {
 	Printf(format string, v ...any)
 	Println(v ...any)
 }
-
-// type Options struct {
-// 	Resources origin.Resources
-// 	Log       Logger
-
-// 	Index            MasterIndex
-// 	InstallDirectory string
-// 	ServerId         string
-// }
 
 type Environment interface {
 	Locale() string
