@@ -6,13 +6,10 @@ toolchain go1.24.7
 
 require (
 	fyne.io/fyne/v2 v2.6.3
-	github.com/I-Am-Dench/goverbuild v0.11.0
+	github.com/I-Am-Dench/goverbuild v0.14.0
 )
 
-require (
-	github.com/mattn/go-sqlite3 v1.14.32
-	golang.org/x/term v0.36.0
-)
+require golang.org/x/term v0.36.0
 
 require github.com/snksoft/crc v1.1.0 // indirect
 

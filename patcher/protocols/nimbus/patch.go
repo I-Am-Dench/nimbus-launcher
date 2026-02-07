@@ -1,8 +1,9 @@
-package netdevil
+package nimbus
 
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/I-Am-Dench/goverbuild/archive"
 	"github.com/I-Am-Dench/goverbuild/archive/manifest"
@@ -19,7 +20,7 @@ type Patch struct {
 	entries []manifest.Entry
 }
 
-func (p Patch) Summary() patcher.Summary {
+func (p *Patch) Summary() patcher.Summary {
 	summary := patcher.Summary{
 		Header: []string{"Source"},
 	}
@@ -31,7 +32,7 @@ func (p Patch) Summary() patcher.Summary {
 	return summary
 }
 
-func (p Patch) Total() int {
+func (p *Patch) Total() int {
 	return len(p.entries)
 }
 
@@ -39,7 +40,7 @@ func (p *Patch) SetProgress(progress func(n int)) {
 	p.progress = progress
 }
 
-func (p Patch) runPacked(ctx context.Context, tracker tracker.Tracker, archive *archive.Archive) error {
+func (p *Patch) runPacked(ctx context.Context, tracker tracker.Tracker, archive *archive.Archive) error {
 	errs := []error{}
 	for i, entry := range p.entries {
 		if cancelled(ctx) {
@@ -54,15 +55,19 @@ func (p Patch) runPacked(ctx context.Context, tracker tracker.Tracker, archive *
 			errs = append(errs, err)
 		}
 
-		if err := p.DownloadCataloged(ctx, entry.Path, entry, archive); err != nil {
+		if err := p.DownloadPacked(ctx, entry.Path, entry, archive); err != nil {
 			errs = append(errs, err)
 		}
 	}
 
-	return errors.Join(errs...)
+	if err := errors.Join(errs...); err != nil {
+		return fmt.Errorf("patch: %v", err)
+	}
+
+	return nil
 }
 
-func (p Patch) runUnpacked(ctx context.Context, tracker tracker.Tracker) error {
+func (p *Patch) runUnpacked(ctx context.Context, tracker tracker.Tracker) error {
 	errs := []error{}
 	for _, entry := range p.entries {
 		if cancelled(ctx) {
@@ -73,7 +78,7 @@ func (p Patch) runUnpacked(ctx context.Context, tracker tracker.Tracker) error {
 			errs = append(errs, err)
 		}
 
-		reader, err := p.DownloadUncataloged(ctx, entry.Path, entry)
+		reader, err := p.DownloadUnpacked(ctx, entry.Path, entry)
 		if err != nil {
 			errs = append(errs, err)
 			continue
@@ -84,16 +89,16 @@ func (p Patch) runUnpacked(ctx context.Context, tracker tracker.Tracker) error {
 		}
 	}
 
-	return errors.Join(errs...)
-}
-
-func (p Patch) Run(ctx context.Context, tkr tracker.Tracker) error {
-	if cancelled(ctx) {
-		return ctx.Err()
+	if err := errors.Join(errs...); err != nil {
+		return fmt.Errorf("patch: %v", err)
 	}
 
-	if tkr == nil {
-		tkr = tracker.Discard{}
+	return nil
+}
+
+func (p *Patch) Run(ctx context.Context, tkr tracker.Tracker) error {
+	if cancelled(ctx) {
+		return ctx.Err()
 	}
 
 	if p.archive != nil {

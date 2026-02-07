@@ -29,8 +29,7 @@ func NewProgressBar() *ProgressBar {
 	infinite.Hide()
 
 	progress.TextFormatter = func() string {
-		text, _ := infiniteBinding.Get()
-		return text
+		return ""
 	}
 
 	return &ProgressBar{
@@ -70,5 +69,5 @@ func (p *ProgressBar) Infinite() {
 func (p *ProgressBar) Progress() {
 	p.progress.Show()
 	p.infinite.Hide()
-	p.infiniteLabel.Hide()
+	p.infiniteLabel.Show()
 }

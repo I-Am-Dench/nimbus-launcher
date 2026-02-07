@@ -2,73 +2,38 @@ package netdevil
 
 import (
 	"encoding/xml"
+	"fmt"
+	"net/url"
+	"path"
 	"path/filepath"
-	"strconv"
-	"strings"
 
+	"github.com/I-Am-Dench/goverbuild/archive/manifest"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher/origin"
 )
 
-type Optional[T any] struct {
-	Exists bool
-	Value  T
-}
+type VersionDirType int
 
-func (o *Optional[T]) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
-	o.Exists = true
-	return d.DecodeElement(&o.Value, &start)
-}
-
-type UGC struct {
-	Host         string `xml:"Host"`
-	Dir          string `xml:"Dir"`
-	DataCenterId int    `xml:"DataCenterId"`
-}
+const (
+	VersionDirTypePatcherDirOnly    = iota // Ignore version, use <CdnInfo.PatcherDir> only
+	VersionDirTypeVersionHotfixOnly        // Use <Version> only for getting version.txt and hotfix.txt
+	VersionDirTypePatcherDirVersion        // Use <CdnInfo.PatcherDir>/<Version> as PATCHSERVERDIR
+)
 
 type Server struct {
-	Name    string `xml:"name,attr"`
-	Lang    string `xml:"lang,attr"`
-	Online  bool   `xml:"Online"`
-	Version string `xml:"Version"`
-	Patcher struct {
-		Host string `xml:"Host"`
-		Dir  string `xml:"Dir"`
-		Port uint16 `xml:"Port"`
-	}
-	UGC  Optional[UGC] `xml:"UGC"`
-	Game struct {
-		AuthIP   string `xml:"AuthIP"`
-		CrashLog string `xml:"CrashLog"`
-	} `xml:"Game"`
+	UniverseConfig
+	UserConfig
 
-	status     *patcher.Status
-	resources  origin.Resources `xml:"-"`
-	userConfig UserConfig       `xml:"-"`
-}
-
-func (s Server) PatcherUrl(resources origin.Resources) string {
-	if _, ok := resources.(*origin.FS); ok {
-		return filepath.Join(s.Patcher.Host, s.Patcher.Dir)
-	}
-
-	scheme := "http"
-	if s.Patcher.Port == 443 || s.Patcher.Port == 8443 {
-		scheme = "https"
-	}
-
-	if s.Patcher.Port == 443 || s.Patcher.Port == 80 {
-		return scheme + "://" + s.Patcher.Host
-	}
-
-	return scheme + "://" + s.Patcher.Host + ":" + strconv.FormatUint(uint64(s.Patcher.Port), 10)
+	patcherIniUrl string
+	status        *patcher.Status
+	resources     origin.Resources
 }
 
 func (s Server) Info() patcher.ServerInfo {
 	return patcher.ServerInfo{
 		Name:   s.Name,
-		Lang:   s.Lang,
-		AuthIP: s.Game.AuthIP,
+		Lang:   s.Language,
+		AuthIP: s.AuthenticationIp,
 	}
 }
 
@@ -76,43 +41,89 @@ func (s Server) Status() *patcher.Status {
 	return s.status
 }
 
-func (s Server) GetPatcher(options patcher.Options) patcher.Patcher {
+func (s Server) GetPatcher(options patcher.Options) (patcher.Patcher, error) {
+	resources := s.resources
+
+	switch v := resources.(type) {
+	case *origin.FS:
+		resources = origin.WithRoot(v, filepath.Join(s.CdnInfo.PatcherUrl, s.CdnInfo.PatcherDir))
+	case *origin.Http, *origin.HttpWithAuth:
+		u, err := url.JoinPath(s.PatcherUrl(v), s.CdnInfo.PatcherDir)
+		if err != nil {
+			return nil, fmt.Errorf("netdevil: %v", err)
+		}
+		resources = origin.WithUrl(resources, u)
+	}
+
 	return &Patcher{
-		UserConfig: s.userConfig,
+		UserConfig: s.UserConfig,
 		Downloader: Downloader{
-			Resources: s.resources,
+			Resources: resources,
 			Log:       options.Log,
 			Root:      options.InstallDirectory,
 			TempDir:   VersionsDir,
 		},
-		serverId: options.ServerId,
-		server:   s,
-	}
+		packEntries:   make(map[string]manifest.Entry),
+		packDownloads: make(map[string]manifest.Entry),
+		serverId:      options.ServerId,
+		server:        s,
+	}, nil
 }
 
-type ServerList struct {
-	XMLName xml.Name `xml:"ServerList"`
-	Servers []Server `xml:"Server"`
+type UniverseConfig struct {
+	AuthenticationIp string `xml:"AuthenticationIP"`
+	CdnInfo          struct {
+		PatcherUrl string `xml:"PatcherUrl"`
+		PatcherDir string `xml:"PatcherDir"`
+		Secure     bool   `xml:"Secure"`
+	} `xml:"CdnInfo"`
+	UgcCdnInfo struct {
+		PatcherUrl string `xml:"PatcherUrl"`
+		PatcherDir string `xml:"PatcherDir"`
+		Secure     bool   `xml:"Secure"`
+	} `xml:"UgcCdnInfo"`
+	DataCenterId   int            `xml:"DataCenterID"`
+	Language       string         `xml:"Language"`
+	Online         bool           `xml:"Online"`
+	Name           string         `xml:"Name"`
+	LogLevel       int32          `xml:"LogLevel"`
+	Use3dServices  bool           `xml:"Use3DServices"`
+	UseDB          bool           `xml:"UseDB"`
+	Version        string         `xml:"Version"`
+	VersionDirType VersionDirType `xml:"VersionDirType"`
 }
 
-func (l *ServerList) FindBest(locale string) (Server, bool) {
-	if len(l.Servers) == 0 {
-		return Server{}, false
+func (c UniverseConfig) PatcherUrl(resources origin.Resources) string {
+	if _, ok := resources.(*origin.FS); ok {
+		return c.CdnInfo.PatcherUrl
 	}
 
-	var best *Server
-	for _, server := range l.Servers {
-		if server.Online {
-			if strings.EqualFold(server.Lang, locale) {
-				return server, true
-			} else if best == nil {
-				best = &server
-			}
-		}
+	scheme := "http"
+	if c.CdnInfo.Secure {
+		scheme = "https"
 	}
 
-	if best != nil {
-		return *best, true
+	return scheme + "://" + c.CdnInfo.PatcherUrl
+}
+
+func (c UniverseConfig) PatcherDir() string {
+	if c.VersionDirType == VersionDirTypePatcherDirVersion {
+		return path.Join(c.CdnInfo.PatcherDir, c.Version)
 	}
-	return Server{}, false
+	return c.CdnInfo.PatcherDir
+}
+
+type GameInfo struct {
+	CrashLogUrl string `xml:"CrashLogUrl"`
+}
+
+type PatcherInfo struct {
+	ConfigUrl string `xml:"ConfigUrl"`
+}
+
+type UniverseEnvironment struct {
+	XMLName     xml.Name         `xml:"Environment"`
+	GameInfo    GameInfo         `xml:"GameInfo"`
+	PatcherInfo PatcherInfo      `xml:"PatcherInfo"`
+	Servers     []UniverseConfig `xml:"Servers>Server"`
 }

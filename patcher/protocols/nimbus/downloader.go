@@ -1,4 +1,4 @@
-package netdevil
+package nimbus
 
 import (
 	"bytes"
@@ -27,11 +27,11 @@ type Downloader struct {
 	TempDir string
 }
 
-func (d Downloader) Open(name string) (*os.File, error) {
+func (d *Downloader) Open(name string) (*os.File, error) {
 	return os.Open(filepath.Join(d.Root, filepath.Clean(name)))
 }
 
-func (d Downloader) Create(name string) (*os.File, error) {
+func (d *Downloader) Create(name string) (*os.File, error) {
 	downloadPath := filepath.Join(d.Root, filepath.Clean(name))
 
 	if err := os.MkdirAll(filepath.Dir(downloadPath), 0755); err != nil {
@@ -41,11 +41,11 @@ func (d Downloader) Create(name string) (*os.File, error) {
 	return os.Create(downloadPath)
 }
 
-func (d Downloader) Stat(name string) (os.FileInfo, error) {
+func (d *Downloader) Stat(name string) (os.FileInfo, error) {
 	return os.Stat(filepath.Join(d.Root, filepath.Clean(name)))
 }
 
-func (d Downloader) Download(ctx context.Context, source, destination string) (file *os.File, err error) {
+func (d *Downloader) Download(ctx context.Context, source, destination string) (file *os.File, err error) {
 	d.Log.Printf("Downloading %s -> %s", source, destination)
 
 	reader, err := d.Get(ctx, source)
@@ -77,7 +77,7 @@ func (d Downloader) Download(ctx context.Context, source, destination string) (f
 	return file, nil
 }
 
-func (d Downloader) downloadCompressed(ctx context.Context, entry manifest.Entry) (r io.ReadCloser, cleanup func() error, err error) {
+func (d *Downloader) downloadCompressed(ctx context.Context, entry manifest.Entry) (r io.ReadCloser, cleanup func() error, err error) {
 	hash := hex.EncodeToString(entry.UncompressedChecksum)
 	if len(hash) < 2 {
 		return nil, nil, fmt.Errorf("download compressed: %s: bad entry checksum: %s", entry.Path, hash)
@@ -103,7 +103,7 @@ func (d Downloader) downloadCompressed(ctx context.Context, entry manifest.Entry
 
 	if sum := checksum.Sum(nil); !bytes.Equal(sum, entry.CompressedChecksum) {
 		cleanup()
-		return nil, nil, fmt.Errorf("download compressed: %s: mismatched compressed checksum: expected %x but got %x", entry.Path, entry.CompressedChecksum, sum)
+		return nil, nil, fmt.Errorf("download compressed: %s: mismatched comrpessed checksum: expected %x but got %x", entry.Path, entry.CompressedChecksum, sum)
 	}
 
 	if cancelled(ctx) {
@@ -119,86 +119,69 @@ func (d Downloader) downloadCompressed(ctx context.Context, entry manifest.Entry
 	return temp, cleanup, nil
 }
 
-func (d Downloader) installUnpacked(temp io.Reader, destination string) (file *os.File, err error) {
-	file, err = d.Create(destination)
-	if err != nil {
-		return nil, err
-	}
-
-	decompressor, err := segmented.NewDataReader(temp)
-	if err != nil {
-		file.Close()
-		return nil, err
-	}
-
-	if _, err := io.Copy(file, decompressor); err != nil {
-		file.Close()
-		return nil, err
-	}
-
-	if _, err := file.Seek(0, io.SeekStart); err != nil {
-		file.Close()
-		return nil, err
-	}
-
-	return file, nil
-}
-
-func (d Downloader) DownloadCataloged(ctx context.Context, path string, entry manifest.Entry, arch *archive.Archive) (err error) {
+func (d *Downloader) DownloadPacked(ctx context.Context, path string, entry manifest.Entry, archive *archive.Archive) (err error) {
 	temp, cleanup, err := d.downloadCompressed(ctx, entry)
 	if err != nil {
 		return err
 	}
 	defer func() {
 		if e := cleanup(); e != nil && err == nil {
-			err = fmt.Errorf("download cataloged: %s: %v", path, e)
+			err = fmt.Errorf("download packed: %s: %v", path, e)
 		}
 	}()
 
-	pack, record, err := arch.FindPack(path)
-
-	// The original patcher treated uncataloged
-	// resources as unpacked.
-	if errors.Is(err, archive.ErrNotCataloged) {
-		f, err := d.installUnpacked(temp, path)
-		if err != nil {
-			return fmt.Errorf("download cataloged: uncataloged: %s: %w", path, err)
-		}
-		f.Close()
-		return nil
-	}
-
+	pack, record, err := archive.FindPack(path)
 	if err != nil {
-		return fmt.Errorf("download cataloged: %s: %v", path, err)
+		return fmt.Errorf("download packed: %s: %v", path, err)
 	}
 
 	reader := io.Reader(temp)
 	if !record.IsCompressed {
 		decompressor, err := segmented.NewDataReader(temp)
 		if err != nil {
-			return fmt.Errorf("download cataloged: %s: %v", path, err)
+			return fmt.Errorf("download packed: %s: %v", path, err)
 		}
 		reader = decompressor
 	}
 
 	if err := pack.Store(path, entry.Info, record.IsCompressed, reader); err != nil {
-		return fmt.Errorf("download cataloged: %s: %v", path, err)
+		return fmt.Errorf("download packed: %s: %v", path, err)
 	}
 
 	return nil
 }
 
-func (d Downloader) DownloadUncataloged(ctx context.Context, destination string, entry manifest.Entry) (f *os.File, err error) {
+func (d *Downloader) DownloadUnpacked(ctx context.Context, destination string, entry manifest.Entry) (f *os.File, err error) {
 	temp, cleanup, err := d.downloadCompressed(ctx, entry)
 	if err != nil {
 		return nil, err
 	}
 	defer func() {
 		if e := cleanup(); e != nil && err == nil {
-			f.Close()
-			err = fmt.Errorf("download uncataloged: %s: %v", destination, err)
+			err = fmt.Errorf("download unpacked: %s: %v", destination, err)
 		}
 	}()
 
-	return d.installUnpacked(temp, destination)
+	file, err := d.Create(destination)
+	if err != nil {
+		return nil, fmt.Errorf("download unpacked: %s: %w", destination, err)
+	}
+
+	decompressor, err := segmented.NewDataReader(temp)
+	if err != nil {
+		file.Close()
+		return nil, fmt.Errorf("download unpacked: %s: %v", destination, err)
+	}
+
+	if _, err := io.Copy(file, decompressor); err != nil {
+		file.Close()
+		return nil, fmt.Errorf("download unpacked: %s: %v", destination, err)
+	}
+
+	if _, err := file.Seek(0, io.SeekStart); err != nil {
+		file.Close()
+		return nil, fmt.Errorf("download unpacked: %s: %v", destination, err)
+	}
+
+	return file, nil
 }

@@ -18,7 +18,7 @@ import (
 	"github.com/I-Am-Dench/nimbus-launcher/patcher"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher/origin"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher/protocols/netdevil"
-	"github.com/I-Am-Dench/nimbus-launcher/patcher/undoer"
+	"github.com/I-Am-Dench/nimbus-launcher/patcher/tracker"
 	"golang.org/x/net/publicsuffix"
 	"golang.org/x/term"
 )
@@ -29,7 +29,7 @@ var (
 	ServerId         string
 	Packed           bool
 	Summary          bool
-	UndoerPath       string
+	TrackerPath      string
 	UndoOnly         bool
 )
 
@@ -192,7 +192,7 @@ func main() {
 	flagset.StringVar(&ServerId, "serverId", "", "A unique ID which will act as a subdirectory that may store some patch resources.")
 	flagset.BoolVar(&Packed, "packed", false, "Whether or not the client is packed.")
 	flagset.BoolVar(&Summary, "summary", false, "Display a summary of the patch instead of installing it.")
-	flagset.StringVar(&UndoerPath, "undoer", "changes.db", "Path to undoer db.")
+	flagset.StringVar(&TrackerPath, "tracker", "defaultclients", "Path to client tracker.")
 	flagset.BoolVar(&UndoOnly, "undoOnly", false, "Undo a patch only.")
 	flagset.Parse(os.Args[2:])
 
@@ -220,12 +220,15 @@ func main() {
 		server = SelectServer(servers)
 	}
 
-	patcher := server.GetPatcher(patcher.Options{
+	patcher, err := server.GetPatcher(patcher.Options{
 		Log: log.New(os.Stdout, os.Args[1]+": ", 0),
 
 		InstallDirectory: InstallationPath,
 		ServerId:         ServerId,
 	})
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	archive, err := patcher.GetVersion(ctx, Packed)
 	if err != nil {
@@ -239,13 +242,19 @@ func main() {
 		}
 	}()
 
-	undoer, err := undoer.NewSqlite(UndoerPath, InstallationPath)
+	hashedPath, err := tracker.HashFilepath(InstallationPath)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	tracker, err := tracker.New(filepath.Join(TrackerPath, hashedPath), InstallationPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer tracker.Close()
+
 	log.Println("Running undoer...")
-	if err := undoer.Undo(archive); err != nil {
+	if err := tracker.Undo(); err != nil {
 		log.Println(err)
 		return
 	}
@@ -265,7 +274,7 @@ func main() {
 		return
 	}
 
-	if err := patch.Run(ctx, undoer); err != nil {
+	if err := patch.Run(ctx, tracker); err != nil {
 		log.Println(err)
 	}
 }

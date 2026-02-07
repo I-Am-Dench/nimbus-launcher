@@ -249,8 +249,9 @@ func (p Profile) getServerList(ctx context.Context, jar http.CookieJar) ([]patch
 		return nil, err
 	}
 
-	if masterIndex.UniverseConfig.Type != patcherConfig.Id {
-		return nil, fmt.Errorf("expected patcher %s but Master Index returned %s", patcherConfig.Id, masterIndex.UniverseConfig.Type)
+	// Empty Universe Config types are assumed to be legacy netdevil patchers
+	if !(masterIndex.UniverseConfig.Type == "" && patcherConfig.Id == "netdevil") && masterIndex.UniverseConfig.Type != patcherConfig.Id {
+		return nil, fmt.Errorf("expected patcher \"%s\" but Master Index returned \"%s\"", patcherConfig.Id, masterIndex.UniverseConfig.Type)
 	}
 
 	if h, ok := resources.(*origin.Http); ok && len(masterIndex.Authentication) > 0 {

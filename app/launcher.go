@@ -18,18 +18,18 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"github.com/I-Am-Dench/goverbuild/archive"
 	"github.com/I-Am-Dench/goverbuild/encoding/ldf"
 	"github.com/I-Am-Dench/goverbuild/models/boot"
 	"github.com/I-Am-Dench/nimbus-launcher/app/nldialogs"
 	"github.com/I-Am-Dench/nimbus-launcher/app/nlwidgets"
 	"github.com/I-Am-Dench/nimbus-launcher/client"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher"
-	"github.com/I-Am-Dench/nimbus-launcher/patcher/undoer"
+	"github.com/I-Am-Dench/nimbus-launcher/patcher/tracker"
 )
 
 const (
-	UndoerName = "changes.db"
+	TrackerDir = "defaultclients"
+	NewInstall = ".nimbus-new"
 
 	logThreshold = time.Second / 60
 )
@@ -226,7 +226,7 @@ func (l *Launcher) DataChanged() {
 		_, serverSelected = l.currentProfile.SelectedServer()
 	}
 
-	if playing, _ := l.playingBinding.Get(); !playing && l.currentProfile != nil && valid && serverSelected {
+	if playing, _ := l.playingBinding.Get(); !playing && l.currentProfile != nil && (l.currentProfile.Server.Patcher != nil || valid) && serverSelected {
 		l.playButton.Enable()
 	} else {
 		l.playButton.Disable()
@@ -234,35 +234,35 @@ func (l *Launcher) DataChanged() {
 }
 
 func (l *Launcher) UndoPatches(client client.Config, packed bool) (err error) {
-	var arch *archive.Archive
-	if packed {
-		catalogPath := filepath.Join(client.Directory, patcher.VersionsDir, patcher.CatalogName)
+	// var ar *archive.Archive
+	// if packed {
+	// 	catalogPath := filepath.Join(client.Directory, patcher.VersionsDir, patcher.CatalogName)
 
-		arch, err = archive.Open(client.Directory, catalogPath)
-		if errors.Is(err, os.ErrNotExist) {
-			return nil
-		}
+	// 	ar, err = archive.Open(client.Directory, catalogPath)
+	// 	if errors.Is(err, os.ErrNotExist) {
+	// 		return nil
+	// 	}
 
-		if err != nil {
-			return err
-		}
-	}
-	defer func() {
-		if arch != nil {
-			if err := arch.Close(); err != nil {
-				slog.Error(err.Error())
-			}
-		}
-	}()
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
+	// defer func() {
+	// 	if ar != nil {
+	// 		if err := ar.Close(); err != nil {
+	// 			slog.Error(err.Error())
+	// 		}
+	// 	}
+	// }()
 
-	undoer, err := undoer.NewSqlite(UndoerName, client.Directory)
+	tracker, err := client.Tracker(TrackerDir)
 	if err != nil {
 		return err
 	}
-	defer undoer.Close()
+	defer tracker.Close()
 
 	slog.Info("Running undoer...")
-	if err := undoer.Undo(arch); err != nil {
+	if err := tracker.Undo(); err != nil {
 		return err
 	}
 
@@ -283,6 +283,21 @@ func (l *Launcher) GetBoot(client client.Config, profile *Profile) (boot.Config,
 		slog.Error("Failed to run undoer", "error", err)
 	}
 
+	tkr, err := client.Tracker(TrackerDir)
+	if err != nil {
+		return boot.Config{}, err
+	}
+	defer tkr.Close()
+
+	if client.IsNewInstall() {
+		slog.Info("Found new installation", "dir", client.Directory)
+		tkr.SetState(tracker.StateNew)
+
+		if err := os.MkdirAll(client.Directory, 0755); err != nil {
+			return boot.Config{}, err
+		}
+	}
+
 	l.SetPatching()
 	defer l.HideProgress()
 
@@ -298,32 +313,29 @@ func (l *Launcher) GetBoot(client client.Config, profile *Profile) (boot.Config,
 		l.playWg.Done()
 	}()
 
-	patcher := server.GetPatcher(patcher.Options{
+	patcher, err := server.GetPatcher(patcher.Options{
 		Log: &l.ProgressBar,
 
 		InstallDirectory: client.Directory,
 		ServerId:         profile.Id,
 	})
+	if err != nil {
+		return boot.Config{}, err
+	}
 
-	archive, err := patcher.GetVersion(ctx, client.IsPacked)
+	ar, err := patcher.GetVersion(ctx, client.IsPacked)
 	if err != nil {
 		return boot.Config{}, err
 	}
 	defer func() {
-		if archive != nil {
-			if err := archive.Close(); err != nil {
+		if ar != nil {
+			if err := ar.Close(); err != nil {
 				slog.Error(err.Error())
 			}
 		}
 	}()
 
-	undoer, err := undoer.NewSqlite(UndoerName, client.Directory)
-	if err != nil {
-		return boot.Config{}, err
-	}
-	defer undoer.Close()
-
-	patch, err := patcher.GetPatch(ctx, archive)
+	patch, err := patcher.GetPatch(ctx, ar)
 	if err != nil {
 		return boot.Config{}, err
 	}
@@ -340,10 +352,12 @@ func (l *Launcher) GetBoot(client client.Config, profile *Profile) (boot.Config,
 	}
 
 	l.Progress()
-	if err := patch.Run(ctx, undoer); err != nil {
+	if err := patch.Run(ctx, tkr); err != nil {
 		return boot.Config{}, err
 	}
 	l.Print("Patcher completed!")
+
+	tkr.SetState(tracker.StateNormal)
 
 	storedConfig := profile.Server.BootConfig()
 

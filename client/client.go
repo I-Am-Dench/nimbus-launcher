@@ -1,10 +1,13 @@
 package client
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/I-Am-Dench/nimbus-launcher/client/disk"
+	"github.com/I-Am-Dench/nimbus-launcher/patcher/tracker"
 )
 
 const (
@@ -48,6 +51,26 @@ func (c *Config) IsValid() bool {
 	}
 
 	return !stats.IsDir()
+}
+
+func (c Config) IsNewInstall() bool {
+	if _, err := os.Stat(c.Directory); errors.Is(err, os.ErrNotExist) {
+		return true
+	}
+
+	if _, err := os.Stat(c.ClientPath()); errors.Is(err, os.ErrNotExist) {
+		return true
+	}
+
+	return false
+}
+
+func (c Config) Tracker(cacheRoot string) (tracker.Tracker, error) {
+	hash, err := tracker.HashFilepath(c.Directory)
+	if err != nil {
+		return nil, fmt.Errorf("client: %v", err)
+	}
+	return tracker.New(filepath.Join(cacheRoot, hash), c.Directory)
 }
 
 var DefaultConfig = Config{

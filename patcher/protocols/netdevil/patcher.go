@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/I-Am-Dench/goverbuild/archive"
@@ -19,7 +20,7 @@ import (
 )
 
 const (
-	PatcherVersion = 10000
+	PatcherVersion = 82
 
 	VersionsDir = patcher.VersionsDir
 
@@ -27,10 +28,16 @@ const (
 	VersionFile = "version.txt"
 	HotFixFile  = "hotfix.txt"
 	IndexFile   = "index.txt"
+	MinimalFile = "frontend.txt"
 	GameFile    = "trunk.txt"
 
 	CatalogFile = patcher.CatalogName
 )
+
+type exclude struct {
+	Path   string
+	Prefix bool
+}
 
 type Patcher struct {
 	UserConfig
@@ -38,53 +45,40 @@ type Patcher struct {
 
 	serverId string
 
+	gameInfo  GameInfo
 	server    Server
 	cachePath string
 	cacheFile *cache.Cache
 
+	packEntries   map[string]manifest.Entry
+	packDownloads map[string]manifest.Entry
+
 	index  *manifest.Manifest
 	hotfix *manifest.Manifest
+
+	exclude []exclude
 }
 
 func (p Patcher) GetBoot(packed bool) boot.Config {
-	ugc := UGC{
-		Host:         "localhost",
-		Dir:          "3dservices",
-		DataCenterId: 150,
-	}
-	if p.server.UGC.Exists {
-		ugc = p.server.UGC.Value
-	}
-
-	patchPort := int32(80)
-	if p.server.Patcher.Port > 0 {
-		patchPort = int32(p.server.Patcher.Port)
-	}
-
-	manifestFile := ""
-	if !p.FullDownload {
-		manifestFile = GameFile
-	}
-
 	return boot.Config{
 		ServerName:       p.server.Name,
-		PatchServerIP:    p.server.Patcher.Host,
-		AuthServerIP:     p.server.Game.AuthIP,
-		PatchServerPort:  patchPort,
-		Logging:          100,
-		DataCenterID:     uint32(ugc.DataCenterId),
-		PatchServerDir:   p.server.Patcher.Dir,
-		UGCUse3dServices: p.server.UGC.Exists,
-		UGCServerIP:      ugc.Host,
-		UGCServerDir:     ugc.Dir,
-		CrashLogURL:      p.server.Game.CrashLog,
-		Locale:           p.server.Lang,
-		ManifestFile:     manifestFile,
+		PatchServerIP:    p.server.CdnInfo.PatcherUrl,
+		AuthServerIP:     p.server.AuthenticationIp,
+		PatchServerPort:  80,
+		Logging:          p.server.LogLevel,
+		DataCenterID:     uint32(p.server.DataCenterId),
+		PatchServerDir:   p.server.PatcherDir(),
+		UGCUse3dServices: p.server.Use3dServices,
+		UGCServerIP:      p.server.UgcCdnInfo.PatcherUrl,
+		UGCServerDir:     p.server.UgcCdnInfo.PatcherDir,
+		CrashLogURL:      p.gameInfo.CrashLogUrl,
+		Locale:           p.server.Language,
+		ManifestFile:     GameFile,
 		UseCatalog:       packed,
 	}
 }
 
-func (p *Patcher) versions(name string, atRoot ...bool) string {
+func (p Patcher) versions(name string, atRoot ...bool) string {
 	if len(atRoot) > 0 && atRoot[0] {
 		return filepath.Join(VersionsDir, filepath.Clean(name))
 	} else {
@@ -92,7 +86,7 @@ func (p *Patcher) versions(name string, atRoot ...bool) string {
 	}
 }
 
-func (p *Patcher) initVersions() error {
+func (p Patcher) initVersions() error {
 	dir := filepath.Join(p.Root, VersionsDir)
 
 	stat, err := os.Stat(dir)
@@ -110,7 +104,7 @@ func (p *Patcher) initVersions() error {
 	return os.Mkdir(dir, 0755)
 }
 
-func (p *Patcher) readCacheFile(name string) (*cache.Cache, error) {
+func (p Patcher) readCacheFile(name string) (*cache.Cache, error) {
 	file, err := os.Open(name)
 	if errors.Is(err, os.ErrNotExist) {
 		return &cache.Cache{}, nil
@@ -121,18 +115,25 @@ func (p *Patcher) readCacheFile(name string) (*cache.Cache, error) {
 	}
 	defer file.Close()
 
-	return cache.Read(file)
+	return cache.Read(file, cache.ReadOptions{
+		IgnoreUnmarshalErrors: true,
+	})
 }
 
-func (p *Patcher) DownloadVersions(ctx context.Context, name string, atRoot ...bool) (*os.File, error) {
-	file, err := p.Download(ctx, path.Join(p.server.Version, name), p.versions(name, atRoot...))
+func (p Patcher) DownloadVersions(ctx context.Context, name string, atRoot ...bool) (*os.File, error) {
+	serverName := name
+	if p.server.VersionDirType == VersionDirTypeVersionHotfixOnly {
+		serverName = path.Join(p.server.Version, name)
+	}
+
+	file, err := p.Download(ctx, serverName, p.versions(name, atRoot...))
 	if err != nil {
 		return nil, err
 	}
 	return file, nil
 }
 
-func (p *Patcher) DownloadManifest(ctx context.Context, name string, atRoot ...bool) (*manifest.Manifest, error) {
+func (p Patcher) DownloadManifest(ctx context.Context, name string, atRoot ...bool) (*manifest.Manifest, error) {
 	file, err := p.DownloadVersions(ctx, name, atRoot...)
 	if err != nil {
 		return nil, err
@@ -155,7 +156,7 @@ func (p *Patcher) DownloadManifest(ctx context.Context, name string, atRoot ...b
 	return manifestFile, nil
 }
 
-func (p *Patcher) verifyQuickCheck(path string, file *os.File, entry *manifest.Entry) (bool, error) {
+func (p Patcher) verifyQuickCheck(path string, file *os.File, entry manifest.Entry) (bool, error) {
 	qc, ok := p.cacheFile.Load(path)
 	if !ok {
 		return false, nil
@@ -173,7 +174,7 @@ func (p *Patcher) verifyQuickCheck(path string, file *os.File, entry *manifest.E
 	return true, nil
 }
 
-func (p *Patcher) Fetch(ctx context.Context, name, destination string, manifestFile *manifest.Manifest) (*os.File, error) {
+func (p Patcher) Fetch(ctx context.Context, name, destination string, manifestFile *manifest.Manifest) (*os.File, error) {
 	entry, ok := manifestFile.GetEntry(name)
 	if !ok {
 		return nil, fmt.Errorf("fetch: %s: missing manifest entry", name)
@@ -181,7 +182,7 @@ func (p *Patcher) Fetch(ctx context.Context, name, destination string, manifestF
 
 	file, err := p.Open(destination)
 	if errors.Is(err, os.ErrNotExist) {
-		return p.DownloadUnpacked(ctx, destination, entry)
+		return p.DownloadUncataloged(ctx, destination, entry)
 	}
 
 	if err != nil {
@@ -199,7 +200,7 @@ func (p *Patcher) Fetch(ctx context.Context, name, destination string, manifestF
 	} else {
 		if err := entry.VerifyUncompressed(file); err != nil {
 			file.Close()
-			return p.DownloadUnpacked(ctx, destination, entry)
+			return p.DownloadUncataloged(ctx, destination, entry)
 		}
 
 		if _, err := file.Seek(0, io.SeekStart); err != nil {
@@ -224,224 +225,41 @@ func (p *Patcher) Fetch(ctx context.Context, name, destination string, manifestF
 	return file, nil
 }
 
-func (p *Patcher) FetchManifest(ctx context.Context, name string, manifestFile *manifest.Manifest, atRoot ...bool) (*manifest.Manifest, error) {
+func (p Patcher) FetchManifest(ctx context.Context, name string, manifestFile, hotfixFile *manifest.Manifest, atRoot ...bool) (*manifest.Manifest, map[string]manifest.Entry, error) {
 	reader, err := p.Fetch(ctx, name, p.versions(name, atRoot...), manifestFile)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer reader.Close()
 
 	fetchedManifest, err := manifest.Read(reader)
 	if err != nil {
-		return nil, fmt.Errorf("fetch manifest: %s: %v", name, err)
+		return nil, nil, fmt.Errorf("fetch manifest: %s: %v", name, err)
 	}
 
 	if cancelled(ctx) {
-		return nil, ctx.Err()
+		return nil, nil, ctx.Err()
 	}
 
 	if fetchedManifest.Version != PatcherVersion {
-		return nil, fmt.Errorf("fetch manifest: %s: incompatible manifest version: expected %d but got %d", name, PatcherVersion, fetchedManifest.Version)
+		return nil, nil, fmt.Errorf("fetch manifest: %s: incompatible manifest version: expected %d but got %d", name, PatcherVersion, fetchedManifest.Version)
 	}
 
-	return fetchedManifest, nil
-}
-
-func (p *Patcher) needsPackedDownload(ctx context.Context, path string, entry *manifest.Entry, arch *archive.Archive) (bool, error) {
-	record, err := arch.Load(path)
-	if errors.Is(err, archive.ErrNotCataloged) {
-		return false, nil
-	}
-
-	if errors.Is(err, archive.ErrNotPacked) {
-		return true, nil
-	}
-
-	if err != nil {
-		return false, err
-	}
-
-	if cancelled(ctx) {
-		return false, ctx.Err()
-	}
-
-	return record.UncompressedSize != entry.UncompressedSize || !bytes.Equal(record.UncompressedChecksum, entry.UncompressedChecksum), nil
-}
-
-func (p *Patcher) needsUnpackedDownload(ctx context.Context, path string, entry *manifest.Entry) (bool, error) {
-	stat, err := p.Stat(path)
-	if errors.Is(err, os.ErrNotExist) {
-		return true, nil
-	}
-
-	if err != nil {
-		return false, err
-	}
-
-	if qc, ok := p.cacheFile.Load(path); ok {
-		if err := qc.Check(stat, entry.Info); err == nil {
-			return false, nil
-		} else {
-			p.Log.Printf("%s: %v", path, err)
-		}
-	}
-
-	file, err := p.Open(path)
-	if err != nil {
-		return false, err
-	}
-	defer file.Close()
-
-	if err := entry.VerifyUncompressed(file); err != nil {
-		return true, nil
-	}
-
-	if cancelled(ctx) {
-		return false, ctx.Err()
-	}
-
-	p.cacheFile.Store(path, stat, entry.Info)
-	return false, nil
-}
-
-func (p *Patcher) NeedsDownload(ctx context.Context, path string, entry *manifest.Entry, archive ...*archive.Archive) (needsDownload bool, err error) {
-	defer func() {
-		if err != nil {
-			return
-		}
-
-		if needsDownload {
-			p.Log.Print(path, " needs download")
-		} else {
-			p.Log.Print(path, " is ok")
-		}
-	}()
-
-	if len(archive) > 0 {
-		return p.needsPackedDownload(ctx, path, entry, archive[0])
-	} else {
-		return p.needsUnpackedDownload(ctx, path, entry)
-	}
-}
-
-func (p *Patcher) shouldIgnore(name string) bool {
-	if strings.EqualFold(name, "client/boot.cfg") {
-		return true
-	}
-
-	name = strings.ToLower(name)
-	if strings.HasSuffix(name, ".pk") {
-		return true
-	}
-
-	if strings.Contains(name, "_loc") && !strings.Contains(name, path.Join("_loc", strings.ToLower(p.Locale))) {
-		return true
-	}
-
-	if strings.Contains(name, path.Join("ndaudio", "vo")) && !strings.Contains(name, path.Join("ndaudio", "vo", strings.ToLower(p.Locale))) {
-		return true
-	}
-
-	return false
-}
-
-func (p *Patcher) collectEntries(ctx context.Context, name string, index, hotfix *manifest.Manifest, archive ...*archive.Archive) ([]*manifest.Entry, error) {
-	manifestFile, err := p.FetchManifest(ctx, name, index, true)
-	if err != nil {
-		return nil, err
-	}
-
-	entries := []*manifest.Entry{}
-
-	for _, entry := range manifestFile.Entries {
-		if cancelled(ctx) {
-			return nil, ctx.Err()
-		}
-
-		if hotfix != nil {
-			if hotfixEntry, ok := hotfix.GetEntry(entry.Path); ok {
-				entry = hotfixEntry
+	added := make(map[string]manifest.Entry)
+	if hotfixFile != nil {
+		for hotfixEntry := range hotfixFile.All() {
+			if _, ok := fetchedManifest.GetEntry(hotfixEntry.Path); !ok {
+				added[hotfixEntry.Path] = hotfixEntry
 			}
 		}
 
-		if p.shouldIgnore(entry.Path) {
-			continue
-		}
-
-		needsDownload, err := p.NeedsDownload(ctx, entry.Path, entry, archive...)
-		if err != nil {
-			return nil, err
-		}
-
-		if needsDownload {
-			p.Log.Print(entry.Path, " needs patching")
-			entries = append(entries, entry)
-		}
+		fetchedManifest.AddEntries(hotfixFile.Entries()...)
 	}
 
-	// Add hotfix entries not present in trunk.txt
-	if hotfix != nil {
-		for _, hotfixEntry := range hotfix.Entries {
-			if cancelled(ctx) {
-				return nil, ctx.Err()
-			}
-
-			if _, ok := manifestFile.GetEntry(hotfixEntry.Path); ok {
-				continue
-			}
-
-			needsDownload, err := p.NeedsDownload(ctx, hotfixEntry.Path, hotfixEntry, archive...)
-			if err != nil {
-				return nil, err
-			}
-
-			if needsDownload {
-				entries = append(entries, hotfixEntry)
-			}
-		}
-	}
-
-	return entries, nil
+	return fetchedManifest, added, nil
 }
 
-func (p *Patcher) doPacked(ctx context.Context, index, hotfix *manifest.Manifest, archive *archive.Archive) (patcher.Patch, error) {
-	entries, err := p.collectEntries(ctx, GameFile, index, hotfix, archive)
-	if err != nil {
-		return nil, fmt.Errorf("patcher: packed: %w", err)
-	}
-
-	p.Log.Printf("Found %d entries that need patching", len(entries))
-
-	return &Patch{
-		Downloader: p.Downloader,
-		archive:    archive,
-		entries:    entries,
-	}, nil
-}
-
-func (p *Patcher) doUnpacked(ctx context.Context, index, hotfix *manifest.Manifest) (patcher.Patch, error) {
-	if cancelled(ctx) {
-		return nil, ctx.Err()
-	}
-
-	entries, err := p.collectEntries(ctx, GameFile, index, hotfix)
-	if err != nil {
-		return nil, fmt.Errorf("patcher: unpacked: %w", err)
-	}
-
-	if cancelled(ctx) {
-		return nil, ctx.Err()
-	}
-
-	p.Log.Printf("Found %d entries that need patching", len(entries))
-
-	return &Patch{
-		Downloader: p.Downloader,
-		entries:    entries,
-	}, nil
-}
-
-func (p *Patcher) fetchCatalog(ctx context.Context, index *manifest.Manifest) (string, error) {
+func (p Patcher) fetchCatalog(ctx context.Context, index *manifest.Manifest) (string, error) {
 	catalogPath := p.versions(CatalogFile, true)
 
 	file, err := p.Fetch(ctx, CatalogFile, catalogPath, index)
@@ -453,6 +271,16 @@ func (p *Patcher) fetchCatalog(ctx context.Context, index *manifest.Manifest) (s
 	return filepath.Join(p.Root, catalogPath), nil
 }
 
+func (p Patcher) getPatcherIni(ctx context.Context) (map[string]string, error) {
+	r, err := p.server.resources.Get(ctx, p.server.patcherIniUrl)
+	if err != nil {
+		return nil, fmt.Errorf("get patcher.ini: %w", err)
+	}
+	defer r.Close()
+
+	return ReadIni(r), nil
+}
+
 func (p *Patcher) GetVersion(ctx context.Context, packed bool) (*archive.Archive, error) {
 	if cancelled(ctx) {
 		return nil, ctx.Err()
@@ -461,35 +289,59 @@ func (p *Patcher) GetVersion(ctx context.Context, packed bool) (*archive.Archive
 	if err := p.initVersions(); err != nil {
 		return nil, fmt.Errorf("patcher: %v", err)
 	}
-
 	p.cachePath = filepath.Join(p.Root, p.versions(CacheFile, true))
 
 	var err error
 	p.cacheFile, err = p.readCacheFile(p.cachePath)
 	if err != nil {
-		return nil, fmt.Errorf("patcher: %v", err)
+		p.cacheFile = &cache.Cache{}
+		p.Log.Printf("Failed to load cache file: %v", err)
+	}
+
+	patcherIni, err := p.getPatcherIni(ctx)
+	if err != nil {
+		p.Log.Print(err)
+		patcherIni = map[string]string{}
+	}
+
+	osExclude := "win_exclude"
+	if runtime.GOOS == "darwin" {
+		osExclude = "max_exclude"
+	}
+
+	if excludeValue, ok := patcherIni[osExclude]; ok {
+		for _, path := range strings.Split(excludeValue, ",") {
+			if s := strings.TrimSpace(path); len(s) > 0 {
+				if s[len(s)-1] == '*' {
+					p.exclude = append(p.exclude, exclude{strings.TrimRight(s, "*"), true})
+				} else {
+					p.exclude = append(p.exclude, exclude{s, false})
+				}
+			}
+		}
 	}
 
 	version, err := p.DownloadManifest(ctx, VersionFile)
 	if err != nil {
-		return nil, fmt.Errorf("patcher: %w", err)
+		return nil, fmt.Errorf("patcher: download version: %w", err)
 	}
 
-	p.hotfix, err = p.DownloadManifest(ctx, HotFixFile, true)
+	p.hotfix, err = p.DownloadManifest(ctx, HotFixFile)
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		return nil, fmt.Errorf("patcher: %w", err)
 	}
 
 	if err != nil {
-		os.Remove(filepath.Join(p.Root, p.versions(HotFixFile, true)))
+		p.Log.Printf("download hotfix: %s", err)
+		os.Remove(filepath.Join(p.Root, p.versions(HotFixFile)))
 	}
 
-	p.index, err = p.FetchManifest(ctx, IndexFile, version)
+	p.index, _, err = p.FetchManifest(ctx, IndexFile, version, nil)
 	if err != nil {
 		return nil, fmt.Errorf("patcher: %w", err)
 	}
 
-	for _, entry := range version.Entries {
+	for entry := range version.All() {
 		if cancelled(ctx) {
 			return nil, ctx.Err()
 		}
@@ -526,7 +378,244 @@ func (p *Patcher) GetVersion(ctx context.Context, packed bool) (*archive.Archive
 	return archive, nil
 }
 
-func (p *Patcher) GetPatch(ctx context.Context, archive *archive.Archive) (patcher.Patch, error) {
+func (p Patcher) getGameManifests(ctx context.Context, index, hotfix *manifest.Manifest) (downloadManifest, gameManifest *manifest.Manifest, addedHotfix map[string]manifest.Entry, err error) {
+	manifestName := MinimalFile
+	if p.FullDownload {
+		manifestName = GameFile
+	}
+
+	downloadManifest, addedHotfix, err = p.FetchManifest(ctx, manifestName, index, hotfix, p.FullDownload) // Only downloads trunk.txt into root
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	if p.FullDownload {
+		return downloadManifest, downloadManifest, nil, nil
+	}
+
+	gameManifest, _, err = p.FetchManifest(ctx, GameFile, index, hotfix, true)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return downloadManifest, gameManifest, addedHotfix, nil
+}
+
+func (p Patcher) needsPackedDownload(ctx context.Context, path string, entry manifest.Entry, addedHotfix map[string]manifest.Entry, arch *archive.Archive) (bool, error) {
+	record, err := arch.Load(path)
+	if errors.Is(err, archive.ErrNotCataloged) {
+		return p.needsUnpackedDownload(ctx, path, entry)
+	}
+
+	if errors.Is(err, archive.ErrNotPacked) {
+		return true, nil
+	}
+
+	if errors.Is(err, os.ErrNotExist) {
+		if _, ok := addedHotfix[path]; ok {
+			return true, nil
+		}
+
+		p.Log.Printf("%s is from a non-existent pack; downloading it", path)
+
+		record, _ := arch.Catalog().Search(path)
+		p.packDownloads[record.PackName] = p.packEntries[record.PackName]
+		return false, nil // Don't download this entry, it will be downloaded in the pack
+	}
+
+	if err != nil {
+		return false, fmt.Errorf("check packed download: %w", err)
+	}
+
+	if cancelled(ctx) {
+		return false, ctx.Err()
+	}
+
+	return record.UncompressedSize != entry.UncompressedSize || !bytes.Equal(record.UncompressedChecksum, entry.UncompressedChecksum), nil
+}
+
+func (p Patcher) needsUnpackedDownload(ctx context.Context, path string, entry manifest.Entry) (bool, error) {
+	stat, err := p.Stat(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return true, nil
+	}
+
+	if err != nil {
+		return false, fmt.Errorf("check unpacked download: %w", err)
+	}
+
+	if qc, ok := p.cacheFile.Load(path); ok {
+		if err := qc.Check(stat, entry.Info); err == nil {
+			return false, nil
+		} else {
+			p.Log.Printf("%s: %v", path, err)
+		}
+	}
+
+	file, err := p.Open(path)
+	if err != nil {
+		return false, fmt.Errorf("check unpacked download: %w", err)
+	}
+	defer file.Close()
+
+	if err := entry.VerifyUncompressed(file); err != nil {
+		return true, nil
+	}
+
+	if cancelled(ctx) {
+		return false, ctx.Err()
+	}
+
+	p.cacheFile.Store(path, stat, entry.Info)
+	return false, nil
+}
+
+func (p Patcher) NeedsDownload(ctx context.Context, path string, entry manifest.Entry, addedHotfix map[string]manifest.Entry, archive ...*archive.Archive) (needsDownload bool, err error) {
+	defer func() {
+		if err != nil {
+			return
+		}
+
+		if needsDownload {
+			p.Log.Print(path, " needs download")
+		} else {
+			p.Log.Print(path, " is ok")
+		}
+	}()
+
+	if len(archive) > 0 {
+		return p.needsPackedDownload(ctx, path, entry, addedHotfix, archive[0])
+	} else {
+		return p.needsUnpackedDownload(ctx, path, entry)
+	}
+}
+
+func (p Patcher) shouldIgnore(name string) bool {
+	name = strings.ToLower(name)
+	if strings.EqualFold(name, "client/boot.cfg") {
+		return true
+	}
+
+	// Only download packs for During Play (High-Speed)
+	if p.FullDownload && strings.HasSuffix(name, ".pk") {
+		return true
+	}
+
+	if strings.Contains(name, "_loc") && !strings.Contains(name, path.Join("_loc", strings.ToLower(p.Locale))) {
+		return true
+	}
+
+	ndaudio := p.Locale
+	if ndaudio == "en_US" {
+		ndaudio = "default"
+	}
+
+	if strings.Contains(name, "ndaudio/vo") && !strings.Contains(name, path.Join("ndaudio", "vo", ndaudio)) {
+		return true
+	}
+
+	for _, exclude := range p.exclude {
+		if exclude.Prefix && strings.HasPrefix(name, exclude.Path) {
+			return true
+		} else if name == exclude.Path {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (p Patcher) collectEntries(ctx context.Context, download *manifest.Manifest, addedHotfix map[string]manifest.Entry, archive ...*archive.Archive) ([]manifest.Entry, error) {
+	entries := []manifest.Entry{}
+
+	for entry := range download.All() {
+		if cancelled(ctx) {
+			return nil, ctx.Err()
+		}
+
+		if p.shouldIgnore(entry.Path) {
+			continue
+		}
+
+		// Skip packs already marked for download
+		// Prevents packs gettings downloaded twice
+		if _, ok := p.packDownloads[entry.Path]; ok {
+			continue
+		}
+
+		needsDownload, err := p.NeedsDownload(ctx, entry.Path, entry, addedHotfix, archive...)
+		if err != nil {
+			return nil, err
+		}
+
+		if needsDownload {
+			entries = append(entries, entry)
+		}
+	}
+
+	for _, entry := range p.packDownloads {
+		entries = append(entries, entry)
+	}
+
+	return entries, nil
+}
+
+func (p *Patcher) doPacked(ctx context.Context, index, hotfix *manifest.Manifest, archive *archive.Archive) (patcher.Patch, error) {
+	if cancelled(ctx) {
+		return nil, ctx.Err()
+	}
+
+	downloadManifest, gameManifest, addedHotfix, err := p.getGameManifests(ctx, index, hotfix)
+	if err != nil {
+		return nil, fmt.Errorf("patcher: packed: %w", err)
+	}
+
+	for _, packName := range archive.Catalog().PackNames() {
+		packEntry, ok := gameManifest.GetEntry(packName)
+		if !ok {
+			return nil, fmt.Errorf("patcher: packed: game manifest does not contain pack \"%s\"", packName)
+		}
+		p.packEntries[packName] = packEntry
+	}
+
+	entries, err := p.collectEntries(ctx, downloadManifest, addedHotfix, archive)
+	if err != nil {
+		return nil, fmt.Errorf("patcher: packed: %w", err)
+	}
+
+	p.Log.Printf("Found %d entries that need patching", len(entries))
+
+	return &Patch{
+		Downloader: p.Downloader,
+		archive:    archive,
+		entries:    entries,
+	}, nil
+}
+
+func (p Patcher) doUnpacked(ctx context.Context, index, hotfix *manifest.Manifest) (patcher.Patch, error) {
+	if cancelled(ctx) {
+		return nil, ctx.Err()
+	}
+
+	downloadManifest, _, addedHotfix, err := p.getGameManifests(ctx, index, hotfix)
+	if err != nil {
+		return nil, fmt.Errorf("patcher: unpacked: %w", err)
+	}
+
+	entries, err := p.collectEntries(ctx, downloadManifest, addedHotfix)
+	if err != nil {
+		return nil, fmt.Errorf("patcher: unpacked: %w", err)
+	}
+
+	p.Log.Printf("Found %d entries that need patching", len(entries))
+
+	return &Patch{
+		Downloader: p.Downloader,
+		entries:    entries,
+	}, nil
+}
+
+func (p Patcher) GetPatch(ctx context.Context, archive *archive.Archive) (patcher.Patch, error) {
 	if cancelled(ctx) {
 		return nil, ctx.Err()
 	}
@@ -537,10 +626,6 @@ func (p *Patcher) GetPatch(ctx context.Context, archive *archive.Archive) (patch
 			}
 		}
 	}()
-
-	if !p.FullDownload {
-		return &Patch{entries: []*manifest.Entry{}}, nil
-	}
 
 	if archive != nil {
 		return p.doPacked(ctx, p.index, p.hotfix, archive)

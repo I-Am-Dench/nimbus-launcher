@@ -7,7 +7,7 @@ import (
 	"github.com/I-Am-Dench/goverbuild/archive"
 	"github.com/I-Am-Dench/goverbuild/models/boot"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher"
-	"github.com/I-Am-Dench/nimbus-launcher/patcher/undoer"
+	"github.com/I-Am-Dench/nimbus-launcher/patcher/tracker"
 )
 
 var _ patcher.Server = (*Server)(nil)
@@ -28,11 +28,11 @@ func (s Server) Status() *patcher.Status {
 	return nil
 }
 
-func (s Server) GetPatcher(o patcher.Options) patcher.Patcher {
+func (s Server) GetPatcher(o patcher.Options) (patcher.Patcher, error) {
 	return Patcher{
 		InstallDirectory: o.InstallDirectory,
 		BootConfig:       s.BootConfig,
-	}
+	}, nil
 }
 
 type Patcher struct {
@@ -72,6 +72,6 @@ func (p Patch) Total() int {
 
 func (p Patch) SetProgress(_ func(n int)) {}
 
-func (p Patch) Run(_ context.Context, _ undoer.Undoer) error {
+func (p Patch) Run(_ context.Context, _ tracker.Tracker) error {
 	return nil
 }

@@ -1,5 +1,6 @@
 settings/
 patches/
+defaultclients/
 
 release/launcher
 
@@ -8,3 +9,5 @@ release/launcher
 *.log
 *.db
 *.json
+
+*.tmp

@@ -288,6 +288,8 @@ func (s *profileSettings) SaveProfile(profile *Profile, bootConfig *boot.Config)
 		return fmt.Errorf("save profile: %v", err)
 	}
 
+	profile.ServerList.once = nil
+
 	profiles := s.Profiles()
 
 	index := slices.IndexFunc(profiles, func(p *Profile) bool { return p != nil && p.Id == profile.Id })

@@ -22,11 +22,11 @@ type Environment struct {
 	UserConfig
 }
 
-func (e *Environment) Locale() string {
+func (e Environment) Locale() string {
 	return e.UserConfig.Locale
 }
 
-func (e *Environment) masterIndexUrl(serviceUrl string, resources origin.Resources) string {
+func (e Environment) masterIndexUrl(serviceUrl string, resources origin.Resources) string {
 	if len(e.Environment) == 0 {
 		return serviceUrl
 	}
@@ -41,7 +41,7 @@ func (e *Environment) masterIndexUrl(serviceUrl string, resources origin.Resourc
 	}
 }
 
-func (e *Environment) GetMasterIndex(ctx context.Context, serviceUrl string, resources origin.Resources) (patcher.MasterIndex, error) {
+func (e Environment) GetMasterIndex(ctx context.Context, serviceUrl string, resources origin.Resources) (patcher.MasterIndex, error) {
 	reader, err := resources.Get(ctx, e.masterIndexUrl(serviceUrl, resources))
 	if err != nil {
 		return patcher.MasterIndex{}, err
@@ -72,38 +72,37 @@ func (e Environment) GetStatusList(ctx context.Context, r origin.Resources, mast
 }
 
 func (e Environment) GetServerList(ctx context.Context, r origin.Resources, masterIndex patcher.MasterIndex) ([]patcher.Server, error) {
-	reader, err := r.Get(ctx, masterIndex.UniverseConfig.URL)
+	universeConfigUrl, err := url.JoinPath(masterIndex.UniverseConfig.URL, "xml", "EnvironmentInfo")
+	if err != nil {
+		return nil, fmt.Errorf("server list: %w", err)
+	}
+
+	reader, err := r.Get(ctx, universeConfigUrl)
 	if err != nil {
 		return nil, fmt.Errorf("server list: %w", err)
 	}
 	defer reader.Close()
 
-	serverList := ServerList{}
-	if err := xml.NewDecoder(reader).Decode(&serverList); err != nil {
-		return nil, fmt.Errorf("server list: %v", err)
+	universeEnv := UniverseEnvironment{}
+	if err := xml.NewDecoder(reader).Decode(&universeEnv); err != nil {
+		return nil, fmt.Errorf("server list: %w", err)
 	}
 
 	statuses := e.GetStatusList(ctx, r, masterIndex)
 
-	servers := make([]patcher.Server, 0, len(serverList.Servers))
-	for _, server := range serverList.Servers {
-		resources := r
-
-		switch v := resources.(type) {
-		case *origin.FS:
-			resources = origin.WithRoot(v, path.Join(server.Patcher.Host, server.Patcher.Dir))
-		case *origin.Http, *origin.HttpWithAuth:
-			u, err := url.JoinPath(server.PatcherUrl(v), server.Patcher.Dir)
-			if err != nil {
-				return nil, fmt.Errorf("nd-nimbus: %v", err)
-			}
-			resources = origin.WithUrl(resources, u)
+	servers := make([]patcher.Server, 0, len(universeEnv.Servers))
+	for _, server := range universeEnv.Servers {
+		if server.VersionDirType == VersionDirTypePatcherDirVersion {
+			server.CdnInfo.PatcherDir = path.Join(server.CdnInfo.PatcherDir, server.Version)
 		}
 
-		server.status = statuses[server.Name]
-		server.resources = resources
-		server.userConfig = e.UserConfig
-		servers = append(servers, server)
+		servers = append(servers, Server{
+			UniverseConfig: server,
+			UserConfig:     e.UserConfig,
+			patcherIniUrl:  universeEnv.PatcherInfo.ConfigUrl,
+			status:         statuses[server.Name],
+			resources:      r,
+		})
 	}
 
 	return servers, nil

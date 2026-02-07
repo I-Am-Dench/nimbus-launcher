@@ -6,7 +6,7 @@ import (
 	"github.com/I-Am-Dench/goverbuild/archive"
 	"github.com/I-Am-Dench/goverbuild/models/boot"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher/origin"
-	"github.com/I-Am-Dench/nimbus-launcher/patcher/undoer"
+	"github.com/I-Am-Dench/nimbus-launcher/patcher/tracker"
 )
 
 const (
@@ -23,7 +23,7 @@ type Patch interface {
 	Summary() Summary
 	Total() int
 	SetProgress(func(n int))
-	Run(context.Context, undoer.Undoer) error
+	Run(context.Context, tracker.Tracker) error
 }
 
 type Options struct {
@@ -48,7 +48,7 @@ type ServerInfo struct {
 type Server interface {
 	Info() ServerInfo
 	Status() *Status
-	GetPatcher(Options) Patcher
+	GetPatcher(Options) (Patcher, error)
 }
 
 type Logger interface {
