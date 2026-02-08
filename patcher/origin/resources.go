@@ -38,7 +38,7 @@ func NewResources(uri string) (Resources, string, error) {
 
 type FS struct{}
 
-func (*FS) Get(ctx context.Context, path string) (io.ReadCloser, error) {
+func (FS) Get(ctx context.Context, path string) (io.ReadCloser, error) {
 	file, err := os.Open(filepath.Clean(filepath.FromSlash(path)))
 	if err != nil {
 		return nil, fmt.Errorf("origin: fs: %w", err)
@@ -63,7 +63,7 @@ type Http struct {
 	Client *http.Client
 }
 
-func (h *Http) Get(ctx context.Context, uri string) (io.ReadCloser, error) {
+func (h Http) Get(ctx context.Context, uri string) (io.ReadCloser, error) {
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, uri, nil)
 	if err != nil {
 		return nil, fmt.Errorf("origin: http: %w", err)
@@ -105,7 +105,7 @@ type HttpWithAuth struct {
 	authUrl     string
 }
 
-func (h *HttpWithAuth) extractResponseMessage(response *http.Response) string {
+func (h HttpWithAuth) extractResponseMessage(response *http.Response) string {
 	message := struct {
 		Message string `json:"error" xml:"error"`
 	}{}
@@ -129,7 +129,7 @@ func (h *HttpWithAuth) extractResponseMessage(response *http.Response) string {
 	return message.Message
 }
 
-func (h *HttpWithAuth) Authenticate(ctx context.Context) error {
+func (h HttpWithAuth) Authenticate(ctx context.Context) error {
 	var lastMessage string
 	for {
 		username, password, err := h.credentials(lastMessage)
@@ -150,6 +150,7 @@ func (h *HttpWithAuth) Authenticate(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("origin: http with auth: %w", err)
 		}
+		defer response.Body.Close()
 
 		if response.StatusCode >= 200 && response.StatusCode < 300 {
 			return nil
@@ -163,7 +164,7 @@ func (h *HttpWithAuth) Authenticate(ctx context.Context) error {
 	}
 }
 
-func (h *HttpWithAuth) Get(ctx context.Context, uri string) (io.ReadCloser, error) {
+func (h HttpWithAuth) Get(ctx context.Context, uri string) (io.ReadCloser, error) {
 	for {
 		r, err := h.Http.Get(ctx, uri)
 		if err == nil {
@@ -192,7 +193,7 @@ type withRoot struct {
 	root string
 }
 
-func (r *withRoot) Get(ctx context.Context, path string) (io.ReadCloser, error) {
+func (r withRoot) Get(ctx context.Context, path string) (io.ReadCloser, error) {
 	return r.Resources.Get(ctx, filepath.Join(r.root, filepath.Clean(path)))
 }
 
@@ -205,7 +206,7 @@ type withUrl struct {
 	base string
 }
 
-func (r *withUrl) Get(ctx context.Context, path string) (io.ReadCloser, error) {
+func (r withUrl) Get(ctx context.Context, path string) (io.ReadCloser, error) {
 	uri, err := url.JoinPath(r.base, filepath.ToSlash(path))
 	if err != nil {
 		return nil, fmt.Errorf("origin: with url: %v", err)
