@@ -29,6 +29,8 @@ type Patch interface {
 type Options struct {
 	Log Logger
 
+	Locale           string
+	FullDownload     bool
 	InstallDirectory string
 	ServerId         string
 }

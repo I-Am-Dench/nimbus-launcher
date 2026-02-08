@@ -64,7 +64,7 @@ func (d Downloader) Download(ctx context.Context, source, destination string) (f
 		return nil, fmt.Errorf("download: %s: %w", source, err)
 	}
 
-	if cancelled(ctx) {
+	if Cancelled(ctx) {
 		file.Close()
 		return nil, ctx.Err()
 	}
@@ -106,7 +106,7 @@ func (d Downloader) downloadCompressed(ctx context.Context, entry manifest.Entry
 		return nil, nil, fmt.Errorf("download compressed: %s: mismatched compressed checksum: expected %x but got %x", entry.Path, entry.CompressedChecksum, sum)
 	}
 
-	if cancelled(ctx) {
+	if Cancelled(ctx) {
 		cleanup()
 		return nil, nil, ctx.Err()
 	}
@@ -144,7 +144,7 @@ func (d Downloader) installUnpacked(temp io.Reader, destination string) (file *o
 	return file, nil
 }
 
-func (d Downloader) DownloadCataloged(ctx context.Context, path string, entry manifest.Entry, arch *archive.Archive) (err error) {
+func (d Downloader) DownloadCataloged(ctx context.Context, path string, entry manifest.Entry, ar *archive.Archive) (err error) {
 	temp, cleanup, err := d.downloadCompressed(ctx, entry)
 	if err != nil {
 		return err
@@ -155,9 +155,9 @@ func (d Downloader) DownloadCataloged(ctx context.Context, path string, entry ma
 		}
 	}()
 
-	pack, record, err := arch.FindPack(path)
+	pack, record, err := ar.FindPack(path)
 
-	// The original patcher treated uncataloged
+	//The original patcher treated uncataloged
 	// resources as unpacked.
 	if errors.Is(err, archive.ErrNotCataloged) {
 		f, err := d.installUnpacked(temp, path)
@@ -184,7 +184,6 @@ func (d Downloader) DownloadCataloged(ctx context.Context, path string, entry ma
 	if err := pack.Store(path, entry.Info, record.IsCompressed, reader); err != nil {
 		return fmt.Errorf("download cataloged: %s: %v", path, err)
 	}
-
 	return nil
 }
 
@@ -201,4 +200,13 @@ func (d Downloader) DownloadUncataloged(ctx context.Context, destination string,
 	}()
 
 	return d.installUnpacked(temp, destination)
+}
+
+func Cancelled(ctx context.Context) bool {
+	select {
+	case <-ctx.Done():
+		return true
+	default:
+		return false
+	}
 }

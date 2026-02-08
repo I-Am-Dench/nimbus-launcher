@@ -13,7 +13,7 @@ import (
 type Patch struct {
 	Downloader
 
-	archive  *archive.Archive
+	ar       *archive.Archive
 	progress func(int)
 
 	entries []manifest.Entry
@@ -39,10 +39,10 @@ func (p *Patch) SetProgress(progress func(n int)) {
 	p.progress = progress
 }
 
-func (p Patch) runPacked(ctx context.Context, tracker tracker.Tracker, archive *archive.Archive) error {
+func (p Patch) runPacked(ctx context.Context, tracker tracker.Tracker, ar *archive.Archive) error {
 	errs := []error{}
 	for i, entry := range p.entries {
-		if cancelled(ctx) {
+		if Cancelled(ctx) {
 			return ctx.Err()
 		}
 
@@ -50,11 +50,11 @@ func (p Patch) runPacked(ctx context.Context, tracker tracker.Tracker, archive *
 			p.progress(i + 1)
 		}
 
-		if err := tracker.Track(entry.Path, archive); err != nil {
+		if err := tracker.Track(entry.Path, ar); err != nil {
 			errs = append(errs, err)
 		}
 
-		if err := p.DownloadCataloged(ctx, entry.Path, entry, archive); err != nil {
+		if err := p.DownloadCataloged(ctx, entry.Path, entry, ar); err != nil {
 			errs = append(errs, err)
 		}
 	}
@@ -64,9 +64,13 @@ func (p Patch) runPacked(ctx context.Context, tracker tracker.Tracker, archive *
 
 func (p Patch) runUnpacked(ctx context.Context, tracker tracker.Tracker) error {
 	errs := []error{}
-	for _, entry := range p.entries {
-		if cancelled(ctx) {
+	for i, entry := range p.entries {
+		if Cancelled(ctx) {
 			return ctx.Err()
+		}
+
+		if p.progress != nil {
+			p.progress(i + 1)
 		}
 
 		if err := tracker.Track(entry.Path, nil); err != nil {
@@ -88,7 +92,7 @@ func (p Patch) runUnpacked(ctx context.Context, tracker tracker.Tracker) error {
 }
 
 func (p Patch) Run(ctx context.Context, tkr tracker.Tracker) error {
-	if cancelled(ctx) {
+	if Cancelled(ctx) {
 		return ctx.Err()
 	}
 
@@ -96,8 +100,8 @@ func (p Patch) Run(ctx context.Context, tkr tracker.Tracker) error {
 		tkr = tracker.Discard{}
 	}
 
-	if p.archive != nil {
-		return p.runPacked(ctx, tkr, p.archive)
+	if p.ar != nil {
+		return p.runPacked(ctx, tkr, p.ar)
 	} else {
 		return p.runUnpacked(ctx, tkr)
 	}

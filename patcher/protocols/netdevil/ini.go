@@ -6,10 +6,12 @@ import (
 	"strings"
 )
 
-func ReadIni(r io.Reader) map[string]string {
+type Ini map[string]string
+
+func ReadIni(r io.Reader) Ini {
 	scanner := bufio.NewScanner(r)
 
-	m := map[string]string{}
+	m := Ini{}
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if len(line) > 0 && line[0] == '#' {

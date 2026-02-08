@@ -7,22 +7,13 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/I-Am-Dench/goverbuild/archive/manifest"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher/origin"
-)
-
-type VersionDirType int
-
-const (
-	VersionDirTypePatcherDirOnly    = iota // Ignore version, use <CdnInfo.PatcherDir> only
-	VersionDirTypeVersionHotfixOnly        // Use <Version> only for getting version.txt and hotfix.txt
-	VersionDirTypePatcherDirVersion        // Use <CdnInfo.PatcherDir>/<Version> as PATCHSERVERDIR
+	int_netdevil "github.com/I-Am-Dench/nimbus-launcher/patcher/protocols/internal/netdevil"
 )
 
 type Server struct {
 	UniverseConfig
-	UserConfig
 
 	patcherIniUrl string
 	status        *patcher.Status
@@ -33,7 +24,7 @@ func (s Server) Info() patcher.ServerInfo {
 	return patcher.ServerInfo{
 		Name:   s.Name,
 		Lang:   s.Language,
-		AuthIP: s.AuthenticationIp,
+		AuthIP: s.AuthenticationIP,
 	}
 }
 
@@ -55,23 +46,31 @@ func (s Server) GetPatcher(options patcher.Options) (patcher.Patcher, error) {
 		resources = origin.WithUrl(resources, u)
 	}
 
+	config := int_netdevil.Config{
+		Locale:         options.Locale,
+		FullDownload:   options.FullDownload,
+		ServerId:       options.ServerId,
+		Version:        s.Version,
+		VersionDirType: s.VersionDirType,
+	}
+
+	downloader := int_netdevil.Downloader{
+		Resources: resources,
+		Log:       options.Log,
+		Root:      options.InstallDirectory,
+		TempDir:   patcher.VersionsDir,
+	}
+
 	return &Patcher{
-		UserConfig: s.UserConfig,
-		Downloader: Downloader{
-			Resources: resources,
-			Log:       options.Log,
-			Root:      options.InstallDirectory,
-			TempDir:   VersionsDir,
-		},
-		packEntries:   make(map[string]manifest.Entry),
-		packDownloads: make(map[string]manifest.Entry),
-		serverId:      options.ServerId,
-		server:        s,
+		patcher: int_netdevil.NewPatcher([]int{82}, config, downloader),
+		server:  s,
 	}, nil
 }
 
+type VersionDirType = int_netdevil.VersionDirType
+
 type UniverseConfig struct {
-	AuthenticationIp string `xml:"AuthenticationIP"`
+	AuthenticationIP string `xml:"AuthenticationIP"`
 	CdnInfo          struct {
 		PatcherUrl string `xml:"PatcherUrl"`
 		PatcherDir string `xml:"PatcherDir"`
@@ -107,7 +106,7 @@ func (c UniverseConfig) PatcherUrl(resources origin.Resources) string {
 }
 
 func (c UniverseConfig) PatcherDir() string {
-	if c.VersionDirType == VersionDirTypePatcherDirVersion {
+	if c.VersionDirType == int_netdevil.VersionDirTypeWithVersion {
 		return path.Join(c.CdnInfo.PatcherDir, c.Version)
 	}
 	return c.CdnInfo.PatcherDir

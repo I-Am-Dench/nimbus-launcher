@@ -10,20 +10,15 @@ import (
 
 	"github.com/I-Am-Dench/nimbus-launcher/patcher"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher/origin"
+	int_netdevil "github.com/I-Am-Dench/nimbus-launcher/patcher/protocols/internal/netdevil"
 )
-
-type UserConfig struct {
-	Locale       string `json:"locale" xml:"locale"`
-	FullDownload bool   `json:"fullDownload" xml:"-"`
-}
 
 type Environment struct {
 	Environment string `json:"environment" xml:"environment"`
-	UserConfig
 }
 
 func (e Environment) Locale() string {
-	return e.UserConfig.Locale
+	return "en_US"
 }
 
 func (e Environment) masterIndexUrl(serviceUrl string, resources origin.Resources) string {
@@ -52,7 +47,6 @@ func (e Environment) GetMasterIndex(ctx context.Context, serviceUrl string, reso
 	if err := xml.NewDecoder(reader).Decode(&masterIndex); err != nil {
 		return patcher.MasterIndex{}, err
 	}
-
 	return masterIndex, nil
 }
 
@@ -92,13 +86,12 @@ func (e Environment) GetServerList(ctx context.Context, r origin.Resources, mast
 
 	servers := make([]patcher.Server, 0, len(universeEnv.Servers))
 	for _, server := range universeEnv.Servers {
-		if server.VersionDirType == VersionDirTypePatcherDirVersion {
+		if server.VersionDirType == int_netdevil.VersionDirTypeWithVersion {
 			server.CdnInfo.PatcherDir = path.Join(server.CdnInfo.PatcherDir, server.Version)
 		}
 
 		servers = append(servers, Server{
 			UniverseConfig: server,
-			UserConfig:     e.UserConfig,
 			patcherIniUrl:  universeEnv.PatcherInfo.ConfigUrl,
 			status:         statuses[server.Name],
 			resources:      r,
@@ -106,13 +99,4 @@ func (e Environment) GetServerList(ctx context.Context, r origin.Resources, mast
 	}
 
 	return servers, nil
-}
-
-func cancelled(ctx context.Context) bool {
-	select {
-	case <-ctx.Done():
-		return true
-	default:
-		return false
-	}
 }

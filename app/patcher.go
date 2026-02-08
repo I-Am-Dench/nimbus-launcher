@@ -22,7 +22,7 @@ type Patcher interface {
 
 var Patchers = map[string]Patcher{
 	"netdevil": NetDevilPatcher{},
-	"nimbus":   NimbusPatcher{},
+	// "nimbus":   NimbusPatcher{},
 }
 
 func PatcherOptions() []string {
@@ -43,10 +43,10 @@ func (e NetDevilPatcher) Default() Patcher {
 	return &NetDevilPatcher{
 		Environment: netdevil.Environment{
 			Environment: "live",
-			UserConfig: netdevil.UserConfig{
-				Locale:       "en_US",
-				FullDownload: true,
-			},
+			// UserConfig: netdevil.UserConfig{
+			// 	Locale:       "en_US",
+			// 	FullDownload: true,
+			// },
 		},
 	}
 }
@@ -61,29 +61,29 @@ func (e NetDevilPatcher) ProfileForm() ([]*widget.FormItem, PatcherFunc) {
 			return &NetDevilPatcher{
 				netdevil.Environment{
 					Environment: environment.Text,
-					UserConfig:  e.UserConfig,
+					// UserConfig:  e.UserConfig,
 				},
 			}
 		}
 }
 
 func (e NetDevilPatcher) UserForm() ([]*widget.FormItem, PatcherFunc) {
-	locale := nlwidgets.NewLocaleSelector(e.Locale())
+	// locale := nlwidgets.NewLocaleSelector(e.Locale())
 
-	fullDownload := widget.NewCheck("Download before or during play", func(b bool) {})
-	fullDownload.SetChecked(e.FullDownload)
+	// fullDownload := widget.NewCheck("Download before or during play", func(b bool) {})
+	// fullDownload.SetChecked(e.FullDownload)
 
 	return []*widget.FormItem{
-			widget.NewFormItem("Locale", locale),
-			widget.NewFormItem("Full Download", fullDownload),
+			// widget.NewFormItem("Locale", locale),
+			// widget.NewFormItem("Full Download", fullDownload),
 		}, func() Patcher {
 			return &NetDevilPatcher{
 				netdevil.Environment{
 					Environment: e.Environment.Environment,
-					UserConfig: netdevil.UserConfig{
-						Locale:       locale.Selected,
-						FullDownload: fullDownload.Checked,
-					},
+					// UserConfig: netdevil.UserConfig{
+					// 	Locale:       locale.Selected,
+					// 	FullDownload: fullDownload.Checked,
+					// },
 				},
 			}
 		}
