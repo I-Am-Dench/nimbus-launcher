@@ -38,7 +38,7 @@ type ProfileForm struct {
 	patcherFunc func() Patcher
 	bootForm    *BootForm
 
-	client *client.Config
+	client *client.Optional
 
 	patcherContainer *fyne.Container
 	patcherForm      *widget.Form

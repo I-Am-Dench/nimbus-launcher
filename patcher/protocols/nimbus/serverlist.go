@@ -5,19 +5,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/I-Am-Dench/nimbus-launcher/internal/optional"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher/origin"
 )
-
-type Optional[T any] struct {
-	Exists bool
-	Value  T
-}
-
-func (o *Optional[T]) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
-	o.Exists = true
-	return d.DecodeElement(&o.Value, &start)
-}
 
 type UGC struct {
 	Host         string `xml:"Host"`
@@ -35,7 +26,7 @@ type Server struct {
 		Dir  string `xml:"Dir"`
 		Port uint16 `xml:"Port"`
 	} `xml:"Patcher"`
-	UGC  Optional[UGC] `xml:"UGC"`
+	UGC  optional.O[UGC] `xml:"UGC"`
 	Game struct {
 		AuthIP   string `xml:"AuthIP"`
 		CrashLog string `xml:"CrashLog"`

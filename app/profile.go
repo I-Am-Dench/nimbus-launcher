@@ -195,8 +195,8 @@ type Profile struct {
 	Id   string `json:"id" xml:"-"`
 	Name string `json:"name" xml:"name"`
 
-	Client *client.Config `json:"client,omitempty" xml:"client,omitempty"`
-	Server ServerInfo     `json:"server" xml:"server"`
+	Client *client.Optional `json:"client,omitempty" xml:"client,omitempty"`
+	Server ServerInfo       `json:"server" xml:"server"`
 
 	ServerList struct {
 		seq      int64

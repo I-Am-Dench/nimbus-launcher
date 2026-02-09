@@ -52,7 +52,7 @@ func (p Patcher) GetBoot(packed bool) boot.Config {
 		Dir:          "3dservices",
 		DataCenterId: 150,
 	}
-	if p.server.UGC.Exists {
+	if p.server.UGC.HasValue() {
 		ugc = p.server.UGC.Value
 	}
 
@@ -74,7 +74,7 @@ func (p Patcher) GetBoot(packed bool) boot.Config {
 		Logging:          100,
 		DataCenterID:     uint32(ugc.DataCenterId),
 		PatchServerDir:   p.server.Patcher.Dir,
-		UGCUse3dServices: p.server.UGC.Exists,
+		UGCUse3dServices: p.server.UGC.HasValue(),
 		UGCServerIP:      ugc.Host,
 		UGCServerDir:     ugc.Dir,
 		CrashLogURL:      p.server.Game.CrashLog,

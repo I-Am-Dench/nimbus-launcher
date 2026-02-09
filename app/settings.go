@@ -67,30 +67,14 @@ func newProfileSettings(window fyne.Window, profilesBinding ProfileListBinding, 
 		content:            container.NewStack(),
 	}
 
-	directory := nlwidgets.NewDirectorySelector(window)
+	clientSettings := nlwidgets.NewClientSettings(window, false)
 
-	clientName := widget.NewEntry()
-	clientName.PlaceHolder = client.DefaultExe
-
-	packed := widget.NewCheck("Client uses a catalog file (i.e. versions/primary.pki)", func(b bool) {})
-	packed.Partial = true
-
-	resetPacked := widget.NewButton("", func() {
-		packed.Partial = true
-		packed.Refresh()
-	})
-	resetPacked.Icon = theme.ViewRefreshIcon()
-
-	clientSettings := widget.NewAccordionItem(
+	clientSettingsOverride := widget.NewAccordionItem(
 		"Client (Override Default)",
-		widget.NewForm(
-			widget.NewFormItem("Directory", directory),
-			widget.NewFormItem("Client Name", clientName),
-			widget.NewFormItem("Packed", container.NewBorder(nil, nil, packed, resetPacked)),
-		),
+		widget.NewForm(clientSettings.Form()...),
 	)
 
-	// === Selector
+	// === Selector === //
 	p.profileSelector = nlwidgets.NewItemSelector(p.Profiles(), profileName, compareProfiles, func(profile *Profile) {
 		if profile == nil {
 			return
@@ -99,16 +83,12 @@ func newProfileSettings(window fyne.Window, profilesBinding ProfileListBinding, 
 		p.SetPatcherSettings(profile)
 
 		if profile.Client == nil {
-			directory.SetText("")
-			clientName.SetText("")
-			packed.Partial = true
+			clientSettings.Set(client.Optional{})
 		} else {
-			directory.SetText(profile.Client.Directory)
-			clientName.SetText(profile.Client.Name)
-			packed.SetChecked(profile.Client.IsPacked)
+			clientSettings.Set(*profile.Client)
 		}
 
-		clientSettings.Open = profile.Client != nil
+		clientSettingsOverride.Open = profile.Client != nil
 	})
 	p.profileSelector.PlaceHolder = "(Select server)"
 	p.profileSelector.SetSelectedIndex(0)
@@ -116,7 +96,7 @@ func newProfileSettings(window fyne.Window, profilesBinding ProfileListBinding, 
 	addServerButton := widget.NewButtonWithIcon("Add Server", theme.ContentAddIcon(), p.ShowNewProfile)
 	addServerButton.Importance = widget.LowImportance
 
-	// === Menu
+	// === Menu === //
 	editItem := fyne.NewMenuItem("Edit", p.ShowEditProfile)
 	editItem.Icon = theme.DocumentCreateIcon()
 
@@ -131,8 +111,7 @@ func newProfileSettings(window fyne.Window, profilesBinding ProfileListBinding, 
 
 		dialog.NewCustomConfirm(
 			"Remove Server",
-			"Remove",
-			"Cancel",
+			"Remove", "Cancel",
 			widget.NewLabel(fmt.Sprintf("Remove profile %q?", profile.Name)),
 			func(ok bool) {
 				if !ok {
@@ -172,7 +151,7 @@ func newProfileSettings(window fyne.Window, profilesBinding ProfileListBinding, 
 		menu.ShowAtRelativePosition(position, serverMenuButton)
 	}
 
-	// === Pages
+	// === Pages === //
 	heading := canvas.NewText("Servers", theme.Color(theme.ColorNameForeground))
 	heading.TextSize = 16
 
@@ -182,14 +161,11 @@ func newProfileSettings(window fyne.Window, profilesBinding ProfileListBinding, 
 			return
 		}
 
-		if len(directory.Text) == 0 && len(clientName.Text) == 0 && packed.Partial {
+		clientConfig := clientSettings.GetOptional()
+		if clientConfig.IsEmpty() {
 			profile.Client = nil
 		} else {
-			profile.Client = &client.Config{
-				Directory: directory.Text,
-				Name:      clientName.Text,
-				IsPacked:  !packed.Partial && packed.Checked,
-			}
+			profile.Client = &clientConfig
 		}
 
 		if p.patcherFunc != nil && profile.Server.Patcher != nil {
@@ -200,7 +176,7 @@ func newProfileSettings(window fyne.Window, profilesBinding ProfileListBinding, 
 		if err := p.SaveProfile(profile, &bootConfig); err != nil {
 			dialog.ShowError(err, p.window)
 		} else {
-			dialog.ShowInformation("Save User Settings", "Saved!", p.window)
+			dialog.ShowInformation("User Settings", "Saved!", p.window)
 		}
 	})
 	saveButton.Importance = widget.HighImportance
@@ -218,7 +194,7 @@ func newProfileSettings(window fyne.Window, profilesBinding ProfileListBinding, 
 				),
 				widget.NewSeparator(),
 				p.patcherContainer,
-				widget.NewAccordion(clientSettings),
+				widget.NewAccordion(clientSettingsOverride),
 			),
 		),
 	)
@@ -397,20 +373,12 @@ func newLauncherSettings(window fyne.Window, settingsBinding SettingsBinding) *l
 	closeOnPlay.Checked = settings.Launch.CloseOnPlay
 
 	reviewPatches := widget.NewCheck("Display a summary of a patch before updating", func(b bool) {})
-	reviewPatches.Checked = settings.Launch.ReviewPatchesBeforeUpdate
+	reviewPatches.Checked = settings.Launch.CloseOnPlay
 
 	clientHeading := canvas.NewText("Default Client", theme.Color(theme.ColorNameForeground))
 	clientHeading.TextSize = 16
 
-	installDirectory := nlwidgets.NewDirectorySelector(window)
-	installDirectory.SetText(settings.Launch.DefaultClient.Directory)
-
-	clientName := widget.NewEntry()
-	clientName.PlaceHolder = "client/legouniverse.exe"
-	clientName.SetText(settings.Launch.DefaultClient.Name)
-
-	packed := widget.NewCheck("Client uses a catalog file (i.e. versions/primary.pki)", func(b bool) {})
-	packed.SetChecked(settings.Launch.DefaultClient.IsPacked)
+	clientSettings := nlwidgets.NewClientSettings(window, true, settings.Launch.DefaultClient.ToOptional())
 
 	etcSettings, etcFunc := NewEtcSettings(window, settings)
 
@@ -420,12 +388,8 @@ func newLauncherSettings(window fyne.Window, settingsBinding SettingsBinding) *l
 		settings.Launch.CloseOnPlay = closeOnPlay.Checked
 		settings.Launch.ReviewPatchesBeforeUpdate = reviewPatches.Checked
 
-		settings.Launch.DefaultClient = client.Config{
-			Directory: installDirectory.Text,
-			Name:      clientName.Text,
-			IsPacked:  packed.Checked,
-			Etc:       etcFunc(),
-		}
+		settings.Launch.DefaultClient = clientSettings.Get()
+		settings.Launch.DefaultClient.Etc = etcFunc()
 
 		dialog.ShowInformation("Launcher Settings", "Settings saved!", window)
 		l.Set(settings)
@@ -444,11 +408,7 @@ func newLauncherSettings(window fyne.Window, settingsBinding SettingsBinding) *l
 					),
 					widget.NewSeparator(),
 					clientHeading,
-					widget.NewForm(
-						widget.NewFormItem("Directory", installDirectory),
-						widget.NewFormItem("Name", clientName),
-						widget.NewFormItem("Packed", packed),
-					),
+					widget.NewForm(clientSettings.Form()...),
 					etcSettings,
 				),
 			),

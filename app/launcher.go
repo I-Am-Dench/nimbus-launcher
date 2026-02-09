@@ -195,7 +195,17 @@ func (l *Launcher) ClientConfig() client.Config {
 			c.Name = profile.Client.Name
 		}
 
-		c.IsPacked = profile.Client.IsPacked
+		if profile.Client.IsPacked.HasValue() {
+			c.IsPacked = profile.Client.IsPacked.Value
+		}
+
+		if len(profile.Client.Locale) > 0 {
+			c.Locale = profile.Client.Locale
+		}
+
+		if profile.Client.FullDownload.HasValue() {
+			c.FullDownload = profile.Client.FullDownload.Value
+		}
 	}
 
 	installDir, err := GetAbs(c.Directory)
@@ -316,6 +326,8 @@ func (l *Launcher) GetBoot(client client.Config, profile *Profile) (boot.Config,
 	patcher, err := server.GetPatcher(patcher.Options{
 		Log: &l.ProgressBar,
 
+		Locale:           client.Locale,
+		FullDownload:     client.FullDownload,
 		InstallDirectory: client.Directory,
 		ServerId:         profile.Id,
 	})

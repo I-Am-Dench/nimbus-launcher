@@ -4,10 +4,20 @@ import (
 	"github.com/I-Am-Dench/nimbus-launcher/locale"
 )
 
-func NewLocaleSelector(initial string) *ItemSelector[string] {
+func NewLocaleSelector(initial string, optional ...bool) *ItemSelector[string] {
+	options := locale.List()
+	if len(optional) > 0 && optional[0] {
+		options = append([]string{""}, options...)
+	}
+
 	selector := NewItemSelector(
-		locale.List(),
-		func(l string) string { return locale.GetName(l) },
+		options,
+		func(l string) string {
+			if len(l) == 0 {
+				return "(Default)"
+			}
+			return locale.GetName(l)
+		},
 		func(a, b string) bool { return a == b },
 		func(_ string) {},
 	)
