@@ -23,6 +23,11 @@ type Patcher struct {
 }
 
 func (p Patcher) GetBoot(packed bool) boot.Config {
+	manifestFile := ""
+	if !p.patcher.FullDownload {
+		manifestFile = int_netdevil.GameFile
+	}
+
 	return boot.Config{
 		ServerName:       p.server.Name,
 		PatchServerIP:    p.server.CdnInfo.PatcherUrl,
@@ -36,7 +41,7 @@ func (p Patcher) GetBoot(packed bool) boot.Config {
 		UGCServerDir:     p.server.UgcCdnInfo.PatcherDir,
 		CrashLogURL:      p.gameInfo.CrashLogUrl,
 		Locale:           p.server.Language,
-		ManifestFile:     int_netdevil.GameFile,
+		ManifestFile:     manifestFile,
 		UseCatalog:       packed,
 	}
 }

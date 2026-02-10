@@ -60,7 +60,6 @@ type Logger interface {
 }
 
 type Environment interface {
-	Locale() string
 	GetMasterIndex(ctx context.Context, serviceUrl string, resources origin.Resources) (MasterIndex, error)
 	GetServerList(context.Context, origin.Resources, MasterIndex) ([]Server, error)
 }

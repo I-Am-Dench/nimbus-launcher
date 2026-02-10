@@ -8,6 +8,7 @@ import (
 	"github.com/I-Am-Dench/nimbus-launcher/internal/optional"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher/origin"
+	int_netdevil "github.com/I-Am-Dench/nimbus-launcher/patcher/protocols/internal/netdevil"
 )
 
 type UGC struct {
@@ -32,9 +33,8 @@ type Server struct {
 		CrashLog string `xml:"CrashLog"`
 	} `xml:"Game"`
 
-	status     *patcher.Status  `xml:"-"`
-	resources  origin.Resources `xml:"-"`
-	userConfig UserConfig       `xml:"-"`
+	status    *patcher.Status  `xml:"-"`
+	resources origin.Resources `xml:"-"`
 }
 
 func (s Server) PatcherUrl(resources origin.Resources) string {
@@ -67,16 +67,25 @@ func (s Server) Status() *patcher.Status {
 }
 
 func (s Server) GetPatcher(options patcher.Options) (patcher.Patcher, error) {
+	config := int_netdevil.Config{
+		Locale:                 options.Locale,
+		FullDownload:           options.FullDownload,
+		ServerId:               options.ServerId,
+		Version:                s.Version,
+		VersionDirType:         int_netdevil.VersionDirTypeVersionHotfixOnly,
+		AllowNoMinimalManifest: true,
+	}
+
+	downloader := int_netdevil.Downloader{
+		Resources: s.resources,
+		Log:       options.Log,
+		Root:      options.InstallDirectory,
+		TempDir:   patcher.VersionsDir,
+	}
+
 	return &Patcher{
-		UserConfig: s.userConfig,
-		Downloader: Downloader{
-			Resources: s.resources,
-			Log:       options.Log,
-			Root:      options.InstallDirectory,
-			TempDir:   VersionsDir,
-		},
-		serverId: options.ServerId,
-		server:   s,
+		patcher: int_netdevil.NewPatcher([]int{82, 10000}, config, downloader),
+		server:  s,
 	}, nil
 }
 
@@ -85,7 +94,7 @@ type ServerList struct {
 	Servers []Server `xml:"Server"`
 }
 
-func (l *ServerList) FindBest(locale string) (Server, bool) {
+func (l ServerList) FindBest(locale string) (Server, bool) {
 	if len(l.Servers) == 0 {
 		return Server{}, false
 	}

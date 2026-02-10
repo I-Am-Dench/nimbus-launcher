@@ -11,18 +11,8 @@ import (
 	"github.com/I-Am-Dench/nimbus-launcher/patcher/origin"
 )
 
-type UserConfig struct {
-	Locale       string `json:"locale" xml:"locale"`
-	FullDownload bool   `json:"fullDownload" xml:"-"`
-}
-
 type Environment struct {
 	Environment string `json:"environment" xml:"environment"`
-	UserConfig
-}
-
-func (e Environment) Locale() string {
-	return e.UserConfig.Locale
 }
 
 func (e Environment) masterIndexUrl(serviceUrl string, resources origin.Resources) string {
@@ -94,25 +84,15 @@ func (e Environment) GetServerList(ctx context.Context, r origin.Resources, mast
 		case *origin.Http, *origin.HttpWithAuth:
 			u, err := url.JoinPath(server.PatcherUrl(v), server.Patcher.Dir)
 			if err != nil {
-				return nil, fmt.Errorf("nd-nimbus: %v", err)
+				return nil, fmt.Errorf("nimbus: %v", err)
 			}
 			resources = origin.WithUrl(resources, u)
 		}
 
 		server.status = statuses[server.Name]
 		server.resources = resources
-		server.userConfig = e.UserConfig
 		servers = append(servers, server)
 	}
 
 	return servers, nil
-}
-
-func cancelled(ctx context.Context) bool {
-	select {
-	case <-ctx.Done():
-		return true
-	default:
-		return false
-	}
 }

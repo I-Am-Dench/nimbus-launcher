@@ -17,6 +17,7 @@ import (
 	"github.com/I-Am-Dench/goverbuild/archive/cache"
 	"github.com/I-Am-Dench/goverbuild/archive/manifest"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher"
+	"github.com/I-Am-Dench/nimbus-launcher/patcher/origin"
 )
 
 const (
@@ -35,12 +36,14 @@ const (
 type VersionDirType int
 
 const (
-	VersionDirTypeNone              = iota // only use server dir for requests
-	VersionDirTypeVersionHotfixOnly        // Include version in request path only for getting version.txt and hotfix.txt
-	VersionDirTypeWithVersion              // Include version in request path for all resources
+	VersionDirTypeNone              = VersionDirType(iota) // Only use server dir for requests
+	VersionDirTypeVersionHotfixOnly                        // Include version in request path only for getting version.txt and hotfix.txt
+	VersionDirTypeWithVersion                              // Include version in request path for all resources
 )
 
 type ManifestMap map[string]manifest.Entry
+
+var errMissingManifestEntry = errors.New("no manifest entry")
 
 type Config struct {
 	Locale         string
@@ -48,6 +51,11 @@ type Config struct {
 	ServerId       string
 	Version        string
 	VersionDirType VersionDirType
+
+	// Allows patch servers to no support frontend.txt.
+	// If frontend.txt cannot be found, trunk.txt
+	// will be used instead.
+	AllowNoMinimalManifest bool
 }
 
 type Patcher struct {
@@ -185,7 +193,7 @@ func (p Patcher) verifyQuickCheck(path string, file *os.File, entry manifest.Ent
 func (p Patcher) Fetch(ctx context.Context, name, destination string, manifestFile *manifest.Manifest) (*os.File, error) {
 	entry, ok := manifestFile.GetEntry(name)
 	if !ok {
-		return nil, fmt.Errorf("fetch: %s: missing manifest entry", name)
+		return nil, fmt.Errorf("fetch: %s: %w", name, errMissingManifestEntry)
 	}
 
 	file, err := p.Open(destination)
@@ -306,9 +314,11 @@ func (p *Patcher) GetVersion(ctx context.Context, packed bool) (*archive.Archive
 		return nil, fmt.Errorf("patcher: %w", err)
 	}
 
-	if err != nil {
-		p.Log.Printf("download hotfix: %s", err)
+	if errors.Is(err, origin.ErrFileNotFound) {
+		p.Log.Printf("download hotfix: %v", err)
 		os.Remove(filepath.Join(p.Root, p.versions(HotFixFile)))
+	} else if err != nil {
+		return nil, fmt.Errorf("patcher: %w", err)
 	}
 
 	p.index, _, err = p.FetchManifest(ctx, IndexFile, version, nil)
@@ -508,14 +518,20 @@ func (p Patcher) collectEntries(ctx context.Context, download *manifest.Manifest
 	return entries, nil
 }
 
-func (p Patcher) getGameManifests(ctx context.Context, index, hotfix *manifest.Manifest) (downloadManifest, gameManifest *manifest.Manifest, addedHotfix ManifestMap, err error) {
+func (p Patcher) getGameManifests(ctx context.Context, index, hotfix *manifest.Manifest, fullDownload bool) (downloadManifest, gameManifest *manifest.Manifest, addedHotfix ManifestMap, err error) {
 	manifestName := MinimalFile
-	if p.FullDownload {
+	if fullDownload {
 		manifestName = GameFile
 	}
 
-	downloadManifest, addedHotfix, err = p.FetchManifest(ctx, manifestName, index, hotfix, p.FullDownload) // Only downloads trunk.txt into root
+	downloadManifest, addedHotfix, err = p.FetchManifest(ctx, manifestName, index, hotfix, fullDownload) // Only downloads trunk.txt into root
 	if err != nil {
+		// If we failed to download the minimal manifest file,
+		// we'll force the use of trunk.txt.
+		if errors.Is(err, errMissingManifestEntry) && !fullDownload && p.AllowNoMinimalManifest {
+			p.Log.Print("Minimal manifest file is not supported. Using full game manifest.")
+			return p.getGameManifests(ctx, index, hotfix, true)
+		}
 		return nil, nil, nil, err
 	}
 
@@ -536,7 +552,7 @@ func (p *Patcher) DoUnpacked(ctx context.Context, index, hotfix *manifest.Manife
 		return nil, ctx.Err()
 	}
 
-	downloadManifest, _, addedHotfix, err := p.getGameManifests(ctx, index, hotfix)
+	downloadManifest, _, addedHotfix, err := p.getGameManifests(ctx, index, hotfix, p.FullDownload)
 	if err != nil {
 		return nil, fmt.Errorf("patcher: unpacked: %w", err)
 	}
@@ -559,7 +575,7 @@ func (p *Patcher) DoPacked(ctx context.Context, index, hotfix *manifest.Manifest
 		return nil, ctx.Err()
 	}
 
-	downloadManifest, gameManifest, addedHotfix, err := p.getGameManifests(ctx, index, hotfix)
+	downloadManifest, gameManifest, addedHotfix, err := p.getGameManifests(ctx, index, hotfix, p.FullDownload)
 	if err != nil {
 		return nil, fmt.Errorf("patcher: packed: %w", err)
 	}

@@ -41,6 +41,9 @@ type FS struct{}
 func (FS) Get(ctx context.Context, path string) (io.ReadCloser, error) {
 	file, err := os.Open(filepath.Clean(filepath.FromSlash(path)))
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, fmt.Errorf("origin: fs: %w: %w", ErrFileNotFound, err)
+		}
 		return nil, fmt.Errorf("origin: fs: %w", err)
 	}
 
@@ -55,6 +58,7 @@ func (FS) Get(ctx context.Context, path string) (io.ReadCloser, error) {
 
 var (
 	ErrNotAuthenticated = errors.New("not authenticated")
+	ErrFileNotFound     = errors.New("file not found")
 
 	userAgent = "NimbusLauncher/" + version.Get().Name()
 )
@@ -85,15 +89,15 @@ func (h Http) Get(ctx context.Context, uri string) (io.ReadCloser, error) {
 	io.Copy(io.Discard, response.Body)
 	response.Body.Close()
 
+	if response.StatusCode == http.StatusNotFound {
+		return nil, fmt.Errorf("origin: http: %s: %w", uri, ErrFileNotFound)
+	}
+
 	if response.StatusCode == http.StatusUnauthorized {
 		return nil, fmt.Errorf("origin: http: %w", ErrNotAuthenticated)
 	}
 
 	return nil, fmt.Errorf("origin: http: Get %s: unhandled status: %s", uri, response.Status)
-}
-
-type ResponseMessage struct {
-	Message string `json:"error" xml:"error"`
 }
 
 type CredentialsFunc = func(authMessage string) (username string, password []byte, err error)

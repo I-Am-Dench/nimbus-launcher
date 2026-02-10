@@ -206,16 +206,10 @@ type Profile struct {
 }
 
 func (p *Profile) Locale() string {
-	locale := p.Server.BootConfig().Locale
-
-	patcher, ok := p.Server.GetPatcher()
-	if ok {
-		if l := patcher.Locale(); len(l) > 0 {
-			return l
-		}
+	if p.Client != nil && len(p.Client.Locale) > 0 {
+		return p.Client.Locale
 	}
-
-	return locale
+	return p.Server.BootConfig().Locale
 }
 
 func (p *Profile) DefaultBootPath(dir string) string {
