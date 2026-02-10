@@ -7,10 +7,13 @@ import (
 	"path"
 	"path/filepath"
 
+	"github.com/I-Am-Dench/goverbuild/archive/manifest"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher/origin"
 	int_netdevil "github.com/I-Am-Dench/nimbus-launcher/patcher/protocols/internal/netdevil"
 )
+
+const ManifestVersion = 82
 
 type Server struct {
 	UniverseConfig
@@ -32,6 +35,13 @@ func (s Server) Status() *patcher.Status {
 	return s.status
 }
 
+func verifyManifest(manifest *manifest.Manifest) error {
+	if manifest.Version != ManifestVersion {
+		return fmt.Errorf("incompatible manifest version: expected %d but got %d", ManifestVersion, manifest.Version)
+	}
+	return nil
+}
+
 func (s Server) GetPatcher(options patcher.Options) (patcher.Patcher, error) {
 	resources := s.resources
 
@@ -47,11 +57,12 @@ func (s Server) GetPatcher(options patcher.Options) (patcher.Patcher, error) {
 	}
 
 	config := int_netdevil.Config{
-		Locale:         options.Locale,
-		FullDownload:   options.FullDownload,
-		ServerId:       options.ServerId,
-		Version:        s.Version,
-		VersionDirType: s.VersionDirType,
+		Locale:             options.Locale,
+		FullDownload:       options.FullDownload,
+		ServerId:           options.ServerId,
+		Version:            s.Version,
+		VersionDirType:     s.VersionDirType,
+		VerifyManifestFunc: verifyManifest,
 	}
 
 	downloader := int_netdevil.Downloader{
@@ -62,7 +73,7 @@ func (s Server) GetPatcher(options patcher.Options) (patcher.Patcher, error) {
 	}
 
 	return &Patcher{
-		patcher: int_netdevil.NewPatcher([]int{82}, config, downloader),
+		patcher: int_netdevil.NewPatcher(config, downloader),
 		server:  s,
 	}, nil
 }

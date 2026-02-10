@@ -2,14 +2,19 @@ package nimbus
 
 import (
 	"encoding/xml"
+	"fmt"
 	"strconv"
 	"strings"
 
+	"github.com/I-Am-Dench/goverbuild/archive/manifest"
 	"github.com/I-Am-Dench/nimbus-launcher/internal/optional"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher/origin"
 	int_netdevil "github.com/I-Am-Dench/nimbus-launcher/patcher/protocols/internal/netdevil"
+	"github.com/I-Am-Dench/nimbus-launcher/patcher/protocols/netdevil"
 )
+
+const ManifestVersion = 10000
 
 type UGC struct {
 	Host         string `xml:"Host"`
@@ -66,6 +71,13 @@ func (s Server) Status() *patcher.Status {
 	return s.status
 }
 
+func verifyManifest(manifest *manifest.Manifest) error {
+	if manifest.Version != ManifestVersion && manifest.Version != netdevil.ManifestVersion {
+		return fmt.Errorf("incompatible manifest version: expected either %d or %d but got %d", ManifestVersion, netdevil.ManifestVersion, manifest.Version)
+	}
+	return nil
+}
+
 func (s Server) GetPatcher(options patcher.Options) (patcher.Patcher, error) {
 	config := int_netdevil.Config{
 		Locale:                 options.Locale,
@@ -73,6 +85,7 @@ func (s Server) GetPatcher(options patcher.Options) (patcher.Patcher, error) {
 		ServerId:               options.ServerId,
 		Version:                s.Version,
 		VersionDirType:         int_netdevil.VersionDirTypeVersionHotfixOnly,
+		VerifyManifestFunc:     verifyManifest,
 		AllowNoMinimalManifest: true,
 	}
 
@@ -84,7 +97,7 @@ func (s Server) GetPatcher(options patcher.Options) (patcher.Patcher, error) {
 	}
 
 	return &Patcher{
-		patcher: int_netdevil.NewPatcher([]int{82, 10000}, config, downloader),
+		patcher: int_netdevil.NewPatcher(config, downloader),
 		server:  s,
 	}, nil
 }

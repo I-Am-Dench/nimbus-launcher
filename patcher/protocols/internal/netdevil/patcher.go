@@ -9,8 +9,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"slices"
-	"strconv"
 	"strings"
 
 	"github.com/I-Am-Dench/goverbuild/archive"
@@ -41,7 +39,10 @@ const (
 	VersionDirTypeWithVersion                              // Include version in request path for all resources
 )
 
-type ManifestMap map[string]manifest.Entry
+type (
+	ManifestMap        map[string]manifest.Entry
+	VerifyManifestFunc func(*manifest.Manifest) error
+)
 
 var errMissingManifestEntry = errors.New("no manifest entry")
 
@@ -51,6 +52,8 @@ type Config struct {
 	ServerId       string
 	Version        string
 	VersionDirType VersionDirType
+
+	VerifyManifestFunc VerifyManifestFunc
 
 	// Allows patch servers to no support frontend.txt.
 	// If frontend.txt cannot be found, trunk.txt
@@ -62,8 +65,6 @@ type Patcher struct {
 	Config
 	Downloader
 
-	acceptedVersions []int
-
 	cachePath string
 	cacheFile *cache.Cache
 
@@ -74,24 +75,14 @@ type Patcher struct {
 	hotfix *manifest.Manifest
 }
 
-func NewPatcher(acceptedVersions []int, config Config, downloader Downloader) *Patcher {
+func NewPatcher(config Config, downloader Downloader) *Patcher {
 	return &Patcher{
 		Config:     config,
 		Downloader: downloader,
 
-		acceptedVersions: acceptedVersions,
-
 		packEntries:   make(map[string]manifest.Entry),
 		packDownloads: make(map[string]manifest.Entry),
 	}
-}
-
-func (p Patcher) AcceptedVersionsString() string {
-	s := []string{}
-	for _, v := range p.acceptedVersions {
-		s = append(s, strconv.Itoa(v))
-	}
-	return strings.Join(s, ",")
 }
 
 func (p Patcher) versions(name string, atRoot ...bool) string {
@@ -165,8 +156,10 @@ func (p Patcher) DownloadManifest(ctx context.Context, name string, atRoot ...bo
 		return nil, ctx.Err()
 	}
 
-	if !slices.Contains(p.acceptedVersions, manifestFile.Version) {
-		return nil, fmt.Errorf("download manifest: %s incompatible manifest version: expected either %q but got %d", name, p.AcceptedVersionsString(), manifestFile.Version)
+	if p.VerifyManifestFunc != nil {
+		if err := p.VerifyManifestFunc(manifestFile); err != nil {
+			return nil, fmt.Errorf("download manifest: %s: %v", name, err)
+		}
 	}
 
 	return manifestFile, nil
@@ -257,8 +250,10 @@ func (p Patcher) FetchManifest(ctx context.Context, name string, manifestFile, h
 		return nil, nil, ctx.Err()
 	}
 
-	if !slices.Contains(p.acceptedVersions, fetchedManifest.Version) {
-		return nil, nil, fmt.Errorf("fetch manifest: %s: incompatible manifest version: expected either %q but got %d", name, p.AcceptedVersionsString(), fetchedManifest.Version)
+	if p.VerifyManifestFunc != nil {
+		if err := p.VerifyManifestFunc(fetchedManifest); err != nil {
+			return nil, nil, fmt.Errorf("fetch manifest: %s: %v", name, err)
+		}
 	}
 
 	added := make(map[string]manifest.Entry)
