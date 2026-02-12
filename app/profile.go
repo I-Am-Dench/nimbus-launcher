@@ -457,7 +457,7 @@ func NewProfileSelector(window fyne.Window, jar http.CookieJar, profiles Profile
 	})
 	s.serverListButton.Importance = widget.LowImportance
 
-	s.statusLabel = NewStatusLabel(s.statusBinding)
+	s.statusLabel = NewStatusLabel(window, s.statusBinding)
 
 	accountInfo := container.NewBorder(
 		nil, nil,

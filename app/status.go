@@ -1,9 +1,14 @@
 package app
 
 import (
+	"fmt"
+	"strconv"
+	"time"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/data/binding"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher"
@@ -11,39 +16,84 @@ import (
 
 type StatusBinding = binding.Item[*patcher.Status]
 
-func NewStatusLabel(data StatusBinding) *fyne.Container {
-	onlineIcon := widget.NewIcon(theme.NewSuccessThemedResource(theme.ConfirmIcon()))
-	offlineIcon := widget.NewIcon(theme.NewErrorThemedResource(theme.CancelIcon()))
+func showStatus(window fyne.Window, data StatusBinding) func() {
+	return func() {
+		status, _ := data.Get()
+		items := []*widget.FormItem{}
 
-	onlineIcon.Hide()
-	offlineIcon.Hide()
+		if len(status.Version) > 0 {
+			items = append(items, widget.NewFormItem("Version", widget.NewLabel(status.Version)))
+		}
 
-	label := widget.NewLabel("")
+		if status.DataCenterId > 0 {
+			items = append(items, widget.NewFormItem("Data Center ID", widget.NewLabel(strconv.Itoa(status.DataCenterId))))
+		}
+
+		if !status.LastUpdate.IsZero() {
+			items = append(items, widget.NewFormItem("Last Update", widget.NewLabel(status.LastUpdate.Format(time.RFC822))))
+		}
+
+		if status.Online {
+			if uptime := status.FormatUptimeSince(time.Now()); len(uptime) > 0 {
+				items = append(items, widget.NewFormItem("Uptime", widget.NewLabel(uptime)))
+			}
+		}
+
+		form := container.NewHScroll(widget.NewForm(items...))
+		form.SetMinSize(fyne.NewSize(320, 64))
+
+		dialog.ShowCustom("Server Status", "Ok", form, window)
+	}
+}
+
+func NewStatusLabel(window fyne.Window, data StatusBinding) *fyne.Container {
+	onlineButton := widget.NewButtonWithIcon("Online", theme.NewSuccessThemedResource(theme.ConfirmIcon()), showStatus(window, data))
+	offlineButton := widget.NewButtonWithIcon("Offline", theme.NewErrorThemedResource(theme.CancelIcon()), showStatus(window, data))
+	noStatus := widget.NewLabel("No Status")
+
+	onlinePlayers := widget.NewLabel("")
+	onlinePlayers.Alignment = fyne.TextAlignTrailing
+
+	onlineButton.Importance = widget.LowImportance
+	offlineButton.Importance = widget.LowImportance
+
+	onlineButton.Hide()
+	offlineButton.Hide()
 
 	data.AddListener(binding.NewDataListener(func() {
 		status, _ := data.Get()
 
 		if status == nil {
-			onlineIcon.Hide()
-			offlineIcon.Hide()
-			label.SetText("No Status")
+			onlinePlayers.Hide()
+			onlineButton.Hide()
+			offlineButton.Hide()
+			noStatus.Show()
 			return
 		}
 
 		if !status.Online {
-			onlineIcon.Hide()
-			offlineIcon.Show()
-			label.SetText("Offline")
-			return
-		}
+			onlinePlayers.Hide()
+			onlineButton.Hide()
+			offlineButton.Show()
+			noStatus.Hide()
+		} else {
+			onlinePlayersText := ""
+			if status.OnlineUsersMax == 0 {
+				onlinePlayersText = fmt.Sprint(status.OnlineUsers, " Players")
+			} else {
+				onlinePlayersText = fmt.Sprint(status.OnlineUsers, "/", status.OnlineUsersMax, " Players")
+			}
+			onlinePlayers.SetText(onlinePlayersText)
+			onlinePlayers.Show()
 
-		onlineIcon.Show()
-		offlineIcon.Hide()
-		label.SetText("Online")
+			onlineButton.Show()
+			offlineButton.Hide()
+			noStatus.Hide()
+		}
 	}))
 
 	return container.NewHBox(
-		container.NewStack(onlineIcon, offlineIcon),
-		label,
+		container.NewStack(onlineButton, offlineButton, noStatus),
+		onlinePlayers,
 	)
 }
