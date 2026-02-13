@@ -3,6 +3,7 @@ package app
 import (
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -22,13 +23,74 @@ import (
 	"github.com/I-Am-Dench/nimbus-launcher/client"
 )
 
-type SettingsBinding struct {
-	binding.Item[*Settings]
+type settings struct {
+	path    string
+	parsed  bool
+	Binding binding.Item[Settings]
 }
 
-func (b *SettingsBinding) Settings() *Settings {
-	s, _ := b.Get()
-	return s
+func (s settings) write(settings Settings) error {
+	data, err := json.MarshalIndent(settings, "", "    ")
+	if err != nil {
+		return fmt.Errorf("write settings: %v", err)
+	}
+
+	if err := os.WriteFile(s.path, data, 0755); err != nil {
+		return fmt.Errorf("write settings: %v", err)
+	}
+	return nil
+}
+
+func (s settings) read() (Settings, error) {
+	data, err := os.ReadFile(s.path)
+	if errors.Is(err, os.ErrNotExist) {
+		defaultSettings := DefaultSettings()
+		if err := s.write(defaultSettings); err != nil {
+			return Settings{}, fmt.Errorf("read settings: %v", err)
+		}
+		return defaultSettings, nil
+	}
+
+	if err != nil {
+		return Settings{}, fmt.Errorf("read settings: %v", err)
+	}
+
+	settings := Settings{}
+	if err := json.Unmarshal(data, &settings); err != nil {
+		return Settings{}, fmt.Errorf("read settings: %v", err)
+	}
+	return settings, nil
+}
+
+func (s *settings) Get() Settings {
+	if s.parsed {
+		settings, _ := s.Binding.Get()
+		return settings
+	}
+
+	settings, err := s.read()
+	if err != nil {
+		slog.Error("Failed to load settings", "error", err)
+		settings = DefaultSettings()
+	}
+	s.Set(settings)
+
+	s.parsed = true
+	return settings
+}
+
+func (s *settings) Set(settings Settings) {
+	if err := s.write(settings); err != nil {
+		slog.Error("Failed to save settings", "error", err)
+	}
+	s.Binding.Set(settings)
+}
+
+func NewSettings(path string) *settings {
+	return &settings{
+		path:    path,
+		Binding: binding.NewItem(func(_, _ Settings) bool { return false }),
+	}
 }
 
 type Settings struct {
@@ -356,15 +418,10 @@ func (s *profileSettings) ShowEditProfile() {
 
 type launcherSettings struct {
 	*fyne.Container
-	SettingsBinding
 }
 
-func newLauncherSettings(window fyne.Window, settingsBinding SettingsBinding) *launcherSettings {
-	l := &launcherSettings{
-		SettingsBinding: settingsBinding,
-	}
-
-	settings := l.Settings()
+func newLauncherSettings(window fyne.Window) *launcherSettings {
+	settings := AppSettings.Get()
 
 	generalHeading := canvas.NewText("General", theme.Color(theme.ColorNameForeground))
 	generalHeading.TextSize = 16
@@ -383,20 +440,21 @@ func newLauncherSettings(window fyne.Window, settingsBinding SettingsBinding) *l
 	etcSettings, etcFunc := NewEtcSettings(window, settings)
 
 	saveButton := widget.NewButtonWithIcon("Save Launcher", theme.DocumentSaveIcon(), func() {
-		settings := l.Settings()
-
-		settings.Launch.CloseOnPlay = closeOnPlay.Checked
-		settings.Launch.ReviewPatchesBeforeUpdate = reviewPatches.Checked
-
-		settings.Launch.DefaultClient = clientSettings.Get()
+		settings := Settings{
+			Launch: LaunchConfig{
+				DefaultClient:             clientSettings.Get(),
+				CloseOnPlay:               closeOnPlay.Checked,
+				ReviewPatchesBeforeUpdate: reviewPatches.Checked,
+			},
+		}
 		settings.Launch.DefaultClient.Etc = etcFunc()
 
 		dialog.ShowInformation("Launcher Settings", "Settings saved!", window)
-		l.Set(settings)
+		AppSettings.Set(settings)
 	})
 	saveButton.Importance = widget.HighImportance
 
-	l.Container = container.NewPadded(
+	return &launcherSettings{
 		container.NewBorder(
 			nil, container.NewBorder(nil, nil, nil, saveButton), nil, nil,
 			container.NewVScroll(
@@ -413,12 +471,10 @@ func newLauncherSettings(window fyne.Window, settingsBinding SettingsBinding) *l
 				),
 			),
 		),
-	)
-
-	return l
+	}
 }
 
-func NewSettingsWindow(app fyne.App, settingsBinding SettingsBinding, profilesBinding ProfileListBinding, profilesPath string) fyne.Window {
+func NewSettingsWindow(app fyne.App, profilesBinding ProfileListBinding, profilesPath string) fyne.Window {
 	window := app.NewWindow("Settings")
 	window.Resize(fyne.NewSize(800, 600))
 	window.SetIcon(theme.SettingsIcon())
@@ -428,7 +484,7 @@ func NewSettingsWindow(app fyne.App, settingsBinding SettingsBinding, profilesBi
 	heading.TextSize = 24
 
 	profiles := newProfileSettings(window, profilesBinding, profilesPath)
-	launcher := newLauncherSettings(window, settingsBinding)
+	launcher := newLauncherSettings(window)
 
 	window.SetContent(
 		container.NewPadded(

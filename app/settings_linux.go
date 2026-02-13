@@ -17,7 +17,7 @@ import (
 	"github.com/I-Am-Dench/nimbus-launcher/client"
 )
 
-func DefaultSettings() *Settings {
+func DefaultSettings() Settings {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		slog.Error(err.Error())
@@ -30,7 +30,7 @@ func DefaultSettings() *Settings {
 		AppId:      client.DefaultSteamAppId,
 	}
 
-	return &Settings{
+	return Settings{
 		Launch: LaunchConfig{
 			DefaultClient:             clientConfig,
 			CloseOnPlay:               true,
@@ -39,7 +39,7 @@ func DefaultSettings() *Settings {
 	}
 }
 
-func NewEtcSettings(window fyne.Window, settings *Settings) (*fyne.Container, func() client.Etc) {
+func NewEtcSettings(window fyne.Window, settings Settings) (*fyne.Container, func() client.Etc) {
 	protonSelector := widget.NewSelect(settings.Launch.DefaultClient.Etc.ProtonOptions(), func(s string) {})
 	protonSelector.PlaceHolder = "(Select Proton)"
 	protonSelector.SetSelected(settings.Launch.DefaultClient.Etc.Proton)

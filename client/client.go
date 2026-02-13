@@ -105,4 +105,6 @@ func (c Config) Tracker(cacheRoot string) (tkr tracker.Tracker, hash string, err
 var DefaultConfig = Config{
 	Directory: filepath.Join(GetDefaultAppDirectory(), DefaultDir),
 	Name:      DefaultExe,
+	IsPacked:  true,
+	Locale:    "en_US",
 }

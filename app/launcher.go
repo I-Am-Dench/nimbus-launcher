@@ -116,7 +116,6 @@ func (p *ProgressBar) Println(a ...any) {
 
 type Launcher struct {
 	*fyne.Container
-	SettingsBinding
 
 	window fyne.Window
 
@@ -136,10 +135,8 @@ type Launcher struct {
 	playWg     sync.WaitGroup
 }
 
-func NewLauncher(window fyne.Window, settingsBinding SettingsBinding, profileBinding ProfileBinding, playingBinding binding.Bool) *Launcher {
+func NewLauncher(window fyne.Window, profileBinding ProfileBinding, playingBinding binding.Bool) *Launcher {
 	l := &Launcher{
-		SettingsBinding: settingsBinding,
-
 		window: window,
 
 		profileBinding:    profileBinding,
@@ -166,7 +163,7 @@ func NewLauncher(window fyne.Window, settingsBinding SettingsBinding, profileBin
 		clientLabel,
 	)
 
-	settingsBinding.AddListener(l)
+	AppSettings.Binding.AddListener(l)
 	profileBinding.AddListener(l)
 
 	return l
@@ -182,7 +179,7 @@ func GetAbs(path string) (string, error) {
 
 func (l *Launcher) ClientConfig() client.Config {
 	profile := l.currentProfile
-	settings := l.Settings()
+	settings := AppSettings.Get()
 
 	c := settings.Launch.DefaultClient
 	if profile != nil && profile.Client != nil {
@@ -320,7 +317,7 @@ func (l *Launcher) GetBoot(client client.Config, profile *Profile) (boot.Config,
 		l.SetValue(float64(n))
 	})
 
-	settings := l.Settings()
+	settings := AppSettings.Get()
 
 	if patch.Total() > 0 && settings.Launch.ReviewPatchesBeforeUpdate && !nldialogs.AskContinuePatch(patch.Summary()) {
 		return boot.Config{}, errors.New("patch rejected")
@@ -400,7 +397,7 @@ func (l *Launcher) play() {
 		return
 	}
 
-	settings := l.Settings()
+	settings := AppSettings.Get()
 
 	cmd, err := client.Start(clientConfig, !settings.Launch.CloseOnPlay)
 	if err != nil {

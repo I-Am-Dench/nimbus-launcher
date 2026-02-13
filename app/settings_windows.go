@@ -9,8 +9,8 @@ import (
 	"github.com/I-Am-Dench/nimbus-launcher/client"
 )
 
-func DefaultSettings() *Settings {
-	return &Settings{
+func DefaultSettings() Settings {
+	return Settings{
 		Launch: LaunchConfig{
 			DefaultClient:             client.DefaultConfig,
 			CloseOnPlay:               true,
@@ -19,6 +19,6 @@ func DefaultSettings() *Settings {
 	}
 }
 
-func NewEtcSettings(_ fyne.Window, _ *Settings) (*fyne.Container, func() client.Etc) {
+func NewEtcSettings(_ fyne.Window, _ Settings) (*fyne.Container, func() client.Etc) {
 	return container.NewStack(), func() client.Etc { return client.Etc{} }
 }
