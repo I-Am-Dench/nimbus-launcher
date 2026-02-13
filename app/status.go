@@ -46,7 +46,7 @@ func showStatus(window fyne.Window, data StatusBinding) func() {
 	}
 }
 
-func NewStatusLabel(window fyne.Window, data StatusBinding) *fyne.Container {
+func NewStatusWidget(window fyne.Window, data StatusBinding) *fyne.Container {
 	onlineButton := widget.NewButtonWithIcon("Online", theme.NewSuccessThemedResource(theme.ConfirmIcon()), showStatus(window, data))
 	offlineButton := widget.NewButtonWithIcon("Offline", theme.NewErrorThemedResource(theme.CancelIcon()), showStatus(window, data))
 	noStatus := widget.NewLabel("No Status")

@@ -368,7 +368,7 @@ func NewServerRadioGroup(changed func(patcher.Server)) *nlwidgets.ItemRadioGroup
 	return g
 }
 
-type ProfileSelector struct {
+type ProfileSelectorWidget struct {
 	*fyne.Container
 	ProfileListBinding
 
@@ -397,8 +397,8 @@ type ProfileSelector struct {
 	selector *nlwidgets.ItemSelector[*Profile]
 }
 
-func NewProfileSelector(window fyne.Window, jar http.CookieJar, profiles ProfileListBinding, onTapSettings func()) (*ProfileSelector, error) {
-	s := &ProfileSelector{
+func NewProfileSelectorWidget(window fyne.Window, jar http.CookieJar, profiles ProfileListBinding, onTapSettings func()) (*ProfileSelectorWidget, error) {
+	s := &ProfileSelectorWidget{
 		ProfileListBinding: profiles,
 
 		window: window,
@@ -457,7 +457,7 @@ func NewProfileSelector(window fyne.Window, jar http.CookieJar, profiles Profile
 	})
 	s.serverListButton.Importance = widget.LowImportance
 
-	s.statusLabel = NewStatusLabel(window, s.statusBinding)
+	s.statusLabel = NewStatusWidget(window, s.statusBinding)
 
 	accountInfo := container.NewBorder(
 		nil, nil,
@@ -497,7 +497,7 @@ func NewProfileSelector(window fyne.Window, jar http.CookieJar, profiles Profile
 	return s, nil
 }
 
-func (s *ProfileSelector) DataChanged() {
+func (s *ProfileSelectorWidget) DataChanged() {
 	s.selector.SetOptions(s.Profiles())
 
 	if selected := fyne.CurrentApp().Preferences().String(PreferenceSelectProfile); len(selected) > 0 {
@@ -505,13 +505,13 @@ func (s *ProfileSelector) DataChanged() {
 	}
 }
 
-func (s *ProfileSelector) StartLoadServers() {
+func (s *ProfileSelectorWidget) StartLoadServers() {
 	s.serverListButton.Disable()
 	s.activity.Show()
 	s.statusLabel.Hide()
 }
 
-func (s *ProfileSelector) StopLoadServers() {
+func (s *ProfileSelectorWidget) StopLoadServers() {
 	s.serverListButton.Enable()
 	s.activity.Hide()
 	s.statusLabel.Show()
@@ -521,7 +521,7 @@ func (s *ProfileSelector) StopLoadServers() {
 // The original patcher would choose the server
 // based on the selected locale and the CLOSEST
 // server name match (not the exact match).
-func (s ProfileSelector) findBestServer(profile *Profile, options []string) string {
+func (s ProfileSelectorWidget) findBestServer(profile *Profile, options []string) string {
 	selected := fyne.CurrentApp().Preferences().String("profile-" + profile.Id)
 	if slices.Contains(options, selected) {
 		return selected
@@ -529,7 +529,7 @@ func (s ProfileSelector) findBestServer(profile *Profile, options []string) stri
 	return options[0]
 }
 
-func (s *ProfileSelector) SetServerList(profile *Profile) {
+func (s *ProfileSelectorWidget) SetServerList(profile *Profile) {
 	once, seq := profile.ServerListOnce(s.window, context.Background(), s.jar)
 	s.serverListSeq = seq
 
@@ -548,7 +548,7 @@ func (s *ProfileSelector) SetServerList(profile *Profile) {
 	})
 }
 
-func (s *ProfileSelector) SelectServer(profile *Profile) {
+func (s *ProfileSelectorWidget) SelectServer(profile *Profile) {
 	s.Bind(nil, nil)
 
 	if profile == nil {
@@ -561,7 +561,7 @@ func (s *ProfileSelector) SelectServer(profile *Profile) {
 	go s.SetServerList(profile)
 }
 
-func (s ProfileSelector) Bind(profile *Profile, server patcher.Server) {
+func (s ProfileSelectorWidget) Bind(profile *Profile, server patcher.Server) {
 	var (
 		info   patcher.ServerInfo
 		status *patcher.Status

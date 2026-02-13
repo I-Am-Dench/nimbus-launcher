@@ -105,7 +105,7 @@ func profileName(p *Profile) string {
 	return p.Name
 }
 
-type profileSettings struct {
+type profileSettingsWidget struct {
 	*fyne.Container
 	ProfileListBinding
 	window fyne.Window
@@ -120,8 +120,8 @@ type profileSettings struct {
 	content *fyne.Container
 }
 
-func newProfileSettings(window fyne.Window, profilesBinding ProfileListBinding, profilesPath string) *profileSettings {
-	p := &profileSettings{
+func newProfileSettingsWidget(window fyne.Window, profilesBinding ProfileListBinding, profilesPath string) *profileSettingsWidget {
+	p := &profileSettingsWidget{
 		ProfileListBinding: profilesBinding,
 		window:             window,
 		profilesPath:       profilesPath,
@@ -269,12 +269,12 @@ func newProfileSettings(window fyne.Window, profilesBinding ProfileListBinding, 
 	return p
 }
 
-func (p *profileSettings) DataChanged() {
+func (p *profileSettingsWidget) DataChanged() {
 	p.profileSelector.SetOptions(p.Profiles())
 	p.profileSelector.SetSelectedIndex(p.profileSelector.SelectedIndex())
 }
 
-func (p *profileSettings) SetPatcherSettings(profile *Profile) {
+func (p *profileSettingsWidget) SetPatcherSettings(profile *Profile) {
 	p.patcherContainer.RemoveAll()
 
 	patcher, ok := profile.Server.GetPatcher()
@@ -288,7 +288,7 @@ func (p *profileSettings) SetPatcherSettings(profile *Profile) {
 	p.patcherFunc = patcherFunc
 }
 
-func (p *profileSettings) SelectedProfile() *Profile {
+func (p *profileSettingsWidget) SelectedProfile() *Profile {
 	profiles := p.Profiles()
 	if len(profiles) == 0 {
 		return nil
@@ -297,12 +297,12 @@ func (p *profileSettings) SelectedProfile() *Profile {
 	return profiles[p.profileSelector.SelectedIndex()]
 }
 
-func (s *profileSettings) ShowProfileList() {
+func (s *profileSettingsWidget) ShowProfileList() {
 	s.content.RemoveAll()
 	s.content.Add(s.listContainer)
 }
 
-func (s *profileSettings) SaveProfiles(profiles []*Profile) error {
+func (s *profileSettingsWidget) SaveProfiles(profiles []*Profile) error {
 	data, err := json.MarshalIndent(profiles, "", "    ")
 	if err != nil {
 		return fmt.Errorf("save profiles: %v", err)
@@ -316,7 +316,7 @@ func (s *profileSettings) SaveProfiles(profiles []*Profile) error {
 	return nil
 }
 
-func (s *profileSettings) SaveProfile(profile *Profile, bootConfig *boot.Config) error {
+func (s *profileSettingsWidget) SaveProfile(profile *Profile, bootConfig *boot.Config) error {
 	bootPath := profile.Server.Boot
 	if len(bootPath) == 0 { // Allows manually edited boot paths
 		bootPath = profile.DefaultBootPath(filepath.Dir(s.profilesPath))
@@ -340,7 +340,7 @@ func (s *profileSettings) SaveProfile(profile *Profile, bootConfig *boot.Config)
 	return s.SaveProfiles(profiles)
 }
 
-func (s *profileSettings) ShowNewProfile() {
+func (s *profileSettingsWidget) ShowNewProfile() {
 	form := NewProfileForm(nil, s.window)
 	s.content.RemoveAll()
 
@@ -365,7 +365,7 @@ func (s *profileSettings) ShowNewProfile() {
 	)
 }
 
-func (s *profileSettings) ShowEditProfile() {
+func (s *profileSettingsWidget) ShowEditProfile() {
 	form := NewProfileForm(s.SelectedProfile(), s.window)
 	s.content.RemoveAll()
 
@@ -416,11 +416,11 @@ func (s *profileSettings) ShowEditProfile() {
 	)
 }
 
-type launcherSettings struct {
+type launcherSettingsWidget struct {
 	*fyne.Container
 }
 
-func newLauncherSettings(window fyne.Window) *launcherSettings {
+func newLauncherSettingsWidget(window fyne.Window) *launcherSettingsWidget {
 	settings := AppSettings.Get()
 
 	generalHeading := canvas.NewText("General", theme.Color(theme.ColorNameForeground))
@@ -454,7 +454,7 @@ func newLauncherSettings(window fyne.Window) *launcherSettings {
 	})
 	saveButton.Importance = widget.HighImportance
 
-	return &launcherSettings{
+	return &launcherSettingsWidget{
 		container.NewBorder(
 			nil, container.NewBorder(nil, nil, nil, saveButton), nil, nil,
 			container.NewVScroll(
@@ -483,8 +483,8 @@ func NewSettingsWindow(app fyne.App, profilesBinding ProfileListBinding, profile
 	heading := canvas.NewText("Settings", theme.Color(theme.ColorNameForeground))
 	heading.TextSize = 24
 
-	profiles := newProfileSettings(window, profilesBinding, profilesPath)
-	launcher := newLauncherSettings(window)
+	profiles := newProfileSettingsWidget(window, profilesBinding, profilesPath)
+	launcher := newLauncherSettingsWidget(window)
 
 	window.SetContent(
 		container.NewPadded(

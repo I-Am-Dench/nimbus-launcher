@@ -114,7 +114,7 @@ func (p *ProgressBar) Println(a ...any) {
 	slog.Info(text)
 }
 
-type Launcher struct {
+type LauncherWidget struct {
 	*fyne.Container
 
 	window fyne.Window
@@ -135,8 +135,8 @@ type Launcher struct {
 	playWg     sync.WaitGroup
 }
 
-func NewLauncher(window fyne.Window, profileBinding ProfileBinding, playingBinding binding.Bool) *Launcher {
-	l := &Launcher{
+func NewLauncherWidget(window fyne.Window, profileBinding ProfileBinding, playingBinding binding.Bool) *LauncherWidget {
+	l := &LauncherWidget{
 		window: window,
 
 		profileBinding:    profileBinding,
@@ -177,7 +177,7 @@ func GetAbs(path string) (string, error) {
 	return strings.ToUpper(abs[:1]) + abs[1:], nil // Capitalizes drive name on Windows
 }
 
-func (l *Launcher) ClientConfig() client.Config {
+func (l *LauncherWidget) ClientConfig() client.Config {
 	profile := l.currentProfile
 	settings := AppSettings.Get()
 
@@ -214,7 +214,7 @@ func (l *Launcher) ClientConfig() client.Config {
 	return c
 }
 
-func (l *Launcher) DataChanged() {
+func (l *LauncherWidget) DataChanged() {
 	l.currentProfile, _ = l.profileBinding.Get()
 
 	client := l.ClientConfig()
@@ -239,7 +239,7 @@ func (l *Launcher) DataChanged() {
 	}
 }
 
-func (l *Launcher) GetBoot(client client.Config, profile *Profile) (boot.Config, error) {
+func (l *LauncherWidget) GetBoot(client client.Config, profile *Profile) (boot.Config, error) {
 	server, ok := profile.SelectedServer()
 	if !ok {
 		return boot.Config{}, errors.New("attempted to launch client without a selected server")
@@ -342,13 +342,13 @@ func (l *Launcher) GetBoot(client client.Config, profile *Profile) (boot.Config,
 	return bootConfig, nil
 }
 
-func (l *Launcher) ShowError(err error) {
+func (l *LauncherWidget) ShowError(err error) {
 	slog.Error(err.Error())
 	fyne.DoAndWait(func() { dialog.ShowError(err, l.window) })
 	l.SetNormal()
 }
 
-func (l *Launcher) play() {
+func (l *LauncherWidget) play() {
 	l.SetLaunching()
 
 	clientConfig := l.ClientConfig()
@@ -420,11 +420,11 @@ func (l *Launcher) play() {
 	}(cmd)
 }
 
-func (l *Launcher) Play() {
+func (l *LauncherWidget) Play() {
 	go l.play()
 }
 
-func (l *Launcher) cancel() {
+func (l *LauncherWidget) cancel() {
 	if l.cancelFunc != nil {
 		l.cancelFunc()
 		l.playWg.Wait()
@@ -432,12 +432,12 @@ func (l *Launcher) cancel() {
 	l.SetNormal()
 }
 
-func (l *Launcher) Cancel() {
+func (l *LauncherWidget) Cancel() {
 	l.playButton.Disable()
 	go l.cancel()
 }
 
-func (l *Launcher) SetNormal() {
+func (l *LauncherWidget) SetNormal() {
 	fyne.DoAndWait(func() {
 		l.playButton.SetText("Play")
 		l.playButton.SetIcon(theme.MediaPlayIcon())
@@ -450,7 +450,7 @@ func (l *Launcher) SetNormal() {
 	})
 }
 
-func (l *Launcher) SetLaunching() {
+func (l *LauncherWidget) SetLaunching() {
 	fyne.DoAndWait(func() {
 		l.playingBinding.Set(true)
 		l.playButton.SetText("Launching...")
@@ -459,7 +459,7 @@ func (l *Launcher) SetLaunching() {
 	})
 }
 
-func (l *Launcher) SetPlaying() {
+func (l *LauncherWidget) SetPlaying() {
 	fyne.DoAndWait(func() {
 		l.playButton.SetText("Playing")
 		l.playButton.SetIcon(nil)
@@ -467,7 +467,7 @@ func (l *Launcher) SetPlaying() {
 	})
 }
 
-func (l *Launcher) SetPatching() {
+func (l *LauncherWidget) SetPatching() {
 	fyne.DoAndWait(func() {
 		l.playButton.SetText("Cancel")
 		l.playButton.SetIcon(theme.CancelIcon())
