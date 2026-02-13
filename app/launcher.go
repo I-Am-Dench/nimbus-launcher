@@ -29,7 +29,6 @@ import (
 
 const (
 	TrackerDir = "defaultclients"
-	NewInstall = ".nimbus-new"
 
 	logThreshold = time.Second / 60
 )
@@ -243,75 +242,11 @@ func (l *Launcher) DataChanged() {
 	}
 }
 
-func (l *Launcher) UndoPatches(client client.Config, packed bool) (err error) {
-	// var ar *archive.Archive
-	// if packed {
-	// 	catalogPath := filepath.Join(client.Directory, patcher.VersionsDir, patcher.CatalogName)
-
-	// 	ar, err = archive.Open(client.Directory, catalogPath)
-	// 	if errors.Is(err, os.ErrNotExist) {
-	// 		return nil
-	// 	}
-
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// }
-	// defer func() {
-	// 	if ar != nil {
-	// 		if err := ar.Close(); err != nil {
-	// 			slog.Error(err.Error())
-	// 		}
-	// 	}
-	// }()
-
-	tracker, err := client.Tracker(TrackerDir)
-	if err != nil {
-		return err
-	}
-	defer tracker.Close()
-
-	slog.Info("Running undoer...")
-	if err := tracker.Undo(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (l *Launcher) GetBoot(client client.Config, profile *Profile) (boot.Config, error) {
 	server, ok := profile.SelectedServer()
 	if !ok {
 		return boot.Config{}, errors.New("attempted to launch client without a selected server")
 	}
-
-	// We want to run the undoer regardless of whether the profile
-	// contains a patcher configuration. This ensures that switching
-	// to a profile which doesn't use a patcher will reset the client
-	// back to a vanilla state.
-	if err := l.UndoPatches(client, client.IsPacked); err != nil {
-		slog.Error("Failed to run undoer", "error", err)
-	}
-
-	tkr, err := client.Tracker(TrackerDir)
-	if err != nil {
-		return boot.Config{}, err
-	}
-	defer tkr.Close()
-
-	if client.IsNewInstall() {
-		slog.Info("Found new installation", "dir", client.Directory)
-		tkr.SetState(tracker.StateNew)
-
-		if err := os.MkdirAll(client.Directory, 0755); err != nil {
-			return boot.Config{}, err
-		}
-	}
-
-	l.SetPatching()
-	defer l.HideProgress()
-
-	l.Infinite()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	l.cancelFunc = cancel
@@ -322,6 +257,34 @@ func (l *Launcher) GetBoot(client client.Config, profile *Profile) (boot.Config,
 		l.cancelFunc = nil
 		l.playWg.Done()
 	}()
+
+	tkr, _, err := client.Tracker(TrackerDir)
+	if err != nil {
+		return boot.Config{}, err
+	}
+	defer tkr.Close()
+
+	l.SetPatching()
+	defer l.HideProgress()
+
+	l.Infinite()
+
+	// We want to run the undoer regardless of whether the profile
+	// contains a patcher configuration. This ensures that switching
+	// to a profile which doesn't use a patcher will reset the client
+	// back to a vanilla state.
+	if err := tkr.Undo(ctx); err != nil {
+		slog.Error("Failed to run undoer", "error", err)
+	}
+
+	if client.IsNewInstall() {
+		slog.Info("Found new installation", "dir", client.Directory)
+		tkr.SetState(tracker.StateNew)
+
+		if err := os.MkdirAll(client.Directory, 0755); err != nil {
+			return boot.Config{}, err
+		}
+	}
 
 	patcher, err := server.GetPatcher(patcher.Options{
 		Log: &l.ProgressBar,

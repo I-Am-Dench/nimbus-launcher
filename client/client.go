@@ -89,12 +89,17 @@ func (c Config) IsNewInstall() bool {
 	return false
 }
 
-func (c Config) Tracker(cacheRoot string) (tracker.Tracker, error) {
-	hash, err := tracker.HashFilepath(c.Directory)
+func (c Config) Tracker(cacheRoot string) (tkr tracker.Tracker, hash string, err error) {
+	hash, err = tracker.HashFilepath(c.Directory)
 	if err != nil {
-		return nil, fmt.Errorf("client: %v", err)
+		return nil, "", fmt.Errorf("client: %v", err)
 	}
-	return tracker.New(filepath.Join(cacheRoot, hash), c.Directory)
+
+	tkr, err = tracker.New(filepath.Join(cacheRoot, hash), c.Directory)
+	if err != nil {
+		return nil, "", fmt.Errorf("client: %v", err)
+	}
+	return tkr, hash, nil
 }
 
 var DefaultConfig = Config{

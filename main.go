@@ -18,6 +18,7 @@ import (
 const (
 	SettingsDir = "./settings"
 	Log         = "./current.log"
+	Cookies     = "./cookies.json"
 )
 
 func main() {
@@ -42,7 +43,7 @@ func main() {
 	}
 
 	var jar http.CookieJar
-	jar, err = cookiejar.New("cookies.json", &cookiejar.Options{PublicSuffixList: publicsuffix.List})
+	jar, err = cookiejar.New(Cookies, &cookiejar.Options{PublicSuffixList: publicsuffix.List})
 	if err != nil {
 		slog.Error("Failed to open cookie jar", "error", err)
 		jar, _ = http_jar.New(&http_jar.Options{PublicSuffixList: publicsuffix.List})

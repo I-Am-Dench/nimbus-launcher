@@ -2,6 +2,7 @@ package tracker_test
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"io/fs"
@@ -228,7 +229,7 @@ func (c *Client) Test(f func(*testing.T, *Client)) func(*testing.T) {
 		f(t, c)
 
 		t.Log("client: UNDOING CLIENT")
-		if err := c.Tracker.Undo(); err != nil {
+		if err := c.Tracker.Undo(context.Background()); err != nil {
 			t.Error(err)
 			return
 		}
@@ -402,7 +403,7 @@ func many(client *Client) func(t *testing.T) {
 			}
 
 			t.Logf("Undoing client")
-			if err := client.Tracker.Undo(); err != nil {
+			if err := client.Tracker.Undo(context.Background()); err != nil {
 				t.Fatal(err)
 			}
 		}

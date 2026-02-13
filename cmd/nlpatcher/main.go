@@ -254,7 +254,7 @@ func main() {
 	defer tracker.Close()
 
 	log.Println("Running undoer...")
-	if err := tracker.Undo(); err != nil {
+	if err := tracker.Undo(ctx); err != nil {
 		log.Println(err)
 		return
 	}

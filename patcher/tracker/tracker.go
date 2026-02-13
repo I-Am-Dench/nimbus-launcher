@@ -3,6 +3,7 @@ package tracker
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"crypto/md5"
 	"encoding/hex"
 	"errors"
@@ -32,7 +33,7 @@ const (
 
 type Tracker interface {
 	Track(path string, archive *archive.Archive) error
-	Undo() error
+	Undo(ctx context.Context) error
 	Close() error
 
 	GetState() State
@@ -160,47 +161,55 @@ func (t fsTracker) Track(path string, archive *archive.Archive) error {
 	}
 }
 
-func (t fsTracker) undo(path string, d fs.DirEntry, err error) error {
-	if err != nil {
+func (t fsTracker) undo(ctx context.Context) fs.WalkDirFunc {
+	return func(path string, d fs.DirEntry, err error) error {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
+		if err != nil {
+			return err
+		}
+
+		if d.IsDir() {
+			return nil
+		}
+
+		rel, err := filepath.Rel(t.clientCacheDir, path)
+		if err != nil {
+			return err
+		}
+
+		// Allows users to manually add entries to "additions" files.
+		//
+		// This shouldn't get entered under normal use, since resources
+		// won't get cached anyway.
+		if _, ok := t.additions[filepath.Clean(path)]; ok {
+			return nil
+		}
+
+		clientFile, err := os.Create(filepath.Join(t.root, rel))
+		if err != nil {
+			return err
+		}
+		defer clientFile.Close()
+
+		cachedFile, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer cachedFile.Close()
+
+		_, err = io.Copy(clientFile, cachedFile)
 		return err
 	}
-
-	if d.IsDir() {
-		return nil
-	}
-
-	rel, err := filepath.Rel(t.clientCacheDir, path)
-	if err != nil {
-		return err
-	}
-
-	// Allows users to manually add entries to "additions" files.
-	//
-	// This shouldn't get entered under normal use, since resources
-	// won't get cached anyway.
-	if _, ok := t.additions[filepath.Clean(path)]; ok {
-		return nil
-	}
-
-	clientFile, err := os.Create(filepath.Join(t.root, rel))
-	if err != nil {
-		return err
-	}
-	defer clientFile.Close()
-
-	cachedFile, err := os.Open(path)
-	if err != nil {
-		return err
-	}
-	defer cachedFile.Close()
-
-	_, err = io.Copy(clientFile, cachedFile)
-	return err
 }
 
-func (t fsTracker) Undo() error {
-	if err := filepath.WalkDir(t.clientCacheDir, t.undo); err != nil {
-		return fmt.Errorf("undo: %v", err)
+func (t fsTracker) Undo(ctx context.Context) error {
+	if err := filepath.WalkDir(t.clientCacheDir, t.undo(ctx)); err != nil {
+		return fmt.Errorf("undo: %w", err)
 	}
 	return nil
 }
