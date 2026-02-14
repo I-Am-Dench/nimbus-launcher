@@ -116,6 +116,7 @@ func (p *ProgressBar) Println(a ...any) {
 
 type LauncherWidget struct {
 	*fyne.Container
+	Preferences
 
 	window fyne.Window
 
@@ -127,7 +128,6 @@ type LauncherWidget struct {
 	clientPathBinding binding.String
 	clientErrorIcon   *widget.Icon
 
-	preferences    Preferences
 	playingBinding binding.Bool
 
 	ProgressBar
@@ -138,13 +138,14 @@ type LauncherWidget struct {
 
 func NewLauncherWidget(window fyne.Window, preferences Preferences, profileBinding ProfileBinding, playingBinding binding.Bool) *LauncherWidget {
 	l := &LauncherWidget{
+		Preferences: preferences,
+
 		window: window,
 
 		profileBinding:    profileBinding,
 		clientPathBinding: binding.NewString(),
 		clientErrorIcon:   widget.NewIcon(theme.NewErrorThemedResource(theme.ErrorIcon())),
 
-		preferences:    preferences,
 		playingBinding: playingBinding,
 
 		ProgressBar: ProgressBar{ProgressBar: nlwidgets.NewProgressBar()},
@@ -181,7 +182,7 @@ func GetAbs(path string) (string, error) {
 
 func (l *LauncherWidget) ClientConfig() client.Config {
 	profile := l.currentProfile
-	settings := l.preferences.AppSettings().Get()
+	settings := l.AppSettings().Get()
 
 	c := settings.Launch.DefaultClient
 	if profile != nil && profile.Client != nil {
@@ -257,7 +258,7 @@ func (l *LauncherWidget) GetBoot(client client.Config, profile *Profile) (boot.C
 		l.playWg.Done()
 	}()
 
-	tkr, _, err := client.Tracker(TrackerDir)
+	tkr, err := client.Tracker(TrackerDir)
 	if err != nil {
 		return boot.Config{}, err
 	}
@@ -268,17 +269,18 @@ func (l *LauncherWidget) GetBoot(client client.Config, profile *Profile) (boot.C
 
 	l.Infinite()
 
-	// We want to run the undoer regardless of whether the profile
-	// contains a patcher configuration. This ensures that switching
-	// to a profile which doesn't use a patcher will reset the client
-	// back to a vanilla state.
-	if err := tkr.Undo(ctx); err != nil {
-		slog.Error("Failed to run undoer", "error", err)
+	// We only want to undo the patches if the
+	// installation has changed profiles.
+	if tkr.State().Profile != profile.Id {
+		l.Print("Installation changed profiles; undoing patches...")
+		if err := tkr.Undo(ctx); err != nil {
+			slog.Error("Failed to undo patches", "error", err)
+		}
 	}
 
 	if client.IsNewInstall() {
 		slog.Info("Found new installation", "dir", client.Directory)
-		tkr.SetState(tracker.StateNew)
+		tkr.State().Forward = true
 
 		if err := os.MkdirAll(client.Directory, 0755); err != nil {
 			return boot.Config{}, err
@@ -319,7 +321,7 @@ func (l *LauncherWidget) GetBoot(client client.Config, profile *Profile) (boot.C
 		l.SetValue(float64(n))
 	})
 
-	settings := l.preferences.AppSettings().Get()
+	settings := l.AppSettings().Get()
 
 	if patch.Total() > 0 && settings.Launch.ReviewPatchesBeforeUpdate && !nldialogs.AskContinuePatch(patch.Summary()) {
 		return boot.Config{}, errors.New("patch rejected")
@@ -331,7 +333,11 @@ func (l *LauncherWidget) GetBoot(client client.Config, profile *Profile) (boot.C
 	}
 	l.Print("Patcher completed!")
 
-	tkr.SetState(tracker.StateNormal)
+	// funky
+	*tkr.State() = tracker.State{
+		Forward: false,
+		Profile: profile.Id,
+	}
 
 	storedConfig := profile.Server.BootConfig()
 
@@ -399,7 +405,7 @@ func (l *LauncherWidget) play() {
 		return
 	}
 
-	settings := l.preferences.AppSettings().Get()
+	settings := l.AppSettings().Get()
 
 	cmd, err := client.Start(clientConfig, !settings.Launch.CloseOnPlay)
 	if err != nil {

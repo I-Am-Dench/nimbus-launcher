@@ -21,7 +21,7 @@ type Optional struct {
 	Name         string           `json:"name"`
 	IsPacked     optional.O[bool] `json:"packed"`
 	Locale       string           `json:"locale,omitempty"`
-	FullDownload optional.O[bool] `json:"full_download"`
+	FullDownload optional.O[bool] `json:"fullDownload"`
 }
 
 func (o Optional) IsEmpty() bool {
@@ -33,7 +33,7 @@ type Config struct {
 	Name         string `json:"name"`
 	IsPacked     bool   `json:"packed"`
 	Locale       string `json:"locale"`
-	FullDownload bool   `json:"full_download"`
+	FullDownload bool   `json:"fullDownload"`
 	Etc          Etc    `json:"etc,omitzero"`
 }
 
@@ -89,17 +89,12 @@ func (c Config) IsNewInstall() bool {
 	return false
 }
 
-func (c Config) Tracker(cacheRoot string) (tkr tracker.Tracker, hash string, err error) {
-	hash, err = tracker.HashFilepath(c.Directory)
+func (c Config) Tracker(cacheRoot string) (tracker.Tracker, error) {
+	hash, err := tracker.HashFilepath(c.Directory)
 	if err != nil {
-		return nil, "", fmt.Errorf("client: %v", err)
+		return nil, fmt.Errorf("client: %v", err)
 	}
-
-	tkr, err = tracker.New(filepath.Join(cacheRoot, hash), c.Directory)
-	if err != nil {
-		return nil, "", fmt.Errorf("client: %v", err)
-	}
-	return tkr, hash, nil
+	return tracker.New(filepath.Join(cacheRoot, hash), c.Directory)
 }
 
 var DefaultConfig = Config{

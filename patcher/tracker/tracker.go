@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -21,24 +22,20 @@ import (
 
 const (
 	AdditionsName = "additions"
-
-	NewInstallName = ".nimbus-new"
+	StateName     = "state"
 )
 
-type State int
-
-const (
-	StateNormal = State(iota)
-	StateNew
-)
+type State struct {
+	Forward bool   `json:"foward"`
+	Profile string `json:"profile"`
+}
 
 type Tracker interface {
 	Track(path string, archive *archive.Archive) error
 	Undo(ctx context.Context) error
 	Close() error
 
-	GetState() State
-	SetState(State)
+	State() *State
 }
 
 type Additions map[string]struct{}
@@ -61,11 +58,26 @@ func readAdditions(name string) (Additions, error) {
 	return additions, nil
 }
 
+func readState(name string) (State, error) {
+	data, err := os.ReadFile(name)
+	if errors.Is(err, os.ErrNotExist) {
+		return State{}, nil
+	} else if err != nil {
+		return State{}, err
+	}
+
+	state := State{}
+	if err := json.Unmarshal(data, &state); err != nil {
+		return State{}, err
+	}
+	return state, nil
+}
+
 type fsTracker struct {
 	cacheDir, clientCacheDir, root string
 
-	state     State
 	additions Additions
+	state     State
 }
 
 func New(cacheDir, root string) (Tracker, error) {
@@ -79,12 +91,12 @@ func New(cacheDir, root string) (Tracker, error) {
 		return nil, fmt.Errorf("tracker: %w", err)
 	}
 
-	state := StateNormal
-	if _, err := os.Stat(filepath.Join(cacheDir, NewInstallName)); err == nil {
-		state = StateNew
+	state, err := readState(filepath.Join(cacheDir, StateName))
+	if err != nil {
+		return nil, fmt.Errorf("tracker: %w", err)
 	}
 
-	return &fsTracker{cacheDir, clientCacheDir, root, state, additions}, nil
+	return &fsTracker{cacheDir, clientCacheDir, root, additions, state}, nil
 }
 
 func (t fsTracker) writeAdditions() error {
@@ -101,9 +113,22 @@ func (t fsTracker) writeAdditions() error {
 	return nil
 }
 
+func (t fsTracker) writeState() error {
+	data, err := json.Marshal(t.state)
+	if err != nil {
+		return err
+	}
+
+	if err := os.WriteFile(filepath.Join(t.cacheDir, StateName), data, 0664); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (t fsTracker) trackUnpacked(path string) error {
 	if _, ok := t.additions[filepath.Clean(path)]; ok {
-		return nil // resource is an addition, no need to cache
+		return nil // resource is an addition; no need to cache
 	}
 
 	clientFile, err := os.Open(filepath.Join(t.root, path))
@@ -139,10 +164,10 @@ func (t fsTracker) trackUnpacked(path string) error {
 	return nil
 }
 
-func (t fsTracker) trackPacked(path string, archive *archive.Archive) error {
+func (t fsTracker) trackPacked(path string, ar *archive.Archive) error {
 	// don't need to track the individual files,
 	// just the packs themselves
-	record, ok := archive.Catalog().Search(path)
+	record, ok := ar.Catalog().Search(path)
 	if ok {
 		return t.trackUnpacked(record.PackName)
 	} else {
@@ -151,8 +176,8 @@ func (t fsTracker) trackPacked(path string, archive *archive.Archive) error {
 }
 
 func (t fsTracker) Track(path string, archive *archive.Archive) error {
-	if t.state == StateNew {
-		return nil // Don't track for new clients
+	if t.state.Forward {
+		return nil // Don't track for foward update clients
 	}
 
 	if archive == nil {
@@ -237,23 +262,11 @@ func (t fsTracker) Undo(ctx context.Context) error {
 }
 
 func (t fsTracker) Close() error {
-	return t.writeAdditions()
+	return errors.Join(t.writeAdditions(), t.writeState())
 }
 
-func (t fsTracker) GetState() State {
-	return t.state
-}
-
-func (t *fsTracker) SetState(state State) {
-	t.state = state
-
-	newFilePath := filepath.Join(t.cacheDir, NewInstallName)
-	switch state {
-	case StateNew:
-		os.Create(newFilePath)
-	default:
-		os.Remove(newFilePath)
-	}
+func (t *fsTracker) State() *State {
+	return &t.state
 }
 
 func HashFilepath(path string) (string, error) {

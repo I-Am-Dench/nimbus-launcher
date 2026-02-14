@@ -13,5 +13,4 @@ type Discard struct{}
 func (d Discard) Track(_ string, _ *archive.Archive) error { return nil }
 func (d Discard) Undo(ctx context.Context) error           { return nil }
 func (d Discard) Close() error                             { return nil }
-func (d Discard) GetState() State                          { return StateNormal }
-func (d Discard) SetState(State)                           {}
+func (d Discard) State() *State                            { return &State{} }
