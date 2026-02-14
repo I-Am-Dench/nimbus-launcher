@@ -250,7 +250,7 @@ func (p profileSettingsWidget) SaveProfile(profile *Profile, bootConfig *boot.Co
 	return p.AppProfiles().Save(profiles)
 }
 
-func (p profileSettingsWidget) ShowNewProfile() {
+func (p *profileSettingsWidget) ShowNewProfile() {
 	form := NewProfileForm(nil, p.window)
 	p.content.RemoveAll()
 
@@ -275,7 +275,7 @@ func (p profileSettingsWidget) ShowNewProfile() {
 	)
 }
 
-func (p profileSettingsWidget) ShowEditProfile() {
+func (p *profileSettingsWidget) ShowEditProfile() {
 	form := NewProfileForm(p.SelectedProfile(), p.window)
 	p.content.RemoveAll()
 
