@@ -2,6 +2,7 @@ package nldialogs
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"sync"
 
@@ -10,11 +11,12 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"github.com/I-Am-Dench/nimbus-launcher/patcher/origin"
 )
 
-func AskForCredentials(authMessage string) (username string, password []byte, err error) {
-	if len(authMessage) > 0 {
-		slog.Error("Failed to authenticate", "message", authMessage)
+func AskForCredentials(ctx origin.AuthContext) (username string, password []byte, err error) {
+	if len(ctx.Message) > 0 {
+		slog.Error("Failed to authenticate", "message", ctx.Message)
 	}
 
 	wg := sync.WaitGroup{}
@@ -39,6 +41,8 @@ func AskForCredentials(authMessage string) (username string, password []byte, er
 
 		heading := canvas.NewText("Authenticate", theme.Color(theme.ColorNameForeground))
 		heading.TextSize = 16
+
+		url := widget.NewLabel(fmt.Sprint(ctx.URL.Scheme, "://", ctx.URL.Host))
 
 		submit := func(_ string) {
 			if len(usernameEntry.Text) > 0 && len(passwordEntry.Text) > 0 {
@@ -71,13 +75,13 @@ func AskForCredentials(authMessage string) (username string, password []byte, er
 		buttons := container.NewBorder(nil, nil, nil, container.NewHBox(cancelButton, submitButton))
 		buttons.Resize(fyne.NewSize(400, 200))
 
-		errorMessage := widget.NewLabel(authMessage)
+		errorMessage := widget.NewLabel(ctx.Message)
 		errorMessage.Importance = widget.DangerImportance
 		errorMessage.Wrapping = fyne.TextWrapWord
 
 		window.SetContent(container.NewPadded(
 			container.NewBorder(
-				heading, buttons, nil, nil, container.NewPadded(
+				container.NewVBox(heading, url), buttons, nil, nil, container.NewPadded(
 					container.NewVBox(
 						widget.NewForm(
 							widget.NewFormItem("Username", usernameEntry),

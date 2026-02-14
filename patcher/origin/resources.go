@@ -100,7 +100,12 @@ func (h Http) Get(ctx context.Context, uri string) (io.ReadCloser, error) {
 	return nil, fmt.Errorf("origin: http: Get %s: unhandled status: %s", uri, response.Status)
 }
 
-type CredentialsFunc = func(authMessage string) (username string, password []byte, err error)
+type AuthContext struct {
+	URL     *url.URL
+	Message string
+}
+
+type CredentialsFunc = func(AuthContext) (username string, password []byte, err error)
 
 type HttpWithAuth struct {
 	*Http
@@ -124,7 +129,7 @@ func (h HttpWithAuth) extractResponseMessage(response *http.Response) string {
 		if err != nil {
 			return response.Status
 		}
-		return string(data)
+		message.Message = string(data)
 	}
 
 	if len(message.Message) == 0 {
@@ -134,9 +139,14 @@ func (h HttpWithAuth) extractResponseMessage(response *http.Response) string {
 }
 
 func (h HttpWithAuth) Authenticate(ctx context.Context) error {
-	var lastMessage string
+	authUrl, err := url.Parse(h.authUrl)
+	if err != nil {
+		return fmt.Errorf("origin: http with auth: %w", err)
+	}
+
+	authContext := AuthContext{URL: authUrl}
 	for {
-		username, password, err := h.credentials(lastMessage)
+		username, password, err := h.credentials(authContext)
 		if err != nil {
 			return fmt.Errorf("origin: http with auth: %w", err)
 		}
@@ -164,7 +174,7 @@ func (h HttpWithAuth) Authenticate(ctx context.Context) error {
 			return fmt.Errorf("origin: http with auth: unhandled status: %s", response.Status)
 		}
 
-		lastMessage = h.extractResponseMessage(response)
+		authContext.Message = h.extractResponseMessage(response)
 	}
 }
 
