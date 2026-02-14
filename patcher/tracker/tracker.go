@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/I-Am-Dench/goverbuild/archive"
 )
@@ -161,6 +162,15 @@ func (t fsTracker) Track(path string, archive *archive.Archive) error {
 	}
 }
 
+func (f fsTracker) shouldCopy(clientPath string, cachedStat fs.FileInfo) bool {
+	clientStat, err := os.Stat(clientPath)
+	if err != nil {
+		return true
+	}
+
+	return !cachedStat.ModTime().Equal(clientStat.ModTime()) || cachedStat.Size() != clientStat.Size()
+}
+
 func (t fsTracker) undo(ctx context.Context) fs.WalkDirFunc {
 	return func(path string, d fs.DirEntry, err error) error {
 		select {
@@ -182,15 +192,23 @@ func (t fsTracker) undo(ctx context.Context) fs.WalkDirFunc {
 			return err
 		}
 
-		// Allows users to manually add entries to "additions" files.
-		//
-		// This shouldn't get entered under normal use, since resources
-		// won't get cached anyway.
+		// Ignoring additions takes precendence over
+		// replacing base files.
 		if _, ok := t.additions[filepath.Clean(path)]; ok {
 			return nil
 		}
 
-		clientFile, err := os.Create(filepath.Join(t.root, rel))
+		cachedStat, err := d.Info()
+		if err != nil {
+			return err
+		}
+
+		clientPath := filepath.Join(t.root, rel)
+		if !t.shouldCopy(clientPath, cachedStat) {
+			return nil
+		}
+
+		clientFile, err := os.Create(clientPath)
 		if err != nil {
 			return err
 		}
@@ -202,8 +220,12 @@ func (t fsTracker) undo(ctx context.Context) fs.WalkDirFunc {
 		}
 		defer cachedFile.Close()
 
-		_, err = io.Copy(clientFile, cachedFile)
-		return err
+		if _, err := io.Copy(clientFile, cachedFile); err != nil {
+			return err
+		}
+		os.Chtimes(clientPath, time.Time{}, cachedStat.ModTime())
+
+		return nil
 	}
 }
 
