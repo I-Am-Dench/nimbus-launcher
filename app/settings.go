@@ -1,19 +1,15 @@
 package app
 
 import (
-	"encoding/json"
 	"encoding/xml"
-	"errors"
 	"fmt"
 	"log/slog"
 	"os"
-	"path/filepath"
 	"slices"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/theme"
@@ -23,75 +19,75 @@ import (
 	"github.com/I-Am-Dench/nimbus-launcher/client"
 )
 
-type settings struct {
-	path    string
-	parsed  bool
-	Binding binding.Item[Settings]
-}
+// type settings struct {
+// 	path    string
+// 	parsed  bool
+// 	Binding binding.Item[Settings]
+// }
 
-func (s settings) write(settings Settings) error {
-	data, err := json.MarshalIndent(settings, "", "    ")
-	if err != nil {
-		return fmt.Errorf("write settings: %v", err)
-	}
+// func (s settings) write(settings Settings) error {
+// 	data, err := json.MarshalIndent(settings, "", "    ")
+// 	if err != nil {
+// 		return fmt.Errorf("write settings: %v", err)
+// 	}
 
-	if err := os.WriteFile(s.path, data, 0755); err != nil {
-		return fmt.Errorf("write settings: %v", err)
-	}
-	return nil
-}
+// 	if err := os.WriteFile(s.path, data, 0755); err != nil {
+// 		return fmt.Errorf("write settings: %v", err)
+// 	}
+// 	return nil
+// }
 
-func (s settings) read() (Settings, error) {
-	data, err := os.ReadFile(s.path)
-	if errors.Is(err, os.ErrNotExist) {
-		defaultSettings := DefaultSettings()
-		if err := s.write(defaultSettings); err != nil {
-			return Settings{}, fmt.Errorf("read settings: %v", err)
-		}
-		return defaultSettings, nil
-	}
+// func (s settings) read() (Settings, error) {
+// 	data, err := os.ReadFile(s.path)
+// 	if errors.Is(err, os.ErrNotExist) {
+// 		defaultSettings := DefaultSettings()
+// 		if err := s.write(defaultSettings); err != nil {
+// 			return Settings{}, fmt.Errorf("read settings: %v", err)
+// 		}
+// 		return defaultSettings, nil
+// 	}
 
-	if err != nil {
-		return Settings{}, fmt.Errorf("read settings: %v", err)
-	}
+// 	if err != nil {
+// 		return Settings{}, fmt.Errorf("read settings: %v", err)
+// 	}
 
-	settings := Settings{}
-	if err := json.Unmarshal(data, &settings); err != nil {
-		return Settings{}, fmt.Errorf("read settings: %v", err)
-	}
-	return settings, nil
-}
+// 	settings := Settings{}
+// 	if err := json.Unmarshal(data, &settings); err != nil {
+// 		return Settings{}, fmt.Errorf("read settings: %v", err)
+// 	}
+// 	return settings, nil
+// }
 
-func (s *settings) Get() Settings {
-	if s.parsed {
-		settings, _ := s.Binding.Get()
-		return settings
-	}
+// func (s *settings) Get() Settings {
+// 	if s.parsed {
+// 		settings, _ := s.Binding.Get()
+// 		return settings
+// 	}
 
-	settings, err := s.read()
-	if err != nil {
-		slog.Error("Failed to load settings", "error", err)
-		settings = DefaultSettings()
-	}
-	s.Set(settings)
+// 	settings, err := s.read()
+// 	if err != nil {
+// 		slog.Error("Failed to load settings", "error", err)
+// 		settings = DefaultSettings()
+// 	}
+// 	s.Set(settings)
 
-	s.parsed = true
-	return settings
-}
+// 	s.parsed = true
+// 	return settings
+// }
 
-func (s *settings) Set(settings Settings) {
-	if err := s.write(settings); err != nil {
-		slog.Error("Failed to save settings", "error", err)
-	}
-	s.Binding.Set(settings)
-}
+// func (s *settings) Set(settings Settings) {
+// 	if err := s.write(settings); err != nil {
+// 		slog.Error("Failed to save settings", "error", err)
+// 	}
+// 	s.Binding.Set(settings)
+// }
 
-func NewSettings(path string) *settings {
-	return &settings{
-		path:    path,
-		Binding: binding.NewItem(func(_, _ Settings) bool { return false }),
-	}
-}
+// func NewSettings(path string) *settings {
+// 	return &settings{
+// 		path:    path,
+// 		Binding: binding.NewItem(func(_, _ Settings) bool { return false }),
+// 	}
+// }
 
 type Settings struct {
 	Launch LaunchConfig `json:"launch"`
@@ -107,10 +103,10 @@ func profileName(p *Profile) string {
 
 type profileSettingsWidget struct {
 	*fyne.Container
-	ProfileListBinding
+	Preferences
 	window fyne.Window
 
-	profilesPath string
+	settingsDir string
 
 	profileSelector  *nlwidgets.ItemSelector[*Profile]
 	listContainer    *fyne.Container
@@ -120,13 +116,13 @@ type profileSettingsWidget struct {
 	content *fyne.Container
 }
 
-func newProfileSettingsWidget(window fyne.Window, profilesBinding ProfileListBinding, profilesPath string) *profileSettingsWidget {
+func newProfileSettingsWidget(window fyne.Window, preferences Preferences, settingsDir string) *profileSettingsWidget {
 	p := &profileSettingsWidget{
-		ProfileListBinding: profilesBinding,
-		window:             window,
-		profilesPath:       profilesPath,
-		patcherContainer:   container.NewStack(),
-		content:            container.NewStack(),
+		Preferences:      preferences,
+		window:           window,
+		settingsDir:      settingsDir,
+		patcherContainer: container.NewStack(),
+		content:          container.NewStack(),
 	}
 
 	clientSettings := nlwidgets.NewClientSettings(window, false)
@@ -137,7 +133,7 @@ func newProfileSettingsWidget(window fyne.Window, profilesBinding ProfileListBin
 	)
 
 	// === Selector === //
-	p.profileSelector = nlwidgets.NewItemSelector(p.Profiles(), profileName, compareProfiles, func(profile *Profile) {
+	p.profileSelector = nlwidgets.NewItemSelector(p.AppProfiles().Get(), profileName, compareProfiles, func(profile *Profile) {
 		if profile == nil {
 			return
 		}
@@ -164,7 +160,7 @@ func newProfileSettingsWidget(window fyne.Window, profilesBinding ProfileListBin
 
 	removeItem := fyne.NewMenuItem("Remove", func() {
 		index := p.profileSelector.SelectedIndex()
-		profiles := p.Profiles()
+		profiles := p.AppProfiles().Get()
 
 		profile := profiles[index]
 		if profile == nil {
@@ -181,16 +177,14 @@ func newProfileSettingsWidget(window fyne.Window, profilesBinding ProfileListBin
 				}
 
 				profiles = append(profiles[:index], profiles[index+1:]...)
-				profilesBinding.Set(profiles)
-
 				if err := os.Remove(profile.Server.Boot); err != nil {
 					slog.Error("Failed to remove boot config", "boot", profile.Server.Boot, "error", err)
 				}
 
-				if err := p.SaveProfiles(profiles); err != nil {
+				if err := preferences.AppProfiles().Save(profiles); err != nil {
 					dialog.ShowError(err, p.window)
 				} else {
-					dialog.ShowInformation("Remove Profile", fmt.Sprintf("Removed %q", profile.Name), window)
+					dialog.ShowInformation("Remove Profile", fmt.Sprintf("Remove %q", profile.Name), p.window)
 				}
 				p.profileSelector.SetSelectedIndex(0)
 			},
@@ -261,7 +255,7 @@ func newProfileSettingsWidget(window fyne.Window, profilesBinding ProfileListBin
 		),
 	)
 
-	profilesBinding.AddListener(p)
+	preferences.AppProfiles().Binding().AddListener(p)
 
 	p.ShowProfileList()
 	p.Container = container.NewPadded(p.content)
@@ -270,7 +264,7 @@ func newProfileSettingsWidget(window fyne.Window, profilesBinding ProfileListBin
 }
 
 func (p *profileSettingsWidget) DataChanged() {
-	p.profileSelector.SetOptions(p.Profiles())
+	p.profileSelector.SetOptions(p.AppProfiles().Get())
 	p.profileSelector.SetSelectedIndex(p.profileSelector.SelectedIndex())
 }
 
@@ -289,7 +283,7 @@ func (p *profileSettingsWidget) SetPatcherSettings(profile *Profile) {
 }
 
 func (p *profileSettingsWidget) SelectedProfile() *Profile {
-	profiles := p.Profiles()
+	profiles := p.AppProfiles().Get()
 	if len(profiles) == 0 {
 		return nil
 	}
@@ -302,24 +296,10 @@ func (s *profileSettingsWidget) ShowProfileList() {
 	s.content.Add(s.listContainer)
 }
 
-func (s *profileSettingsWidget) SaveProfiles(profiles []*Profile) error {
-	data, err := json.MarshalIndent(profiles, "", "    ")
-	if err != nil {
-		return fmt.Errorf("save profiles: %v", err)
-	}
-
-	if err := os.WriteFile(s.profilesPath, data, 0664); err != nil {
-		return fmt.Errorf("save profiles: %v", err)
-	}
-
-	s.Set(profiles)
-	return nil
-}
-
 func (s *profileSettingsWidget) SaveProfile(profile *Profile, bootConfig *boot.Config) error {
 	bootPath := profile.Server.Boot
 	if len(bootPath) == 0 { // Allows manually edited boot paths
-		bootPath = profile.DefaultBootPath(filepath.Dir(s.profilesPath))
+		bootPath = profile.DefaultBootPath(s.settingsDir)
 	}
 
 	if err := profile.Server.SaveBootConfig(bootPath, bootConfig); err != nil {
@@ -328,7 +308,7 @@ func (s *profileSettingsWidget) SaveProfile(profile *Profile, bootConfig *boot.C
 
 	profile.ServerList.once = nil
 
-	profiles := s.Profiles()
+	profiles := s.AppProfiles().Get()
 
 	index := slices.IndexFunc(profiles, func(p *Profile) bool { return p != nil && p.Id == profile.Id })
 	if index < 0 {
@@ -337,7 +317,7 @@ func (s *profileSettingsWidget) SaveProfile(profile *Profile, bootConfig *boot.C
 		profiles[index] = profile
 	}
 
-	return s.SaveProfiles(profiles)
+	return s.AppProfiles().Save(profiles)
 }
 
 func (s *profileSettingsWidget) ShowNewProfile() {
@@ -420,8 +400,8 @@ type launcherSettingsWidget struct {
 	*fyne.Container
 }
 
-func newLauncherSettingsWidget(window fyne.Window) *launcherSettingsWidget {
-	settings := AppSettings.Get()
+func newLauncherSettingsWidget(window fyne.Window, preferences Preferences) *launcherSettingsWidget {
+	settings := preferences.AppSettings().Get()
 
 	generalHeading := canvas.NewText("General", theme.Color(theme.ColorNameForeground))
 	generalHeading.TextSize = 16
@@ -430,7 +410,7 @@ func newLauncherSettingsWidget(window fyne.Window) *launcherSettingsWidget {
 	closeOnPlay.Checked = settings.Launch.CloseOnPlay
 
 	reviewPatches := widget.NewCheck("Display a summary of a patch before updating", func(b bool) {})
-	reviewPatches.Checked = settings.Launch.CloseOnPlay
+	reviewPatches.Checked = settings.Launch.ReviewPatchesBeforeUpdate
 
 	clientHeading := canvas.NewText("Default Client", theme.Color(theme.ColorNameForeground))
 	clientHeading.TextSize = 16
@@ -449,8 +429,12 @@ func newLauncherSettingsWidget(window fyne.Window) *launcherSettingsWidget {
 		}
 		settings.Launch.DefaultClient.Etc = etcFunc()
 
-		dialog.ShowInformation("Launcher Settings", "Settings saved!", window)
-		AppSettings.Set(settings)
+		if err := preferences.AppSettings().Save(settings); err != nil {
+			slog.Error("Failed to save settings", "error", err)
+			dialog.ShowError(err, window)
+		} else {
+			dialog.ShowInformation("Launcher Settings", "Settings saved!", window)
+		}
 	})
 	saveButton.Importance = widget.HighImportance
 
@@ -474,7 +458,7 @@ func newLauncherSettingsWidget(window fyne.Window) *launcherSettingsWidget {
 	}
 }
 
-func NewSettingsWindow(app fyne.App, profilesBinding ProfileListBinding, profilesPath string) fyne.Window {
+func NewSettingsWindow(app fyne.App, preferences Preferences, settingsDir string) fyne.Window {
 	window := app.NewWindow("Settings")
 	window.Resize(fyne.NewSize(800, 600))
 	window.SetIcon(theme.SettingsIcon())
@@ -483,8 +467,8 @@ func NewSettingsWindow(app fyne.App, profilesBinding ProfileListBinding, profile
 	heading := canvas.NewText("Settings", theme.Color(theme.ColorNameForeground))
 	heading.TextSize = 24
 
-	profiles := newProfileSettingsWidget(window, profilesBinding, profilesPath)
-	launcher := newLauncherSettingsWidget(window)
+	profiles := newProfileSettingsWidget(window, preferences, settingsDir)
+	launcher := newLauncherSettingsWidget(window, preferences)
 
 	window.SetContent(
 		container.NewPadded(

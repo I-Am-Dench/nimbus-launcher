@@ -127,6 +127,7 @@ type LauncherWidget struct {
 	clientPathBinding binding.String
 	clientErrorIcon   *widget.Icon
 
+	preferences    Preferences
 	playingBinding binding.Bool
 
 	ProgressBar
@@ -135,7 +136,7 @@ type LauncherWidget struct {
 	playWg     sync.WaitGroup
 }
 
-func NewLauncherWidget(window fyne.Window, profileBinding ProfileBinding, playingBinding binding.Bool) *LauncherWidget {
+func NewLauncherWidget(window fyne.Window, preferences Preferences, profileBinding ProfileBinding, playingBinding binding.Bool) *LauncherWidget {
 	l := &LauncherWidget{
 		window: window,
 
@@ -143,6 +144,7 @@ func NewLauncherWidget(window fyne.Window, profileBinding ProfileBinding, playin
 		clientPathBinding: binding.NewString(),
 		clientErrorIcon:   widget.NewIcon(theme.NewErrorThemedResource(theme.ErrorIcon())),
 
+		preferences:    preferences,
 		playingBinding: playingBinding,
 
 		ProgressBar: ProgressBar{ProgressBar: nlwidgets.NewProgressBar()},
@@ -163,7 +165,7 @@ func NewLauncherWidget(window fyne.Window, profileBinding ProfileBinding, playin
 		clientLabel,
 	)
 
-	AppSettings.Binding.AddListener(l)
+	preferences.AppSettings().Binding().AddListener(l)
 	profileBinding.AddListener(l)
 
 	return l
@@ -179,7 +181,7 @@ func GetAbs(path string) (string, error) {
 
 func (l *LauncherWidget) ClientConfig() client.Config {
 	profile := l.currentProfile
-	settings := AppSettings.Get()
+	settings := l.preferences.AppSettings().Get()
 
 	c := settings.Launch.DefaultClient
 	if profile != nil && profile.Client != nil {
@@ -317,7 +319,7 @@ func (l *LauncherWidget) GetBoot(client client.Config, profile *Profile) (boot.C
 		l.SetValue(float64(n))
 	})
 
-	settings := AppSettings.Get()
+	settings := l.preferences.AppSettings().Get()
 
 	if patch.Total() > 0 && settings.Launch.ReviewPatchesBeforeUpdate && !nldialogs.AskContinuePatch(patch.Summary()) {
 		return boot.Config{}, errors.New("patch rejected")
@@ -397,7 +399,7 @@ func (l *LauncherWidget) play() {
 		return
 	}
 
-	settings := AppSettings.Get()
+	settings := l.preferences.AppSettings().Get()
 
 	cmd, err := client.Start(clientConfig, !settings.Launch.CloseOnPlay)
 	if err != nil {

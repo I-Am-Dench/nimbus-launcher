@@ -290,17 +290,18 @@ func DefaultBootConfig() boot.Config {
 	return config
 }
 
-func DefaultProfiles(bootConfig boot.Config, profilesPath string) []*Profile {
-	profile := &Profile{
-		Id:   strconv.FormatInt(time.Now().Unix(), 10),
-		Name: "Localhost",
-	}
+func DefaultProfiles(bootConfig boot.Config, settingsDir string) func() []*Profile {
+	return func() []*Profile {
+		profile := &Profile{
+			Id:   strconv.FormatInt(time.Now().Unix(), 10),
+			Name: "Localhost",
+		}
 
-	if err := profile.Server.SaveBootConfig(profile.DefaultBootPath(filepath.Dir(profilesPath)), &bootConfig); err != nil {
-		slog.Error(err.Error())
+		if err := profile.Server.SaveBootConfig(profile.DefaultBootPath(settingsDir), &bootConfig); err != nil {
+			slog.Error(err.Error())
+		}
+		return []*Profile{profile}
 	}
-
-	return []*Profile{profile}
 }
 
 func HyperLinkButton(text string, icon fyne.Resource, urlBinding binding.String) *widget.Button {
@@ -333,29 +334,6 @@ func AddEllipsis(label *widget.Label) *widget.Label {
 	return label
 }
 
-type ProfileListBinding struct {
-	binding.Item[[]*Profile]
-}
-
-func (b *ProfileListBinding) Profiles() []*Profile {
-	p, _ := b.Get()
-	return p
-}
-
-func (b *ProfileListBinding) Options() []string {
-	profiles := b.Profiles()
-	if profiles == nil {
-		return []string{}
-	}
-
-	options := []string{}
-	for _, p := range profiles {
-		options = append(options, p.Name)
-	}
-
-	return options
-}
-
 type ProfileBinding = binding.Item[*Profile]
 
 func NewServerRadioGroup(changed func(patcher.Server)) *nlwidgets.ItemRadioGroup[patcher.Server] {
@@ -370,7 +348,7 @@ func NewServerRadioGroup(changed func(patcher.Server)) *nlwidgets.ItemRadioGroup
 
 type ProfileSelectorWidget struct {
 	*fyne.Container
-	ProfileListBinding
+	Preferences
 
 	window fyne.Window
 	jar    http.CookieJar
@@ -397,9 +375,9 @@ type ProfileSelectorWidget struct {
 	selector *nlwidgets.ItemSelector[*Profile]
 }
 
-func NewProfileSelectorWidget(window fyne.Window, jar http.CookieJar, profiles ProfileListBinding, onTapSettings func()) (*ProfileSelectorWidget, error) {
+func NewProfileSelectorWidget(window fyne.Window, jar http.CookieJar, preferences Preferences, onTapSettings func()) (*ProfileSelectorWidget, error) {
 	s := &ProfileSelectorWidget{
-		ProfileListBinding: profiles,
+		Preferences: preferences,
 
 		window: window,
 		jar:    jar,
@@ -422,7 +400,7 @@ func NewProfileSelectorWidget(window fyne.Window, jar http.CookieJar, profiles P
 	s.activity.Start()
 	s.activity.Hide()
 
-	s.selector = nlwidgets.NewItemSelector(s.Profiles(), profileName, compareProfiles, s.SelectServer)
+	s.selector = nlwidgets.NewItemSelector(s.AppProfiles().Get(), profileName, compareProfiles, s.SelectServer)
 	s.selector.PlaceHolder = "(Select server)"
 
 	serverInfo := widget.NewForm(
@@ -476,7 +454,7 @@ func NewProfileSelectorWidget(window fyne.Window, jar http.CookieJar, profiles P
 
 	settingsButton := widget.NewButtonWithIcon("", theme.SettingsIcon(), onTapSettings)
 
-	profiles.AddListener(s)
+	s.AppProfiles().Binding().AddListener(s)
 
 	s.PlayingBinding.AddListener(binding.NewDataListener(func() {
 		if b, _ := s.PlayingBinding.Get(); b {
@@ -498,7 +476,7 @@ func NewProfileSelectorWidget(window fyne.Window, jar http.CookieJar, profiles P
 }
 
 func (s *ProfileSelectorWidget) DataChanged() {
-	s.selector.SetOptions(s.Profiles())
+	s.selector.SetOptions(s.AppProfiles().Get())
 
 	if selected := fyne.CurrentApp().Preferences().String(PreferenceSelectProfile); len(selected) > 0 {
 		s.selector.SetSelected(&Profile{Id: selected})
