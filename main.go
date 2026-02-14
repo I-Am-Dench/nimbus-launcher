@@ -9,10 +9,11 @@ import (
 	"os"
 
 	"github.com/I-Am-Dench/nimbus-launcher/app"
-	"github.com/I-Am-Dench/nimbus-launcher/app/cookiejar"
 	"github.com/I-Am-Dench/nimbus-launcher/logger"
 	"github.com/I-Am-Dench/nimbus-launcher/version"
 	"golang.org/x/net/publicsuffix"
+
+	cookiejar "github.com/juju/persistent-cookiejar"
 )
 
 const (
@@ -20,6 +21,10 @@ const (
 	Log         = "./current.log"
 	Cookies     = "./cookies.json"
 )
+
+type Saver interface {
+	Save() error
+}
 
 func main() {
 	file, err := os.Create(Log)
@@ -43,14 +48,17 @@ func main() {
 	}
 
 	var jar http.CookieJar
-	jar, err = cookiejar.New(Cookies, &cookiejar.Options{PublicSuffixList: publicsuffix.List})
+	jar, err = cookiejar.New(&cookiejar.Options{
+		PublicSuffixList: publicsuffix.List,
+		Filename:         Cookies,
+	})
 	if err != nil {
 		slog.Error("Failed to open cookie jar", "error", err)
 		jar, _ = http_jar.New(&http_jar.Options{PublicSuffixList: publicsuffix.List})
 	}
 	defer func() {
-		if closer, ok := jar.(io.Closer); ok {
-			closer.Close()
+		if saver, ok := jar.(Saver); ok {
+			saver.Save()
 		}
 	}()
 

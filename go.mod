@@ -11,7 +11,13 @@ require (
 
 require golang.org/x/term v0.39.0
 
-require github.com/snksoft/crc v1.1.0 // indirect
+require (
+	github.com/juju/go4 v0.0.0-20160222163258-40d72ab9641a // indirect
+	github.com/juju/persistent-cookiejar v1.0.0
+	github.com/snksoft/crc v1.1.0 // indirect
+	gopkg.in/errgo.v1 v1.0.1 // indirect
+	gopkg.in/retry.v1 v1.0.3 // indirect
+)
 
 require (
 	fyne.io/systray v1.12.0 // indirect
