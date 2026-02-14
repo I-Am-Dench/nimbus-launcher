@@ -33,7 +33,7 @@ type BootForm struct {
 	trackDiskUsage   *widget.Check
 }
 
-func (b *BootForm) Set(config boot.Config) {
+func (b BootForm) Set(config boot.Config) {
 	b.serverName.SetText(config.ServerName)
 	b.authServerIp.SetText(config.AuthServerIP)
 	b.ugcUse3dServices.SetChecked(config.UGCUse3dServices)
@@ -57,7 +57,7 @@ func (b *BootForm) Set(config boot.Config) {
 	b.trackDiskUsage.SetChecked(config.TrackDiskUsage)
 }
 
-func (b *BootForm) Get() *boot.Config {
+func (b BootForm) Get() *boot.Config {
 	return &boot.Config{
 		ServerName:       b.serverName.Text,
 		PatchServerIP:    b.patchServerIp.Text,

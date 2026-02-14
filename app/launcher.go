@@ -44,25 +44,25 @@ type ProgressBar struct {
 	lastLog time.Time
 }
 
-func (p *ProgressBar) SetValue(f float64) {
+func (p ProgressBar) SetValue(f float64) {
 	fyne.DoAndWait(func() {
 		p.ProgressBar.SetValue(f)
 	})
 }
 
-func (p *ProgressBar) HideProgress() {
+func (p ProgressBar) HideProgress() {
 	fyne.DoAndWait(p.ProgressBar.HideProgress)
 }
 
-func (p *ProgressBar) Infinite() {
+func (p ProgressBar) Infinite() {
 	fyne.DoAndWait(p.ProgressBar.Infinite)
 }
 
-func (p *ProgressBar) Progress() {
+func (p ProgressBar) Progress() {
 	fyne.DoAndWait(p.ProgressBar.Progress)
 }
 
-func (p *ProgressBar) SetText(s string) {
+func (p ProgressBar) SetText(s string) {
 	// NOTE: Having the fyne.DoAndWait here causes a small, but noticeable,
 	// slowdown during patching since (from what I've seen) fyne handles
 	// its event queue every 15ms. Just calling SetText will cause fyne to

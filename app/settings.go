@@ -19,76 +19,6 @@ import (
 	"github.com/I-Am-Dench/nimbus-launcher/client"
 )
 
-// type settings struct {
-// 	path    string
-// 	parsed  bool
-// 	Binding binding.Item[Settings]
-// }
-
-// func (s settings) write(settings Settings) error {
-// 	data, err := json.MarshalIndent(settings, "", "    ")
-// 	if err != nil {
-// 		return fmt.Errorf("write settings: %v", err)
-// 	}
-
-// 	if err := os.WriteFile(s.path, data, 0755); err != nil {
-// 		return fmt.Errorf("write settings: %v", err)
-// 	}
-// 	return nil
-// }
-
-// func (s settings) read() (Settings, error) {
-// 	data, err := os.ReadFile(s.path)
-// 	if errors.Is(err, os.ErrNotExist) {
-// 		defaultSettings := DefaultSettings()
-// 		if err := s.write(defaultSettings); err != nil {
-// 			return Settings{}, fmt.Errorf("read settings: %v", err)
-// 		}
-// 		return defaultSettings, nil
-// 	}
-
-// 	if err != nil {
-// 		return Settings{}, fmt.Errorf("read settings: %v", err)
-// 	}
-
-// 	settings := Settings{}
-// 	if err := json.Unmarshal(data, &settings); err != nil {
-// 		return Settings{}, fmt.Errorf("read settings: %v", err)
-// 	}
-// 	return settings, nil
-// }
-
-// func (s *settings) Get() Settings {
-// 	if s.parsed {
-// 		settings, _ := s.Binding.Get()
-// 		return settings
-// 	}
-
-// 	settings, err := s.read()
-// 	if err != nil {
-// 		slog.Error("Failed to load settings", "error", err)
-// 		settings = DefaultSettings()
-// 	}
-// 	s.Set(settings)
-
-// 	s.parsed = true
-// 	return settings
-// }
-
-// func (s *settings) Set(settings Settings) {
-// 	if err := s.write(settings); err != nil {
-// 		slog.Error("Failed to save settings", "error", err)
-// 	}
-// 	s.Binding.Set(settings)
-// }
-
-// func NewSettings(path string) *settings {
-// 	return &settings{
-// 		path:    path,
-// 		Binding: binding.NewItem(func(_, _ Settings) bool { return false }),
-// 	}
-// }
-
 type Settings struct {
 	Launch LaunchConfig `json:"launch"`
 }
@@ -263,7 +193,7 @@ func newProfileSettingsWidget(window fyne.Window, preferences Preferences, setti
 	return p
 }
 
-func (p *profileSettingsWidget) DataChanged() {
+func (p profileSettingsWidget) DataChanged() {
 	p.profileSelector.SetOptions(p.AppProfiles().Get())
 	p.profileSelector.SetSelectedIndex(p.profileSelector.SelectedIndex())
 }
@@ -282,7 +212,7 @@ func (p *profileSettingsWidget) SetPatcherSettings(profile *Profile) {
 	p.patcherFunc = patcherFunc
 }
 
-func (p *profileSettingsWidget) SelectedProfile() *Profile {
+func (p profileSettingsWidget) SelectedProfile() *Profile {
 	profiles := p.AppProfiles().Get()
 	if len(profiles) == 0 {
 		return nil
@@ -291,15 +221,15 @@ func (p *profileSettingsWidget) SelectedProfile() *Profile {
 	return profiles[p.profileSelector.SelectedIndex()]
 }
 
-func (s *profileSettingsWidget) ShowProfileList() {
-	s.content.RemoveAll()
-	s.content.Add(s.listContainer)
+func (p profileSettingsWidget) ShowProfileList() {
+	p.content.RemoveAll()
+	p.content.Add(p.listContainer)
 }
 
-func (s *profileSettingsWidget) SaveProfile(profile *Profile, bootConfig *boot.Config) error {
+func (p profileSettingsWidget) SaveProfile(profile *Profile, bootConfig *boot.Config) error {
 	bootPath := profile.Server.Boot
 	if len(bootPath) == 0 { // Allows manually edited boot paths
-		bootPath = profile.DefaultBootPath(s.settingsDir)
+		bootPath = profile.DefaultBootPath(p.settingsDir)
 	}
 
 	if err := profile.Server.SaveBootConfig(bootPath, bootConfig); err != nil {
@@ -308,7 +238,7 @@ func (s *profileSettingsWidget) SaveProfile(profile *Profile, bootConfig *boot.C
 
 	profile.ServerList.once = nil
 
-	profiles := s.AppProfiles().Get()
+	profiles := p.AppProfiles().Get()
 
 	index := slices.IndexFunc(profiles, func(p *Profile) bool { return p != nil && p.Id == profile.Id })
 	if index < 0 {
@@ -317,27 +247,27 @@ func (s *profileSettingsWidget) SaveProfile(profile *Profile, bootConfig *boot.C
 		profiles[index] = profile
 	}
 
-	return s.AppProfiles().Save(profiles)
+	return p.AppProfiles().Save(profiles)
 }
 
-func (s *profileSettingsWidget) ShowNewProfile() {
-	form := NewProfileForm(nil, s.window)
-	s.content.RemoveAll()
+func (p profileSettingsWidget) ShowNewProfile() {
+	form := NewProfileForm(nil, p.window)
+	p.content.RemoveAll()
 
-	back := widget.NewButtonWithIcon("Back", theme.NavigateBackIcon(), s.ShowProfileList)
+	back := widget.NewButtonWithIcon("Back", theme.NavigateBackIcon(), p.ShowProfileList)
 	back.Importance = widget.LowImportance
 
 	add := widget.NewButtonWithIcon("Create", theme.ContentAddIcon(), func() {
-		if err := s.SaveProfile(form.Get()); err != nil {
-			dialog.ShowError(err, s.window)
+		if err := p.SaveProfile(form.Get()); err != nil {
+			dialog.ShowError(err, p.window)
 		} else {
-			dialog.ShowInformation("Create Server", "Server created!", s.window)
-			s.ShowProfileList()
+			dialog.ShowInformation("Create Server", "Server created!", p.window)
+			p.ShowProfileList()
 		}
 	})
 	add.Importance = widget.HighImportance
 
-	s.content.Add(
+	p.content.Add(
 		container.NewBorder(
 			nil, container.NewBorder(nil, nil, back, add), nil, nil,
 			container.NewVScroll(form.Container),
@@ -345,18 +275,18 @@ func (s *profileSettingsWidget) ShowNewProfile() {
 	)
 }
 
-func (s *profileSettingsWidget) ShowEditProfile() {
-	form := NewProfileForm(s.SelectedProfile(), s.window)
-	s.content.RemoveAll()
+func (p profileSettingsWidget) ShowEditProfile() {
+	form := NewProfileForm(p.SelectedProfile(), p.window)
+	p.content.RemoveAll()
 
-	back := widget.NewButtonWithIcon("Back", theme.NavigateBackIcon(), s.ShowProfileList)
+	back := widget.NewButtonWithIcon("Back", theme.NavigateBackIcon(), p.ShowProfileList)
 	back.Importance = widget.LowImportance
 
 	update := widget.NewButtonWithIcon("Save", theme.DocumentSaveIcon(), func() {
-		if err := s.SaveProfile(form.Get()); err != nil {
-			dialog.ShowError(err, s.window)
+		if err := p.SaveProfile(form.Get()); err != nil {
+			dialog.ShowError(err, p.window)
 		} else {
-			dialog.ShowInformation("Edit Server", "Server updated!", s.window)
+			dialog.ShowInformation("Edit Server", "Server updated!", p.window)
 		}
 	})
 	update.Importance = widget.HighImportance
@@ -368,7 +298,7 @@ func (s *profileSettingsWidget) ShowEditProfile() {
 			}
 
 			if err != nil {
-				dialog.ShowError(fmt.Errorf("error when choosing file: %v", err), s.window)
+				dialog.ShowError(fmt.Errorf("error when choosing file: %v", err), p.window)
 				return
 			}
 
@@ -376,19 +306,19 @@ func (s *profileSettingsWidget) ShowEditProfile() {
 			data, _ := xml.MarshalIndent(serverXml, "", "    ")
 
 			if _, err := writer.Write(append([]byte(xml.Header), data...)); err != nil {
-				dialog.ShowError(fmt.Errorf("cannot write server.xml: %v", err), s.window)
+				dialog.ShowError(fmt.Errorf("cannot write server.xml: %v", err), p.window)
 				return
 			}
 
-			dialog.ShowInformation("Export Complete", "Exported server configuration successfully!", s.window)
-		}, s.window)
+			dialog.ShowInformation("Export Complete", "Exported server configuration successfully!", p.window)
+		}, p.window)
 
 		dialog.SetFileName("server.xml")
 		dialog.SetFilter(storage.NewExtensionFileFilter([]string{".xml"}))
 		dialog.Show()
 	})
 
-	s.content.Add(
+	p.content.Add(
 		container.NewBorder(
 			nil, container.NewBorder(nil, nil, back, container.NewHBox(export, update)), nil, nil,
 			container.NewVScroll(form.Container),

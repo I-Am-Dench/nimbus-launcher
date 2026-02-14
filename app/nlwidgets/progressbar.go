@@ -42,31 +42,31 @@ func NewProgressBar() *ProgressBar {
 	}
 }
 
-func (p *ProgressBar) SetMax(f float64) {
+func (p ProgressBar) SetMax(f float64) {
 	p.progress.Max = f
 }
 
-func (p *ProgressBar) SetValue(f float64) {
+func (p ProgressBar) SetValue(f float64) {
 	p.progress.SetValue(f)
 }
 
-func (p *ProgressBar) SetText(s string) {
+func (p ProgressBar) SetText(s string) {
 	p.infiniteBinding.Set(s)
 }
 
-func (p *ProgressBar) HideProgress() {
+func (p ProgressBar) HideProgress() {
 	p.progress.Hide()
 	p.infinite.Hide()
 	p.infiniteLabel.Hide()
 }
 
-func (p *ProgressBar) Infinite() {
+func (p ProgressBar) Infinite() {
 	p.progress.Hide()
 	p.infinite.Show()
 	p.infiniteLabel.Show()
 }
 
-func (p *ProgressBar) Progress() {
+func (p ProgressBar) Progress() {
 	p.progress.Show()
 	p.infinite.Hide()
 	p.infiniteLabel.Show()

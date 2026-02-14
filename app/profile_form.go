@@ -56,7 +56,7 @@ func (p *ProfileForm) Set(profile Profile) {
 	}
 }
 
-func (p *ProfileForm) Get() (*Profile, *boot.Config) {
+func (p ProfileForm) Get() (*Profile, *boot.Config) {
 	id := p.id
 	if len(id) == 0 {
 		id = strconv.FormatInt(time.Now().Unix(), 10)
@@ -84,7 +84,7 @@ func (p *ProfileForm) Get() (*Profile, *boot.Config) {
 	}, p.bootForm.Get()
 }
 
-func (p *ProfileForm) GetXml() ServerXml {
+func (p ProfileForm) GetXml() ServerXml {
 	profile, bootConfig := p.Get()
 
 	bootData, _ := ldf.MarshalText(bootConfig)

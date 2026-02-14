@@ -135,7 +135,7 @@ func (s *ServerInfo) SaveBootConfig(path string, config *boot.Config) error {
 	return nil
 }
 
-func (s *ServerInfo) LoadBootConfig() (*boot.Config, error) {
+func (s ServerInfo) LoadBootConfig() (*boot.Config, error) {
 	data, err := os.ReadFile(s.Boot)
 	if err != nil {
 		return nil, fmt.Errorf("server info: load boot config: %v", err)
@@ -205,14 +205,7 @@ type Profile struct {
 	} `json:"-" xml:"-"`
 }
 
-func (p *Profile) Locale() string {
-	if p.Client != nil && len(p.Client.Locale) > 0 {
-		return p.Client.Locale
-	}
-	return p.Server.BootConfig().Locale
-}
-
-func (p *Profile) DefaultBootPath(dir string) string {
+func (p Profile) DefaultBootPath(dir string) string {
 	return filepath.Join(dir, BootDir, p.Id+".cfg")
 }
 
@@ -280,7 +273,7 @@ func (p *Profile) ServerListOnce(window fyne.Window, ctx context.Context, jar ht
 	return p.ServerList.once, p.ServerList.seq
 }
 
-func (p *Profile) SelectedServer() (patcher.Server, bool) {
+func (p Profile) SelectedServer() (patcher.Server, bool) {
 	return p.ServerList.selected, p.ServerList.selected != nil
 }
 
@@ -475,7 +468,7 @@ func NewProfileSelectorWidget(window fyne.Window, jar http.CookieJar, preference
 	return s, nil
 }
 
-func (s *ProfileSelectorWidget) DataChanged() {
+func (s ProfileSelectorWidget) DataChanged() {
 	s.selector.SetOptions(s.AppProfiles().Get())
 
 	if selected := fyne.CurrentApp().Preferences().String(PreferenceSelectProfile); len(selected) > 0 {
@@ -483,13 +476,13 @@ func (s *ProfileSelectorWidget) DataChanged() {
 	}
 }
 
-func (s *ProfileSelectorWidget) StartLoadServers() {
+func (s ProfileSelectorWidget) StartLoadServers() {
 	s.serverListButton.Disable()
 	s.activity.Show()
 	s.statusLabel.Hide()
 }
 
-func (s *ProfileSelectorWidget) StopLoadServers() {
+func (s ProfileSelectorWidget) StopLoadServers() {
 	s.serverListButton.Enable()
 	s.activity.Hide()
 	s.statusLabel.Show()
