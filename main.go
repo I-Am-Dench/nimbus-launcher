@@ -38,8 +38,13 @@ func main() {
 		w = io.MultiWriter(os.Stdout, file)
 	}
 
+	level := slog.LevelInfo
+	if !version.Get().IsRelease || os.Getenv("NIMBUS_DEBUG") == "1" {
+		level = slog.LevelDebug
+	}
+
 	slog.SetDefault(slog.New(logger.NewHandler(w, &slog.HandlerOptions{
-		Level: slog.LevelDebug,
+		Level: level,
 	})))
 	slog.Info("Starting Nimbus Launcher", "version", version.Get())
 
