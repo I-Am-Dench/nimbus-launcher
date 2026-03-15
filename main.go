@@ -22,6 +22,20 @@ const (
 	Cookies     = "./cookies.json"
 )
 
+// Programs compiled with -H=windowsgui don't have
+// an os.Stdout defined, so writes to the log writer
+// fail before writing to a file.
+//
+// LaxMultiWriter is just a writer which ignores errors.
+type LaxMultiWriter []io.Writer
+
+func (l LaxMultiWriter) Write(p []byte) (n int, err error) {
+	for _, w := range l {
+		w.Write(p)
+	}
+	return len(p), nil
+}
+
 type Saver interface {
 	Save() error
 }
@@ -35,7 +49,7 @@ func main() {
 	var w io.Writer = os.Stdout
 	if file != nil {
 		defer file.Close()
-		w = io.MultiWriter(os.Stdout, file)
+		w = LaxMultiWriter{os.Stdout, file}
 	}
 
 	level := slog.LevelInfo

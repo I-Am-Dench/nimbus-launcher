@@ -32,7 +32,7 @@ for %%s IN (
         )
 
         set tags=-tags release
-        if %1==standalone (
+        if "%1"=="standalone" (
             set tags=
         )
 
