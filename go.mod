@@ -6,7 +6,7 @@ toolchain go1.24.7
 
 require (
 	fyne.io/fyne/v2 v2.7.2
-	github.com/I-Am-Dench/goverbuild v0.14.0
+	github.com/I-Am-Dench/goverbuild v0.14.1-0.20260414014531-7e95e0cc995b
 )
 
 require golang.org/x/term v0.39.0

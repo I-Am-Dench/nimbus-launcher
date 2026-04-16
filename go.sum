@@ -6,6 +6,8 @@ github.com/BurntSushi/toml v1.6.0 h1:dRaEfpa2VI55EwlIW72hMRHdWouJeRF7TPYhI+AUQjk
 github.com/BurntSushi/toml v1.6.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
 github.com/I-Am-Dench/goverbuild v0.14.0 h1:CkhQe7K1DNoL7ZLVd39NFo+0hotnJwDIHMEdDkFxAVU=
 github.com/I-Am-Dench/goverbuild v0.14.0/go.mod h1:AMwIjqTtfpQIkLFAN65OvtC5iqDBylHe8HY7iLlBUuU=
+github.com/I-Am-Dench/goverbuild v0.14.1-0.20260414014531-7e95e0cc995b h1:ZUWlYpkp9ljvj+yEk41GwI0jmAUWGuOi8zvIqWTBJN0=
+github.com/I-Am-Dench/goverbuild v0.14.1-0.20260414014531-7e95e0cc995b/go.mod h1:AMwIjqTtfpQIkLFAN65OvtC5iqDBylHe8HY7iLlBUuU=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
