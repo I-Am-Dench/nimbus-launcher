@@ -81,7 +81,7 @@ func verifyManifest(manifest *manifest.Manifest) error {
 func (s Server) GetPatcher(options patcher.Options) (patcher.Patcher, error) {
 	config := int_netdevil.Config{
 		Locale:                 options.Locale,
-		FullDownload:           options.FullDownload,
+		DownloadType:           options.DownloadType,
 		ServerId:               options.ServerId,
 		Version:                s.Version,
 		VersionDirType:         int_netdevil.VersionDirTypeVersionHotfixOnly,

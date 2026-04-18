@@ -2,6 +2,7 @@ package patcher
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/I-Am-Dench/goverbuild/archive"
 	"github.com/I-Am-Dench/goverbuild/models/boot"
@@ -26,11 +27,29 @@ type Patch interface {
 	Run(context.Context, tracker.Tracker) error
 }
 
+type DownloadType int
+
+const (
+	DownloadTypeMinimal = DownloadType(iota)
+	DownloadTypeFull
+)
+
+func (d DownloadType) String() string {
+	switch d {
+	case DownloadTypeMinimal:
+		return "Minimal Download"
+	case DownloadTypeFull:
+		return "Full Download"
+	default:
+		return fmt.Sprintf("DownloadType(%d)", d)
+	}
+}
+
 type Options struct {
 	Log Logger
 
 	Locale           string
-	FullDownload     bool
+	DownloadType     DownloadType
 	InstallDirectory string
 	ServerId         string
 }

@@ -7,6 +7,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"github.com/I-Am-Dench/nimbus-launcher/client"
 	"github.com/I-Am-Dench/nimbus-launcher/internal/optional"
+	"github.com/I-Am-Dench/nimbus-launcher/patcher"
 )
 
 type ClientSettings struct {
@@ -14,10 +15,11 @@ type ClientSettings struct {
 	clientName       *widget.Entry
 	packed           *widget.Check
 	locale           *ItemSelector[string]
-	fullDownload     *widget.Check
+	downloadType     *ItemSelector[patcher.DownloadType]
 
 	resetPacked       *widget.Button
-	resetFullDownload *widget.Button
+	resetLocale       *widget.Button
+	resetDownloadType *widget.Button
 
 	isDefault bool
 }
@@ -28,7 +30,7 @@ func NewClientSettings(window fyne.Window, isDefault bool, config ...client.Opti
 		clientName:       widget.NewEntry(),
 		packed:           widget.NewCheck("Uses catalog (i.e. versions/primary.pki)", func(b bool) {}),
 		locale:           NewLocaleSelector("", !isDefault),
-		fullDownload:     widget.NewCheck("Download before or during play", func(b bool) {}),
+		downloadType:     NewDownloadTypeSelector(-1, !isDefault),
 
 		isDefault: isDefault,
 	}
@@ -40,11 +42,15 @@ func NewClientSettings(window fyne.Window, isDefault bool, config ...client.Opti
 	})
 	c.resetPacked.Hidden = isDefault
 
-	c.resetFullDownload = widget.NewButtonWithIcon("", theme.ViewRefreshIcon(), func() {
-		c.fullDownload.Partial = true
-		c.fullDownload.Refresh()
+	c.resetLocale = widget.NewButtonWithIcon("", theme.ViewRefreshIcon(), func() {
+		c.locale.ClearSelected()
 	})
-	c.resetFullDownload.Hidden = isDefault
+	c.resetLocale.Hidden = isDefault
+
+	c.resetDownloadType = widget.NewButtonWithIcon("", theme.ViewRefreshIcon(), func() {
+		c.downloadType.ClearSelected()
+	})
+	c.resetDownloadType.Hidden = isDefault
 
 	if len(config) > 0 {
 		c.Set(config[0])
@@ -57,8 +63,8 @@ func (c ClientSettings) Form() []*widget.FormItem {
 		widget.NewFormItem("Directory", c.installDirectory),
 		widget.NewFormItem("Name", c.clientName),
 		widget.NewFormItem("Packed", container.NewBorder(nil, nil, c.packed, c.resetPacked)),
-		widget.NewFormItem("Locale", c.locale),
-		widget.NewFormItem("Full Download", container.NewBorder(nil, nil, c.fullDownload, c.resetFullDownload)),
+		widget.NewFormItem("Locale", container.NewBorder(nil, nil, nil, c.resetLocale, c.locale)),
+		widget.NewFormItem("Full Download", container.NewBorder(nil, nil, nil, c.resetDownloadType, c.downloadType)),
 	}
 }
 
@@ -73,9 +79,8 @@ func (c ClientSettings) Set(config client.Optional) {
 
 	c.locale.SetSelected(config.Locale)
 
-	c.fullDownload.Partial = !c.isDefault && !config.FullDownload.HasValue()
-	if !c.fullDownload.Partial {
-		c.fullDownload.SetChecked(config.FullDownload.Value)
+	if config.DownloadType.HasValue() {
+		c.downloadType.SetSelected(config.DownloadType.Value)
 	}
 }
 
@@ -85,9 +90,9 @@ func (c ClientSettings) GetOptional() client.Optional {
 		isPacked = optional.From(c.packed.Checked)
 	}
 
-	isFullDownload := optional.O[bool]{}
-	if !c.fullDownload.Partial {
-		isFullDownload = optional.From(c.fullDownload.Checked)
+	downloadType := optional.O[patcher.DownloadType]{}
+	if c.downloadType.SelectedIndex() >= 0 {
+		downloadType = optional.From(c.downloadType.Selected)
 	}
 
 	return client.Optional{
@@ -95,7 +100,7 @@ func (c ClientSettings) GetOptional() client.Optional {
 		Name:         c.clientName.Text,
 		IsPacked:     isPacked,
 		Locale:       c.locale.Selected,
-		FullDownload: isFullDownload,
+		DownloadType: downloadType,
 	}
 }
 
@@ -105,6 +110,6 @@ func (c ClientSettings) Get() client.Config {
 		Name:         c.clientName.Text,
 		IsPacked:     !c.packed.Partial && c.packed.Checked,
 		Locale:       c.locale.Selected,
-		FullDownload: !c.fullDownload.Partial && c.fullDownload.Checked,
+		DownloadType: c.downloadType.Selected,
 	}
 }

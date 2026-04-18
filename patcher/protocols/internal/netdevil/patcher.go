@@ -48,7 +48,7 @@ var errMissingManifestEntry = errors.New("no manifest entry")
 
 type Config struct {
 	Locale         string
-	FullDownload   bool
+	DownloadType   patcher.DownloadType
 	ServerId       string
 	Version        string
 	VersionDirType VersionDirType
@@ -83,6 +83,10 @@ func NewPatcher(config Config, downloader Downloader) *Patcher {
 		packEntries:   make(map[string]manifest.Entry),
 		packDownloads: make(map[string]manifest.Entry),
 	}
+}
+
+func (p Patcher) FullDownload() bool {
+	return p.DownloadType == patcher.DownloadTypeFull
 }
 
 func (p Patcher) versions(name string, atRoot ...bool) string {
@@ -452,7 +456,7 @@ func (p Patcher) shouldIgnore(name string, exclude []string) bool {
 	}
 
 	// Only download packs for During Play (High-Speed)
-	if p.FullDownload && strings.HasSuffix(name, ".pk") {
+	if p.FullDownload() && strings.HasSuffix(name, ".pk") {
 		return true
 	}
 
@@ -530,7 +534,7 @@ func (p Patcher) getGameManifests(ctx context.Context, index, hotfix *manifest.M
 		return nil, nil, nil, err
 	}
 
-	if p.FullDownload {
+	if p.FullDownload() {
 		return downloadManifest, downloadManifest, nil, nil
 	}
 
@@ -547,7 +551,7 @@ func (p *Patcher) DoUnpacked(ctx context.Context, index, hotfix *manifest.Manife
 		return nil, ctx.Err()
 	}
 
-	downloadManifest, _, addedHotfix, err := p.getGameManifests(ctx, index, hotfix, p.FullDownload)
+	downloadManifest, _, addedHotfix, err := p.getGameManifests(ctx, index, hotfix, p.FullDownload())
 	if err != nil {
 		return nil, fmt.Errorf("patcher: unpacked: %w", err)
 	}
@@ -570,7 +574,7 @@ func (p *Patcher) DoPacked(ctx context.Context, index, hotfix *manifest.Manifest
 		return nil, ctx.Err()
 	}
 
-	downloadManifest, gameManifest, addedHotfix, err := p.getGameManifests(ctx, index, hotfix, p.FullDownload)
+	downloadManifest, gameManifest, addedHotfix, err := p.getGameManifests(ctx, index, hotfix, p.FullDownload())
 	if err != nil {
 		return nil, fmt.Errorf("patcher: packed: %w", err)
 	}

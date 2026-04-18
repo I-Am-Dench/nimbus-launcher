@@ -202,8 +202,8 @@ func (l *LauncherWidget) ClientConfig() client.Config {
 			c.Locale = profile.Client.Locale
 		}
 
-		if profile.Client.FullDownload.HasValue() {
-			c.FullDownload = profile.Client.FullDownload.Value
+		if profile.Client.DownloadType.HasValue() {
+			c.DownloadType = profile.Client.DownloadType.Value
 		}
 	}
 
@@ -291,7 +291,7 @@ func (l *LauncherWidget) GetBoot(client client.Config, profile *Profile) (boot.C
 		Log: &l.ProgressBar,
 
 		Locale:           client.Locale,
-		FullDownload:     client.FullDownload,
+		DownloadType:     client.DownloadType,
 		InstallDirectory: client.Directory,
 		ServerId:         profile.Id,
 	})

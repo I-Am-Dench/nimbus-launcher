@@ -32,7 +32,7 @@ func (p Patcher) GetBoot(packed bool) boot.Config {
 	}
 
 	manifestFile := ""
-	if !p.patcher.FullDownload {
+	if !p.patcher.FullDownload() {
 		manifestFile = int_netdevil.GameFile
 	}
 

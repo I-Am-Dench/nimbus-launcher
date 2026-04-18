@@ -87,7 +87,7 @@ func NewBootForm() *BootForm {
 		serverName:       widget.NewEntry(),
 		authServerIp:     widget.NewEntry(),
 		ugcUse3dServices: widget.NewCheck("", func(b bool) {}),
-		locale:           nlwidgets.NewLocaleSelector(""),
+		locale:           nlwidgets.NewLocaleSelector("", false),
 		patchServerIp:    widget.NewEntry(),
 		patchServerPort:  nlwidgets.NewIntegerEntry(),
 		logging:          nlwidgets.NewIntegerEntry(),

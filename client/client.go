@@ -8,6 +8,7 @@ import (
 
 	"github.com/I-Am-Dench/nimbus-launcher/client/disk"
 	"github.com/I-Am-Dench/nimbus-launcher/internal/optional"
+	"github.com/I-Am-Dench/nimbus-launcher/patcher"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher/tracker"
 )
 
@@ -16,25 +17,27 @@ const (
 	DefaultExe = "client" + string(filepath.Separator) + "legouniverse.exe"
 )
 
+type DownloadType = patcher.DownloadType
+
 type Optional struct {
-	Directory    string           `json:"directory"`
-	Name         string           `json:"name"`
-	IsPacked     optional.O[bool] `json:"packed"`
-	Locale       string           `json:"locale,omitempty"`
-	FullDownload optional.O[bool] `json:"fullDownload"`
+	Directory    string                   `json:"directory"`
+	Name         string                   `json:"name"`
+	IsPacked     optional.O[bool]         `json:"packed"`
+	Locale       string                   `json:"locale,omitempty"`
+	DownloadType optional.O[DownloadType] `json:"downloadType"`
 }
 
 func (o Optional) IsEmpty() bool {
-	return len(o.Directory) == 0 && len(o.Name) == 0 && !o.IsPacked.HasValue() && len(o.Locale) == 0 && !o.FullDownload.HasValue()
+	return len(o.Directory) == 0 && len(o.Name) == 0 && !o.IsPacked.HasValue() && len(o.Locale) == 0 && !o.DownloadType.HasValue()
 }
 
 type Config struct {
-	Directory    string `json:"directory"`
-	Name         string `json:"name"`
-	IsPacked     bool   `json:"packed"`
-	Locale       string `json:"locale"`
-	FullDownload bool   `json:"fullDownload"`
-	Etc          Etc    `json:"etc,omitzero"`
+	Directory    string       `json:"directory"`
+	Name         string       `json:"name"`
+	IsPacked     bool         `json:"packed"`
+	Locale       string       `json:"locale"`
+	DownloadType DownloadType `json:"downloadType"`
+	Etc          Etc          `json:"etc,omitzero"`
 }
 
 func (c Config) ClientPath() string {
@@ -51,7 +54,7 @@ func (c Config) ToOptional() Optional {
 		Name:         c.Name,
 		IsPacked:     optional.From(c.IsPacked),
 		Locale:       c.Locale,
-		FullDownload: optional.From(c.FullDownload),
+		DownloadType: optional.From(c.DownloadType),
 	}
 }
 
