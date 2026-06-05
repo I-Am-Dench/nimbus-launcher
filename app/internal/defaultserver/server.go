@@ -2,6 +2,7 @@ package defaultserver
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 
 	"github.com/I-Am-Dench/goverbuild/archive"
@@ -56,7 +57,14 @@ func (p Patcher) GetVersion(_ context.Context, packed bool) (*archive.Archive, e
 	if !packed {
 		return nil, nil
 	}
-	return archive.Open(p.InstallDirectory, filepath.Join(p.InstallDirectory, patcher.VersionsDir, patcher.CatalogName))
+
+	catalogName := filepath.Join(p.InstallDirectory, patcher.VersionsDir, patcher.CatalogName)
+
+	ar, err := archive.Open(p.InstallDirectory, catalogName)
+	if err != nil {
+		return nil, fmt.Errorf("patcher is configured to a packed installation, but failed to open catalog: %v", catalogName)
+	}
+	return ar, nil
 }
 
 func (p Patcher) GetPatch(_ context.Context, _ *archive.Archive) (patcher.Patch, error) {

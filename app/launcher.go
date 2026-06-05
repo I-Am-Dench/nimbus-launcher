@@ -259,7 +259,7 @@ func (l *LauncherWidget) GetBoot(client client.Config, profile *Profile) (BootCo
 
 	tkr, err := client.Tracker(TrackerDir)
 	if err != nil {
-		return BootConfig{}, err
+		return BootConfig{}, fmt.Errorf("tracker: %v", err)
 	}
 	defer tkr.Close()
 
@@ -295,12 +295,12 @@ func (l *LauncherWidget) GetBoot(client client.Config, profile *Profile) (BootCo
 		ServerId:         profile.Id,
 	})
 	if err != nil {
-		return BootConfig{}, err
+		return BootConfig{}, fmt.Errorf("get patcher: %v", err)
 	}
 
 	ar, err := patcher.GetVersion(ctx, client.IsPacked)
 	if err != nil {
-		return BootConfig{}, err
+		return BootConfig{}, fmt.Errorf("get version: %v", err)
 	}
 	defer func() {
 		if ar != nil {
@@ -312,7 +312,7 @@ func (l *LauncherWidget) GetBoot(client client.Config, profile *Profile) (BootCo
 
 	patch, err := patcher.GetPatch(ctx, ar)
 	if err != nil {
-		return BootConfig{}, err
+		return BootConfig{}, fmt.Errorf("get patch: %v", err)
 	}
 
 	l.SetMax(float64(patch.Total()))
@@ -328,7 +328,7 @@ func (l *LauncherWidget) GetBoot(client client.Config, profile *Profile) (BootCo
 
 	l.Progress()
 	if err := patch.Run(ctx, tkr); err != nil {
-		return BootConfig{}, err
+		return BootConfig{}, fmt.Errorf("run patch: %v", err)
 	}
 	l.Print("Patcher completed!")
 
