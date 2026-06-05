@@ -19,7 +19,6 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/I-Am-Dench/goverbuild/encoding/ldf"
-	"github.com/I-Am-Dench/goverbuild/models/boot"
 	"github.com/I-Am-Dench/nimbus-launcher/app/nldialogs"
 	"github.com/I-Am-Dench/nimbus-launcher/app/nlwidgets"
 	"github.com/I-Am-Dench/nimbus-launcher/client"
@@ -242,10 +241,10 @@ func (l *LauncherWidget) DataChanged() {
 	}
 }
 
-func (l *LauncherWidget) GetBoot(client client.Config, profile *Profile) (boot.Config, error) {
+func (l *LauncherWidget) GetBoot(client client.Config, profile *Profile) (BootConfig, error) {
 	server, ok := profile.SelectedServer()
 	if !ok {
-		return boot.Config{}, errors.New("attempted to launch client without a selected server")
+		return BootConfig{}, errors.New("attempted to launch client without a selected server")
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -260,7 +259,7 @@ func (l *LauncherWidget) GetBoot(client client.Config, profile *Profile) (boot.C
 
 	tkr, err := client.Tracker(TrackerDir)
 	if err != nil {
-		return boot.Config{}, err
+		return BootConfig{}, err
 	}
 	defer tkr.Close()
 
@@ -283,7 +282,7 @@ func (l *LauncherWidget) GetBoot(client client.Config, profile *Profile) (boot.C
 		tkr.State().Forward = true
 
 		if err := os.MkdirAll(client.Directory, 0755); err != nil {
-			return boot.Config{}, err
+			return BootConfig{}, err
 		}
 	}
 
@@ -296,12 +295,12 @@ func (l *LauncherWidget) GetBoot(client client.Config, profile *Profile) (boot.C
 		ServerId:         profile.Id,
 	})
 	if err != nil {
-		return boot.Config{}, err
+		return BootConfig{}, err
 	}
 
 	ar, err := patcher.GetVersion(ctx, client.IsPacked)
 	if err != nil {
-		return boot.Config{}, err
+		return BootConfig{}, err
 	}
 	defer func() {
 		if ar != nil {
@@ -313,7 +312,7 @@ func (l *LauncherWidget) GetBoot(client client.Config, profile *Profile) (boot.C
 
 	patch, err := patcher.GetPatch(ctx, ar)
 	if err != nil {
-		return boot.Config{}, err
+		return BootConfig{}, err
 	}
 
 	l.SetMax(float64(patch.Total()))
@@ -324,12 +323,12 @@ func (l *LauncherWidget) GetBoot(client client.Config, profile *Profile) (boot.C
 	settings := l.AppSettings().Get()
 
 	if patch.Total() > 0 && settings.Launch.ReviewPatchesBeforeUpdate && !nldialogs.AskContinuePatch(patch.Summary()) {
-		return boot.Config{}, errors.New("patch rejected")
+		return BootConfig{}, errors.New("patch rejected")
 	}
 
 	l.Progress()
 	if err := patch.Run(ctx, tkr); err != nil {
-		return boot.Config{}, err
+		return BootConfig{}, err
 	}
 	l.Print("Patcher completed!")
 
@@ -347,7 +346,10 @@ func (l *LauncherWidget) GetBoot(client client.Config, profile *Profile) (boot.C
 	bootConfig.PasswordURL = storedConfig.PasswordURL
 	bootConfig.RegisterURL = storedConfig.RegisterURL
 
-	return bootConfig, nil
+	return BootConfig{
+		Config: bootConfig,
+		Map:    storedConfig.Map,
+	}, nil
 }
 
 func (l *LauncherWidget) ShowError(err error) {

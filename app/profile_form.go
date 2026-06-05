@@ -15,7 +15,6 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/I-Am-Dench/goverbuild/encoding/ldf"
-	"github.com/I-Am-Dench/goverbuild/models/boot"
 	"github.com/I-Am-Dench/nimbus-launcher/client"
 )
 
@@ -56,7 +55,7 @@ func (p *ProfileForm) Set(profile Profile) {
 	}
 }
 
-func (p ProfileForm) Get() (*Profile, *boot.Config) {
+func (p ProfileForm) Get() (*Profile, *BootConfig) {
 	id := p.id
 	if len(id) == 0 {
 		id = strconv.FormatInt(time.Now().Unix(), 10)
@@ -101,7 +100,7 @@ func (p ProfileForm) GetXml() ServerXml {
 func (p *ProfileForm) SetXml(serverXml ServerXml) error {
 	p.name.SetText(serverXml.Name)
 
-	bootConfig := boot.Config{}
+	bootConfig := BootConfig{}
 	if err := ldf.UnmarshalText(serverXml.Boot.Text, &bootConfig); err != nil {
 		return err
 	}
@@ -156,7 +155,7 @@ func NewProfileForm(profile *Profile, window fyne.Window) *ProfileForm {
 	form := &ProfileForm{
 		name:       widget.NewEntry(),
 		serviceUrl: widget.NewEntry(),
-		bootForm:   NewBootForm(),
+		bootForm:   NewBootForm(window),
 	}
 
 	form.name.PlaceHolder = "My Server"

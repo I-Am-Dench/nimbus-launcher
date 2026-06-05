@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/I-Am-Dench/goverbuild/archive"
+	"github.com/I-Am-Dench/goverbuild/encoding/ldf"
 	"github.com/I-Am-Dench/goverbuild/models/boot"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher/tracker"
@@ -12,8 +13,13 @@ import (
 
 var _ patcher.Server = (*Server)(nil)
 
+type BootConfig struct {
+	boot.Config
+	ldf.Map
+}
+
 type Server struct {
-	BootConfig boot.Config
+	BootConfig BootConfig
 }
 
 func (s Server) Info() patcher.ServerInfo {
@@ -31,7 +37,7 @@ func (s Server) Status() *patcher.Status {
 func (s Server) GetPatcher(o patcher.Options) (patcher.Patcher, error) {
 	return Patcher{
 		InstallDirectory: o.InstallDirectory,
-		BootConfig:       s.BootConfig,
+		BootConfig:       s.BootConfig.Config,
 	}, nil
 }
 

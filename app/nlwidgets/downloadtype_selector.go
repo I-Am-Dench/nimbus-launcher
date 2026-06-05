@@ -23,7 +23,6 @@ func NewDownloadTypeSelector(initial patcher.DownloadType, optional bool) *ItemS
 			}
 		},
 		func(a, b patcher.DownloadType) bool { return a == b },
-		func(patcher.DownloadType) {},
 	)
 	selector.PlaceHolder = "(Default)"
 

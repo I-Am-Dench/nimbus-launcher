@@ -11,7 +11,6 @@ func NewLocaleSelector(initial string, optional bool) *ItemSelector[string] {
 			return locale.GetName(l)
 		},
 		func(a, b string) bool { return a == b },
-		func(string) {},
 	)
 	selector.PlaceHolder = "(Default)"
 

@@ -114,10 +114,10 @@ type ServerInfo struct {
 
 	Patcher *PatcherConfig `json:"patcher,omitempty" xml:"patcher,omitempty"`
 
-	bootConfig *boot.Config `json:"-" xml:"-"`
+	bootConfig *BootConfig `json:"-" xml:"-"`
 }
 
-func (s *ServerInfo) SaveBootConfig(path string, config *boot.Config) error {
+func (s *ServerInfo) SaveBootConfig(path string, config *BootConfig) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return fmt.Errorf("server info: save boot config: %v", err)
 	}
@@ -135,13 +135,13 @@ func (s *ServerInfo) SaveBootConfig(path string, config *boot.Config) error {
 	return nil
 }
 
-func (s ServerInfo) LoadBootConfig() (*boot.Config, error) {
+func (s ServerInfo) LoadBootConfig() (*BootConfig, error) {
 	data, err := os.ReadFile(s.Boot)
 	if err != nil {
 		return nil, fmt.Errorf("server info: load boot config: %v", err)
 	}
 
-	config := &boot.Config{}
+	config := &BootConfig{}
 	if err := ldf.UnmarshalText(data, config); err != nil {
 		return nil, fmt.Errorf("server info: load boot config: %v", err)
 	}
@@ -149,7 +149,7 @@ func (s ServerInfo) LoadBootConfig() (*boot.Config, error) {
 	return config, nil
 }
 
-func (s *ServerInfo) BootConfig() boot.Config {
+func (s *ServerInfo) BootConfig() BootConfig {
 	if s.bootConfig != nil {
 		return *s.bootConfig
 	}
@@ -157,7 +157,7 @@ func (s *ServerInfo) BootConfig() boot.Config {
 	config, err := s.LoadBootConfig()
 	if err != nil {
 		slog.Error("Failed to load boot config", "error", err)
-		return boot.Config{}
+		return BootConfig{}
 	}
 
 	return *config
@@ -277,13 +277,16 @@ func (p Profile) SelectedServer() (patcher.Server, bool) {
 	return p.ServerList.selected, p.ServerList.selected != nil
 }
 
-func DefaultBootConfig() boot.Config {
+func DefaultBootConfig() BootConfig {
 	config := boot.DefaultConfig()
 	config.ManifestFile = ""
-	return config
+	return BootConfig{
+		Config: config,
+		Map:    ldf.Map{},
+	}
 }
 
-func DefaultProfiles(bootConfig boot.Config, settingsDir string) func() []*Profile {
+func DefaultProfiles(bootConfig BootConfig, settingsDir string) func() []*Profile {
 	return func() []*Profile {
 		profile := &Profile{
 			Id:   strconv.FormatInt(time.Now().Unix(), 10),
@@ -393,7 +396,8 @@ func NewProfileSelectorWidget(window fyne.Window, jar http.CookieJar, preference
 	s.activity.Start()
 	s.activity.Hide()
 
-	s.selector = nlwidgets.NewItemSelector(s.AppProfiles().Get(), profileName, compareProfiles, s.SelectServer)
+	s.selector = nlwidgets.NewItemSelector(s.AppProfiles().Get(), profileName, compareProfiles)
+	s.selector.OnChanged = s.SelectServer
 	s.selector.PlaceHolder = "(Select server)"
 
 	serverInfo := widget.NewForm(

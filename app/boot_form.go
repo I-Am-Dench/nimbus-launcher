@@ -3,10 +3,14 @@ package app
 import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/I-Am-Dench/goverbuild/models/boot"
+	"github.com/I-Am-Dench/nimbus-launcher/app/internal/defaultserver"
 	"github.com/I-Am-Dench/nimbus-launcher/app/nlwidgets"
 )
+
+type BootConfig = defaultserver.BootConfig
 
 type BootForm struct {
 	Container *fyne.Container
@@ -31,9 +35,11 @@ type BootForm struct {
 	crashLogUrl      *widget.Entry
 	manifestFile     *widget.Entry
 	trackDiskUsage   *widget.Check
+
+	ldfForm *nlwidgets.LdfForm
 }
 
-func (b BootForm) Set(config boot.Config) {
+func (b BootForm) Set(config BootConfig) {
 	b.serverName.SetText(config.ServerName)
 	b.authServerIp.SetText(config.AuthServerIP)
 	b.ugcUse3dServices.SetChecked(config.UGCUse3dServices)
@@ -55,34 +61,39 @@ func (b BootForm) Set(config boot.Config) {
 	b.crashLogUrl.SetText(config.CrashLogURL)
 	b.manifestFile.SetText(config.ManifestFile)
 	b.trackDiskUsage.SetChecked(config.TrackDiskUsage)
+
+	b.ldfForm.Set(config.Map)
 }
 
-func (b BootForm) Get() *boot.Config {
-	return &boot.Config{
-		ServerName:       b.serverName.Text,
-		PatchServerIP:    b.patchServerIp.Text,
-		AuthServerIP:     b.authServerIp.Text,
-		PatchServerPort:  int32(b.patchServerPort.Value()),
-		Logging:          int32(b.logging.Value()),
-		DataCenterID:     uint32(b.dataCenterId.Value()),
-		CPCode:           int32(b.cpCode.Value()),
-		AkamaiDLM:        b.akamaiDLM.Checked,
-		PatchServerDir:   b.patchServerDir.Text,
-		UGCUse3dServices: b.ugcUse3dServices.Checked,
-		UGCServerIP:      b.ugcServerIp.Text,
-		UGCServerDir:     b.ugcServerDir.Text,
-		PasswordURL:      b.passUrl.Text,
-		SigninURL:        b.signinUrl.Text,
-		SignupURL:        b.signupUrl.Text,
-		RegisterURL:      b.registerUrl.Text,
-		CrashLogURL:      b.crashLogUrl.Text,
-		Locale:           b.locale.Selected,
-		ManifestFile:     b.manifestFile.Text,
-		TrackDiskUsage:   b.trackDiskUsage.Checked,
+func (b BootForm) Get() *BootConfig {
+	return &BootConfig{
+		Config: boot.Config{
+			ServerName:       b.serverName.Text,
+			PatchServerIP:    b.patchServerIp.Text,
+			AuthServerIP:     b.authServerIp.Text,
+			PatchServerPort:  int32(b.patchServerPort.Value()),
+			Logging:          int32(b.logging.Value()),
+			DataCenterID:     uint32(b.dataCenterId.Value()),
+			CPCode:           int32(b.cpCode.Value()),
+			AkamaiDLM:        b.akamaiDLM.Checked,
+			PatchServerDir:   b.patchServerDir.Text,
+			UGCUse3dServices: b.ugcUse3dServices.Checked,
+			UGCServerIP:      b.ugcServerIp.Text,
+			UGCServerDir:     b.ugcServerDir.Text,
+			PasswordURL:      b.passUrl.Text,
+			SigninURL:        b.signinUrl.Text,
+			SignupURL:        b.signupUrl.Text,
+			RegisterURL:      b.registerUrl.Text,
+			CrashLogURL:      b.crashLogUrl.Text,
+			Locale:           b.locale.Selected,
+			ManifestFile:     b.manifestFile.Text,
+			TrackDiskUsage:   b.trackDiskUsage.Checked,
+		},
+		Map: b.ldfForm.Get(),
 	}
 }
 
-func NewBootForm() *BootForm {
+func NewBootForm(window fyne.Window) *BootForm {
 	form := &BootForm{
 		serverName:       widget.NewEntry(),
 		authServerIp:     widget.NewEntry(),
@@ -104,6 +115,8 @@ func NewBootForm() *BootForm {
 		crashLogUrl:      widget.NewEntry(),
 		manifestFile:     widget.NewEntry(),
 		trackDiskUsage:   widget.NewCheck("", func(b bool) {}),
+
+		ldfForm: nlwidgets.NewLdfForm(),
 	}
 
 	form.serverName.PlaceHolder = "Overbuild Universe (US)"
@@ -114,6 +127,11 @@ func NewBootForm() *BootForm {
 	form.ugcServerIp.PlaceHolder = "127.0.0.1"
 	form.ugcServerDir.PlaceHolder = "3dservices"
 	form.manifestFile.PlaceHolder = "trunk.txt"
+
+	addLdfButton := widget.NewButtonWithIcon("Add/Edit Inputs", theme.DocumentCreateIcon(), func() {
+		form.ldfForm.ShowDialog(window)
+	})
+	addLdfButton.Importance = widget.HighImportance
 
 	form.Container = container.NewVBox(
 		widget.NewForm(
@@ -147,6 +165,9 @@ func NewBootForm() *BootForm {
 				),
 			),
 		),
+		widget.NewLabel("Custom Data"),
+		form.ldfForm.Summary(),
+		container.NewBorder(nil, nil, addLdfButton, nil),
 	)
 
 	return form

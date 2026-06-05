@@ -14,7 +14,6 @@ import (
 	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"github.com/I-Am-Dench/goverbuild/models/boot"
 	"github.com/I-Am-Dench/nimbus-launcher/app/nlwidgets"
 	"github.com/I-Am-Dench/nimbus-launcher/client"
 )
@@ -63,7 +62,8 @@ func newProfileSettingsWidget(window fyne.Window, preferences Preferences, setti
 	)
 
 	// === Selector === //
-	p.profileSelector = nlwidgets.NewItemSelector(p.AppProfiles().Get(), profileName, compareProfiles, func(profile *Profile) {
+	p.profileSelector = nlwidgets.NewItemSelector(p.AppProfiles().Get(), profileName, compareProfiles)
+	p.profileSelector.OnChanged = func(profile *Profile) {
 		if profile == nil {
 			return
 		}
@@ -77,7 +77,7 @@ func newProfileSettingsWidget(window fyne.Window, preferences Preferences, setti
 		}
 
 		clientSettingsOverride.Open = profile.Client != nil
-	})
+	}
 	p.profileSelector.PlaceHolder = "(Select server)"
 	p.profileSelector.SetSelectedIndex(0)
 
@@ -226,7 +226,7 @@ func (p profileSettingsWidget) ShowProfileList() {
 	p.content.Add(p.listContainer)
 }
 
-func (p profileSettingsWidget) SaveProfile(profile *Profile, bootConfig *boot.Config) error {
+func (p profileSettingsWidget) SaveProfile(profile *Profile, bootConfig *BootConfig) error {
 	bootPath := profile.Server.Boot
 	if len(bootPath) == 0 { // Allows manually edited boot paths
 		bootPath = profile.DefaultBootPath(p.settingsDir)
