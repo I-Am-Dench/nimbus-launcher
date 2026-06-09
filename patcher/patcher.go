@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/I-Am-Dench/goverbuild/archive"
+	"github.com/I-Am-Dench/goverbuild/encoding/ldf"
 	"github.com/I-Am-Dench/goverbuild/models/boot"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher/origin"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher/tracker"
@@ -55,7 +56,7 @@ type Options struct {
 }
 
 type Patcher interface {
-	GetBoot(packed bool) boot.Config
+	GetBoot(packed bool) (boot boot.Config, custom ldf.Map)
 	GetVersion(ctx context.Context, packed bool) (*archive.Archive, error)
 	GetPatch(context.Context, *archive.Archive) (Patch, error)
 }

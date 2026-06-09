@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/I-Am-Dench/goverbuild/archive"
+	"github.com/I-Am-Dench/goverbuild/encoding/ldf"
 	"github.com/I-Am-Dench/goverbuild/models/boot"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher"
 	int_netdevil "github.com/I-Am-Dench/nimbus-launcher/patcher/protocols/internal/netdevil"
@@ -22,7 +23,7 @@ type Patcher struct {
 	exclude []string
 }
 
-func (p Patcher) GetBoot(packed bool) boot.Config {
+func (p Patcher) GetBoot(packed bool) (boot.Config, ldf.Map) {
 	manifestFile := ""
 	if !p.patcher.FullDownload() {
 		manifestFile = int_netdevil.GameFile
@@ -43,7 +44,7 @@ func (p Patcher) GetBoot(packed bool) boot.Config {
 		Locale:           p.server.Language,
 		ManifestFile:     manifestFile,
 		UseCatalog:       packed,
-	}
+	}, ldf.Map{}
 }
 
 func (p Patcher) getPatcherIni(ctx context.Context) (Ini, error) {
@@ -74,7 +75,7 @@ func (p *Patcher) GetVersion(ctx context.Context, packed bool) (*archive.Archive
 	}
 
 	if excludeValue, ok := patcherIni[osExclude]; ok {
-		for _, path := range strings.Split(excludeValue, ",") {
+		for path := range strings.SplitSeq(excludeValue, ",") {
 			if s := strings.TrimSpace(path); len(s) > 0 {
 				p.exclude = append(p.exclude, s)
 			}

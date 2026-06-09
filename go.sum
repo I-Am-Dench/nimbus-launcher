@@ -20,6 +20,8 @@ github.com/I-Am-Dench/goverbuild v0.14.1-0.20260605203627-5798b8672465 h1:+k3tKp
 github.com/I-Am-Dench/goverbuild v0.14.1-0.20260605203627-5798b8672465/go.mod h1:AMwIjqTtfpQIkLFAN65OvtC5iqDBylHe8HY7iLlBUuU=
 github.com/I-Am-Dench/goverbuild v0.14.1-0.20260605215424-5b78879715f0 h1:FJPyOjyf/A1LrGdA4ulYZB/r62sNFy0RG5pDpgzCArE=
 github.com/I-Am-Dench/goverbuild v0.14.1-0.20260605215424-5b78879715f0/go.mod h1:AMwIjqTtfpQIkLFAN65OvtC5iqDBylHe8HY7iLlBUuU=
+github.com/I-Am-Dench/goverbuild v0.14.1-0.20260607043106-e5f9ea027524 h1:pO22GPxfWIGwHhkIx9ZgZpi+o8HmE6bZC9GWenhYeX4=
+github.com/I-Am-Dench/goverbuild v0.14.1-0.20260607043106-e5f9ea027524/go.mod h1:AMwIjqTtfpQIkLFAN65OvtC5iqDBylHe8HY7iLlBUuU=
 github.com/clipperhouse/uax29/v2 v2.7.0 h1:+gs4oBZ2gPfVrKPthwbMzWZDaAFPGYK72F0NJv2v7Vk=
 github.com/clipperhouse/uax29/v2 v2.7.0/go.mod h1:EFJ2TJMRUaplDxHKj1qAEhCtQPW2tJSwu5BF98AuoVM=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=

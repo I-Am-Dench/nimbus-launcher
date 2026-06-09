@@ -87,4 +87,5 @@ func main() {
 	}
 
 	a.Start()
+	slog.Debug("Application shutdown")
 }

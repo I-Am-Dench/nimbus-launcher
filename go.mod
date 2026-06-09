@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	fyne.io/fyne/v2 v2.7.4
-	github.com/I-Am-Dench/goverbuild v0.14.1-0.20260605215424-5b78879715f0
+	github.com/I-Am-Dench/goverbuild v0.14.1-0.20260607043106-e5f9ea027524
 )
 
 require golang.org/x/term v0.43.0

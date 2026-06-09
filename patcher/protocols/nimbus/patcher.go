@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/I-Am-Dench/goverbuild/archive"
+	"github.com/I-Am-Dench/goverbuild/encoding/ldf"
 	"github.com/I-Am-Dench/goverbuild/models/boot"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher"
 	int_netdevil "github.com/I-Am-Dench/nimbus-launcher/patcher/protocols/internal/netdevil"
@@ -16,7 +17,7 @@ type Patcher struct {
 	server  Server
 }
 
-func (p Patcher) GetBoot(packed bool) boot.Config {
+func (p Patcher) GetBoot(packed bool) (boot.Config, ldf.Map) {
 	ugc := UGC{
 		Host:         "localhost",
 		Dir:          "3dservices",
@@ -36,6 +37,11 @@ func (p Patcher) GetBoot(packed bool) boot.Config {
 		manifestFile = int_netdevil.GameFile
 	}
 
+	customConfig := ldf.Map{}
+	for _, entry := range p.server.Game.Config {
+		customConfig[entry.Key] = entry.Value
+	}
+
 	return boot.Config{
 		ServerName:       p.server.Name,
 		PatchServerIP:    p.server.Patcher.Host,
@@ -51,7 +57,7 @@ func (p Patcher) GetBoot(packed bool) boot.Config {
 		Locale:           p.patcher.Locale,
 		ManifestFile:     manifestFile,
 		UseCatalog:       packed,
-	}
+	}, customConfig
 }
 
 func (p *Patcher) GetVersion(ctx context.Context, packed bool) (*archive.Archive, error) {

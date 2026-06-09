@@ -38,19 +38,19 @@ func (s Server) Status() *patcher.Status {
 func (s Server) GetPatcher(o patcher.Options) (patcher.Patcher, error) {
 	return Patcher{
 		InstallDirectory: o.InstallDirectory,
-		BootConfig:       s.BootConfig.Config,
+		BootConfig:       s.BootConfig,
 	}, nil
 }
 
 type Patcher struct {
 	InstallDirectory string
-	BootConfig       boot.Config
+	BootConfig       BootConfig
 }
 
-func (p Patcher) GetBoot(packed bool) boot.Config {
+func (p Patcher) GetBoot(packed bool) (boot.Config, ldf.Map) {
 	config := p.BootConfig
 	config.UseCatalog = packed
-	return config
+	return config.Config, p.BootConfig.Map
 }
 
 func (p Patcher) GetVersion(_ context.Context, packed bool) (*archive.Archive, error) {

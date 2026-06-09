@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -340,15 +341,24 @@ func (l *LauncherWidget) GetBoot(client client.Config, profile *Profile) (BootCo
 
 	storedConfig := profile.Server.BootConfig()
 
-	bootConfig := patcher.GetBoot(client.IsPacked)
+	bootConfig, customConfig := patcher.GetBoot(client.IsPacked)
 	bootConfig.SigninURL = storedConfig.SigninURL
 	bootConfig.SignupURL = storedConfig.SignupURL
 	bootConfig.PasswordURL = storedConfig.PasswordURL
 	bootConfig.RegisterURL = storedConfig.RegisterURL
+	maps.Copy(customConfig, storedConfig.Map)
+
+	for _, name := range blacklistedCustomConfigs {
+		delete(customConfig, name)
+	}
+
+	for k, v := range customConfig {
+		slog.Debug("Found custom config", "key", k, "value", v)
+	}
 
 	return BootConfig{
 		Config: bootConfig,
-		Map:    storedConfig.Map,
+		Map:    customConfig,
 	}, nil
 }
 
@@ -486,4 +496,30 @@ func (l *LauncherWidget) SetPatching() {
 		l.playButton.Refresh()
 		l.playButton.Enable()
 	})
+}
+
+var blacklistedCustomConfigs = []string{
+	"SERVERNAME",
+	"PATCHSERVERIP",
+	"AUTHSERVERIP",
+	"PATCHSERVERPORT",
+	"LOGGING",
+	"DATACENTERID",
+	"CPCODE",
+	"AKAMAIDLM",
+	"PATCHSERVERDIR",
+	"UGCUSE3DSERVICES",
+	"UGCSERVERIP",
+	"UGCSERVERDIR",
+	"PASSURL",
+	"SIGNINURL",
+	"SIGNUPURL",
+	"REGISTERURL",
+	"CRASHLOGURL",
+	"LOCALE",
+	"MANIFESTFILE",
+	"TRACK_DSK_USAGE",
+	"HD_SPACE_FREE",
+	"HD_SPACE_USED",
+	"USE_CATALOG",
 }
