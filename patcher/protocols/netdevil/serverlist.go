@@ -78,7 +78,10 @@ func (s Server) GetPatcher(options patcher.Options) (patcher.Patcher, error) {
 	}, nil
 }
 
-type VersionDirType = int_netdevil.VersionDirType
+type (
+	VersionDirType = int_netdevil.VersionDirType
+	LdfEntries     = int_netdevil.LdfEntries
+)
 
 type UniverseConfig struct {
 	AuthenticationIP string `xml:"AuthenticationIP"`
@@ -101,6 +104,7 @@ type UniverseConfig struct {
 	UseDB          bool           `xml:"UseDB"`
 	Version        string         `xml:"Version"`
 	VersionDirType VersionDirType `xml:"VersionDirType"`
+	Config         LdfEntries     `xml:"Config"`
 }
 
 func (c UniverseConfig) PatcherUrl(resources origin.Resources) string {

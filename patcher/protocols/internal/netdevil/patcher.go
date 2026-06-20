@@ -55,7 +55,7 @@ type Config struct {
 
 	VerifyManifestFunc VerifyManifestFunc
 
-	// Allows patch servers to no support frontend.txt.
+	// Allows patch servers to not support frontend.txt.
 	// If frontend.txt cannot be found, trunk.txt
 	// will be used instead.
 	AllowNoMinimalManifest bool

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"runtime"
-	"strings"
 
 	"github.com/I-Am-Dench/goverbuild/archive"
 	"github.com/I-Am-Dench/goverbuild/encoding/ldf"
@@ -20,6 +19,13 @@ type Patcher struct {
 	server   Server
 	gameInfo GameInfo
 
+	// If the "patcherexeversion" within the patcher.ini
+	// is prefixed with a '+', use custom boot configuration.
+	//
+	// Example:
+	//  patcherexeversion="+12.85"
+	useExtensions bool
+
 	exclude []string
 }
 
@@ -27,6 +33,11 @@ func (p Patcher) GetBoot(packed bool) (boot.Config, ldf.Map) {
 	manifestFile := ""
 	if !p.patcher.FullDownload() {
 		manifestFile = int_netdevil.GameFile
+	}
+
+	customConfig := ldf.Map{}
+	if p.useExtensions {
+		customConfig = p.server.Config.Map()
 	}
 
 	return boot.Config{
@@ -44,10 +55,10 @@ func (p Patcher) GetBoot(packed bool) (boot.Config, ldf.Map) {
 		Locale:           p.server.Language,
 		ManifestFile:     manifestFile,
 		UseCatalog:       packed,
-	}, ldf.Map{}
+	}, customConfig
 }
 
-func (p Patcher) getPatcherIni(ctx context.Context) (Ini, error) {
+func (p Patcher) getPatcherIni(ctx context.Context) (int_netdevil.Ini, error) {
 	p.patcher.Log.Printf("Requesting patcher.ini -> %s", p.server.patcherIniUrl)
 	r, err := p.server.resources.Get(ctx, p.server.patcherIniUrl)
 	if err != nil {
@@ -55,7 +66,7 @@ func (p Patcher) getPatcherIni(ctx context.Context) (Ini, error) {
 	}
 	defer r.Close()
 
-	return ReadIni(r), nil
+	return int_netdevil.ReadIni(r)
 }
 
 func (p *Patcher) GetVersion(ctx context.Context, packed bool) (*archive.Archive, error) {
@@ -66,21 +77,16 @@ func (p *Patcher) GetVersion(ctx context.Context, packed bool) (*archive.Archive
 	patcherIni, err := p.getPatcherIni(ctx)
 	if err != nil {
 		p.patcher.Log.Print(err)
-		patcherIni = Ini{}
+		patcherIni = int_netdevil.Ini{}
 	}
+
+	_, p.useExtensions = patcherIni.PatcherExeVersion()
 
 	osExclude := "win_exclude"
 	if runtime.GOOS == "darwin" {
 		osExclude = "mac_exclude"
 	}
-
-	if excludeValue, ok := patcherIni[osExclude]; ok {
-		for path := range strings.SplitSeq(excludeValue, ",") {
-			if s := strings.TrimSpace(path); len(s) > 0 {
-				p.exclude = append(p.exclude, s)
-			}
-		}
-	}
+	p.exclude = append(p.exclude, patcherIni.List(osExclude)...)
 
 	return p.patcher.GetVersion(ctx, packed)
 }

@@ -1,4 +1,4 @@
-package nimbus_test
+package netdevil_test
 
 import (
 	"bytes"
@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/I-Am-Dench/goverbuild/encoding/ldf"
-	"github.com/I-Am-Dench/nimbus-launcher/patcher/protocols/nimbus"
+	"github.com/I-Am-Dench/nimbus-launcher/patcher/protocols/internal/netdevil"
 )
 
 func TestLdfEntries(t *testing.T) {
@@ -30,10 +30,10 @@ func TestLdfEntries(t *testing.T) {
 	`
 
 	type Data struct {
-		XMLName xml.Name          `xml:"Data"`
-		Config  nimbus.LdfEntries `xml:"Config"`
+		XMLName xml.Name            `xml:"Data"`
+		Config  netdevil.LdfEntries `xml:"Config"`
 	}
-	expected := nimbus.LdfEntries{
+	expected := netdevil.LdfEntries{
 		{Key: "STRING", Value: "Sample String"},
 		{Key: "UTF8", Value: []byte("Utf8 data")},
 		{Key: "INT32", Value: int32(396456)},

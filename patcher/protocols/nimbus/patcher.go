@@ -37,11 +37,6 @@ func (p Patcher) GetBoot(packed bool) (boot.Config, ldf.Map) {
 		manifestFile = int_netdevil.GameFile
 	}
 
-	customConfig := ldf.Map{}
-	for _, entry := range p.server.Game.Config {
-		customConfig[entry.Key] = entry.Value
-	}
-
 	return boot.Config{
 		ServerName:       p.server.Name,
 		PatchServerIP:    p.server.Patcher.Host,
@@ -57,7 +52,7 @@ func (p Patcher) GetBoot(packed bool) (boot.Config, ldf.Map) {
 		Locale:           p.patcher.Locale,
 		ManifestFile:     manifestFile,
 		UseCatalog:       packed,
-	}, customConfig
+	}, p.server.Game.Config.Map()
 }
 
 func (p *Patcher) GetVersion(ctx context.Context, packed bool) (*archive.Archive, error) {
