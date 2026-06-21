@@ -369,19 +369,21 @@ func newLauncherSettingsWidget(window fyne.Window, preferences Preferences) *lau
 	saveButton.Importance = widget.HighImportance
 
 	return &launcherSettingsWidget{
-		container.NewBorder(
-			nil, container.NewBorder(nil, nil, nil, saveButton), nil, nil,
-			container.NewVScroll(
-				container.NewVBox(
-					generalHeading,
-					widget.NewForm(
-						widget.NewFormItem("Close On Play", closeOnPlay),
-						widget.NewFormItem("Review Patches", reviewPatches),
+		container.NewPadded(
+			container.NewBorder(
+				nil, container.NewBorder(nil, nil, nil, saveButton), nil, nil,
+				container.NewVScroll(
+					container.NewVBox(
+						generalHeading,
+						widget.NewForm(
+							widget.NewFormItem("Close On Play", closeOnPlay),
+							widget.NewFormItem("Review Patches", reviewPatches),
+						),
+						widget.NewSeparator(),
+						clientHeading,
+						widget.NewForm(clientSettings.Form()...),
+						etcSettings,
 					),
-					widget.NewSeparator(),
-					clientHeading,
-					widget.NewForm(clientSettings.Form()...),
-					etcSettings,
 				),
 			),
 		),
