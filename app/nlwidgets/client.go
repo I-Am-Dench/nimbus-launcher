@@ -64,7 +64,7 @@ func (c ClientSettings) Form() []*widget.FormItem {
 		widget.NewFormItem("Name", c.clientName),
 		widget.NewFormItem("Packed", container.NewBorder(nil, nil, c.packed, c.resetPacked)),
 		widget.NewFormItem("Locale", container.NewBorder(nil, nil, nil, c.resetLocale, c.locale)),
-		widget.NewFormItem("Full Download", container.NewBorder(nil, nil, nil, c.resetDownloadType, c.downloadType)),
+		widget.NewFormItem("Download Type", container.NewBorder(nil, nil, nil, c.resetDownloadType, c.downloadType)),
 	}
 }
 
