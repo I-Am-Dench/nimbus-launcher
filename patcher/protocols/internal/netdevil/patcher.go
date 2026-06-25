@@ -412,9 +412,9 @@ func (p Patcher) needsPackedDownload(ctx context.Context, path string, entry man
 			return true, nil
 		}
 
-		p.Log.Printf("%s is from a non-existent pack; downloading it", path)
-
 		record, _ := ar.Catalog().Search(path)
+		p.Log.Printf("%s is from a non-existent pack (%s); downloading it", path, record.PackName)
+
 		p.packDownloads[record.PackName] = p.packEntries[record.PackName]
 		return false, nil // Don't download this entry, it will be downloaded in the pack
 	}
