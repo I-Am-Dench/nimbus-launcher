@@ -106,6 +106,7 @@ func (c Container) RunCmd(commandName string, commandArgs ...string) *exec.Cmd {
 	args = append(args,
 		"-e", "CGO_ENABLED=1",
 		"-e", "GOCACHE="+containerCacheDir,
+		"-e", "GOTOOLCHAIN=auto",
 	)
 
 	// Apply custom environment variables
