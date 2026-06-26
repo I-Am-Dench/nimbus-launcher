@@ -184,7 +184,7 @@ func Start(config Config, logOutput bool) (*exec.Cmd, error) {
 	cmd.Env = os.Environ()
 
 	cmd.Env = append(cmd.Env,
-		"WINEDLLOVERRIDES=\"dinput8.dll=n,b\"",
+		"WINEDLLOVERRIDES=dinput8.dll=n,b",
 		"PROTON_USE_WINED3D=1",
 		"STEAM_COMPAT_DATA_PATH="+compatdata,
 		"STEAM_COMPAT_CLIENT_INSTALL_PATH="+steamApps,
