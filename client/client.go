@@ -3,8 +3,10 @@ package client
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/I-Am-Dench/nimbus-launcher/client/disk"
 	"github.com/I-Am-Dench/nimbus-launcher/internal/optional"
@@ -20,15 +22,16 @@ const (
 type DownloadType = patcher.DownloadType
 
 type Optional struct {
-	Directory    string                   `json:"directory"`
-	Name         string                   `json:"name"`
+	Directory    string                   `json:"directory,omitempty"`
+	Name         string                   `json:"name,omitempty"`
 	IsPacked     optional.O[bool]         `json:"packed"`
 	Locale       string                   `json:"locale,omitempty"`
 	DownloadType optional.O[DownloadType] `json:"downloadType"`
+	MaxUgcSpace  optional.O[int]          `json:"maxUgcSpace"`
 }
 
 func (o Optional) IsEmpty() bool {
-	return len(o.Directory) == 0 && len(o.Name) == 0 && !o.IsPacked.HasValue() && len(o.Locale) == 0 && !o.DownloadType.HasValue()
+	return len(o.Directory) == 0 && len(o.Name) == 0 && !o.IsPacked.HasValue() && len(o.Locale) == 0 && !o.DownloadType.HasValue() && !o.MaxUgcSpace.HasValue()
 }
 
 type Config struct {
@@ -37,6 +40,7 @@ type Config struct {
 	IsPacked     bool         `json:"packed"`
 	Locale       string       `json:"locale"`
 	DownloadType DownloadType `json:"downloadType"`
+	MaxUgcSpace  int          `json:"maxUgcSpace"`
 	Etc          Etc          `json:"etc,omitzero"`
 }
 
@@ -48,13 +52,23 @@ func (c Config) BootPath() string {
 	return filepath.Join(filepath.Dir(c.ClientPath()), "boot.cfg")
 }
 
+func (c Config) UserMadePath() string {
+	return filepath.Join(c.Directory, "client", "res", "BrickModels", "UserMade")
+}
+
 func (c Config) ToOptional() Optional {
+	maxUgcSize := optional.O[int]{}
+	if c.MaxUgcSpace > 0 {
+		maxUgcSize = optional.From(c.MaxUgcSpace)
+	}
+
 	return Optional{
 		Directory:    c.Directory,
 		Name:         c.Name,
 		IsPacked:     optional.From(c.IsPacked),
 		Locale:       c.Locale,
 		DownloadType: optional.From(c.DownloadType),
+		MaxUgcSpace:  maxUgcSize,
 	}
 }
 
@@ -98,6 +112,65 @@ func (c Config) Tracker(cacheRoot string) (tracker.Tracker, error) {
 		return nil, fmt.Errorf("client: %v", err)
 	}
 	return tracker.New(filepath.Join(cacheRoot, hash), c.Directory)
+}
+
+func (c Config) CleanUserMadeModels() error {
+	const (
+		gibibytes    = 1024 * 1024 * 1024
+		manifestName = "manifest.cache"
+	)
+
+	userMadePath := c.UserMadePath()
+
+	userMadeManifest, err := ReadUgcManifest(filepath.Join(userMadePath, manifestName))
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+
+	if err != nil {
+		return fmt.Errorf("clean user made models: %v", err)
+	}
+
+	keys := slices.Collect(maps.Keys(userMadeManifest))
+	slices.SortFunc(keys, func(a, b string) int { return userMadeManifest[a].Compare(userMadeManifest[b]) })
+
+	usedSpace, err := disk.UsedSpace(userMadePath)
+	if err != nil {
+		return fmt.Errorf("clean user made models: %v", err)
+	}
+
+	maxBytes := int64(c.MaxUgcSpace) * gibibytes
+	currentSpace := int64(usedSpace)
+
+	for _, path := range keys {
+		if currentSpace < maxBytes {
+			break
+		}
+
+		filePath := filepath.Join(userMadePath, path)
+
+		stat, err := os.Stat(filePath)
+		if errors.Is(err, os.ErrNotExist) {
+			delete(userMadeManifest, path)
+			continue
+		}
+
+		if err != nil {
+			return fmt.Errorf("clean user made models: %v", err)
+		}
+
+		if err := os.Remove(filePath); err != nil {
+			return fmt.Errorf("clean user made models: %v", err)
+		}
+
+		currentSpace -= stat.Size()
+		delete(userMadeManifest, path)
+	}
+
+	if err := WriteUgcManifest(filepath.Join(userMadePath, manifestName), userMadeManifest); err != nil {
+		return fmt.Errorf("clean user made models: %v", err)
+	}
+	return nil
 }
 
 var DefaultConfig = Config{

@@ -205,6 +205,10 @@ func (l *LauncherWidget) ClientConfig() client.Config {
 		if profile.Client.DownloadType.HasValue() {
 			c.DownloadType = profile.Client.DownloadType.Value
 		}
+
+		if profile.Client.MaxUgcSpace.HasValue() {
+			c.MaxUgcSpace = profile.Client.MaxUgcSpace.Value
+		}
 	}
 
 	installDir, err := GetAbs(c.Directory)
@@ -391,6 +395,13 @@ func (l *LauncherWidget) play() {
 		bootConfig = profile.Server.BootConfig()
 	}
 	fyne.DoAndWait(l.playButton.Disable)
+
+	if clientConfig.MaxUgcSpace > 0 {
+		slog.Debug("Cleaning up user made models")
+		if err := clientConfig.CleanUserMadeModels(); err != nil {
+			slog.Error("Failed to clean user made models", "error", err)
+		}
+	}
 
 	const mebibyte = 1024 * 1024
 
