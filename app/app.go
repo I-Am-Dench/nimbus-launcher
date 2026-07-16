@@ -2,81 +2,64 @@ package app
 
 import (
 	_ "embed"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
-	"os"
+	"net/http"
 	"path/filepath"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"github.com/I-Am-Dench/nimbus-launcher/app/configfile"
 	"github.com/I-Am-Dench/nimbus-launcher/version"
 )
 
 //go:embed embedded/icon.png
 var iconData []byte
 
+type SettingsFile = configfile.ConfigFile[Settings]
+type ProfilesFile = configfile.ConfigFile[[]*Profile]
+
+type Preferences interface {
+	AppSettings() *SettingsFile
+	AppProfiles() *ProfilesFile
+}
+
 type App struct {
 	fyne.App
 
-	settingsPath string
-	profilesPath string
+	settingsDir string
 
-	settings SettingsBinding
-	profiles ProfileListBinding
+	settings *SettingsFile
+	profiles *ProfilesFile
 
-	profileSelector *ProfileSelector
+	profileSelector *ProfileSelectorWidget
 
 	main fyne.Window
 	info fyne.Window
 	sett fyne.Window
 }
 
-func New(settingsDir string) (*App, error) {
+func New(settingsDir string, jar http.CookieJar) (*App, error) {
 	a := &App{
 		App: app.NewWithID("com.nimbus-launcher"),
 
-		settingsPath: filepath.Join(settingsDir, "settings.json"),
-		profilesPath: filepath.Join(settingsDir, "profiles.json"),
+		settingsDir: settingsDir,
 
-		settings: SettingsBinding{binding.NewItem(func(_, _ *Settings) bool { return false })},
-		profiles: ProfileListBinding{binding.NewItem(func(_, _ []*Profile) bool { return false })},
+		settings: configfile.New(filepath.Join(settingsDir, "settings.json"), DefaultSettings),
+		profiles: configfile.New(filepath.Join(settingsDir, "profiles.json"), DefaultProfiles(DefaultBootConfig(), settingsDir)),
 	}
 
-	a.settings.AddListener(binding.NewDataListener(func() {
-		settings := a.settings.Settings()
-		if settings == nil {
-			return
-		}
-
-		if err := a.WriteSettings(settings); err != nil {
-			slog.Error("Failed to write settings", "error", err)
-		}
-	}))
-
-	settings, err := a.ReadSettings()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load settings: %v", err)
+	if _, err := a.settings.Load(); err != nil {
+		slog.Error("Failed to load settings", "error", err)
 	}
-	a.settings.Set(settings)
 
-	profiles, err := a.ReadProfiles()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load profiles: %v", err)
+	if _, err := a.profiles.Load(); err != nil {
+		slog.Error("Failed to load profiles", "error", err)
 	}
-	a.profiles.Set(profiles)
-
-	selector, err := NewProfileSelector(a.profiles, a.ShowSettings)
-	if err != nil {
-		return nil, err
-	}
-	a.profileSelector = selector
 
 	a.main = a.NewWindow(fmt.Sprint("Nimbus Launcher (", version.Get().Name(), ")"))
 	a.main.SetFixedSize(true)
@@ -84,7 +67,13 @@ func New(settingsDir string) (*App, error) {
 	a.main.SetIcon(fyne.NewStaticResource("icon.png", iconData))
 	a.main.SetMaster()
 
-	launcher := NewLauncher(a.main, a.settings, selector.ProfileBinding, selector.PlayingBinding)
+	selector, err := NewProfileSelectorWidget(a.main, jar, a, a.ShowSettings)
+	if err != nil {
+		return nil, err
+	}
+	a.profileSelector = selector
+
+	launcher := NewLauncherWidget(a.main, a, selector.ProfileBinding, selector.PlayingBinding)
 
 	heading := canvas.NewText("Launch LEGO Universe", theme.Color(theme.ColorNameForeground))
 	heading.TextSize = 24
@@ -106,6 +95,14 @@ func New(settingsDir string) (*App, error) {
 	return a, nil
 }
 
+func (a *App) AppSettings() *SettingsFile {
+	return a.settings
+}
+
+func (a *App) AppProfiles() *ProfilesFile {
+	return a.profiles
+}
+
 func (a *App) ShowInfo() {
 	if a.info != nil {
 		a.info.Show()
@@ -123,74 +120,10 @@ func (a *App) ShowSettings() {
 		return
 	}
 
-	a.sett = NewSettingsWindow(a, a.settings, a.profiles, a.profilesPath)
+	a.sett = NewSettingsWindow(a, a, a.settingsDir)
 	a.sett.SetOnClosed(func() { a.sett = nil })
 	a.sett.CenterOnScreen()
 	a.sett.Show()
-}
-
-func (a *App) WriteSettings(settings *Settings) error {
-	data, err := json.MarshalIndent(settings, "", "    ")
-	if err != nil {
-		return fmt.Errorf("write settings: %v", err)
-	}
-
-	if err := os.WriteFile(a.settingsPath, data, 0755); err != nil {
-		return fmt.Errorf("write settings: %v", err)
-	}
-
-	return nil
-}
-
-func (a *App) ReadSettings() (*Settings, error) {
-	data, err := os.ReadFile(a.settingsPath)
-	if errors.Is(err, os.ErrNotExist) {
-		defaultSettings := DefaultSettings()
-		if err := a.WriteSettings(defaultSettings); err != nil {
-			return nil, fmt.Errorf("read settings: %v", err)
-		}
-		return defaultSettings, nil
-	}
-
-	if err != nil {
-		return nil, fmt.Errorf("read settings: %v", err)
-	}
-
-	s := &Settings{}
-	if err := json.Unmarshal(data, s); err != nil {
-		return nil, fmt.Errorf("read settings: %v", err)
-	}
-
-	return s, nil
-}
-
-func (a *App) ReadProfiles() ([]*Profile, error) {
-	data, err := os.ReadFile(a.profilesPath)
-	if errors.Is(err, os.ErrNotExist) {
-		profiles := DefaultProfiles(DefaultBootConfig(), a.profilesPath)
-
-		data, err := json.MarshalIndent(profiles, "", "    ")
-		if err != nil {
-			return nil, fmt.Errorf("read profiles: %v", err)
-		}
-
-		if err := os.WriteFile(a.profilesPath, data, 0664); err != nil {
-			return nil, fmt.Errorf("read profiles: %v", err)
-		}
-
-		return profiles, nil
-	}
-
-	if err != nil {
-		return nil, fmt.Errorf("read profiles: %v", err)
-	}
-
-	profiles := []*Profile{}
-	if err := json.Unmarshal(data, &profiles); err != nil {
-		return nil, fmt.Errorf("read profiles: %v", err)
-	}
-
-	return profiles, nil
 }
 
 func (a *App) Start() {

@@ -9,8 +9,8 @@ import (
 	"github.com/I-Am-Dench/nimbus-launcher/client"
 )
 
-func DefaultSettings() *Settings {
-	return &Settings{
+func DefaultSettings() Settings {
+	return Settings{
 		Launch: LaunchConfig{
 			DefaultClient:             client.DefaultConfig,
 			CloseOnPlay:               true,

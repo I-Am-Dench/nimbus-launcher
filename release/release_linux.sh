@@ -5,8 +5,9 @@ cd "$(dirname $0)"
 rm -rf launcher
 mkdir launcher
 
-go build -tags release -o ./launcher/nimbus-launcher ..
 cp ../LICENSE ./launcher
 cp ../README.md ./launcher
 
-zip -r ../launcher-linux.zip ./launcher
+go build -tags release -o ./launcher/nimbus-launcher ..
+
+zip -9 -r ../launcher-linux-amd64.zip ./launcher

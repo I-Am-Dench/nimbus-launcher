@@ -2,21 +2,75 @@ package patcher
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/I-Am-Dench/goverbuild/archive"
+	"github.com/I-Am-Dench/goverbuild/encoding/ldf"
 	"github.com/I-Am-Dench/goverbuild/models/boot"
+	"github.com/I-Am-Dench/nimbus-launcher/patcher/origin"
+	"github.com/I-Am-Dench/nimbus-launcher/patcher/tracker"
 )
 
-type PatchEntry struct {
-	Source, Destination string
+const (
+	VersionsDir = "versions"
+	CatalogName = "primary.pki"
+)
+
+type Summary struct {
+	Header []string
+	Rows   [][]string
 }
 
 type Patch interface {
-	Summary() []PatchEntry
+	Summary() Summary
+	Total() int
+	SetProgress(func(n int))
+	Run(context.Context, tracker.Tracker) error
+}
+
+type DownloadType int
+
+const (
+	DownloadTypeMinimal = DownloadType(iota)
+	DownloadTypeFull
+)
+
+func (d DownloadType) String() string {
+	switch d {
+	case DownloadTypeMinimal:
+		return "Minimal Download"
+	case DownloadTypeFull:
+		return "Full Download"
+	default:
+		return fmt.Sprintf("DownloadType(%d)", d)
+	}
+}
+
+type Options struct {
+	Log Logger
+
+	Locale           string
+	DownloadType     DownloadType
+	InstallDirectory string
+	ServerId         string
 }
 
 type Patcher interface {
-	GetBoot(packed bool) *boot.Config
-	GetPatch(ctx context.Context, packed bool) (Patch, error)
+	GetBoot(packed bool) (boot boot.Config, custom ldf.Map)
+	GetVersion(ctx context.Context, packed bool) (*archive.Archive, error)
+	GetPatch(context.Context, *archive.Archive) (Patch, error)
+}
+
+type ServerInfo struct {
+	Name   string
+	Lang   string
+	AuthIP string
+}
+
+type Server interface {
+	Info() ServerInfo
+	Status() *Status
+	GetPatcher(Options) (Patcher, error)
 }
 
 type Logger interface {
@@ -25,14 +79,7 @@ type Logger interface {
 	Println(v ...any)
 }
 
-type Options struct {
-	Log Logger
-
-	InstallDirectory string
-	ServerId         string
-}
-
 type Environment interface {
-	Locale() string
-	NewPatcher(ctx context.Context, options Options) (Patcher, error)
+	GetMasterIndex(ctx context.Context, serviceUrl string, resources origin.Resources) (MasterIndex, error)
+	GetServerList(context.Context, origin.Resources, MasterIndex) ([]Server, error)
 }

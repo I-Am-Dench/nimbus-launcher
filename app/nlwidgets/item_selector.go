@@ -11,17 +11,19 @@ type ItemSelector[T any] struct {
 	strFunc func(T) string
 	cmpFunc func(T, T) bool
 
+	OnChanged func(T)
+
 	Selected T
 }
 
-func NewItemSelector[T any](options []T, strFunc func(T) string, cmpFunc func(T, T) bool, changed func(T)) *ItemSelector[T] {
+func NewItemSelector[T any](options []T, strFunc func(T) string, cmpFunc func(T, T) bool) *ItemSelector[T] {
 	s := &ItemSelector[T]{
 		strFunc: strFunc,
 		cmpFunc: cmpFunc,
 	}
 	s.ExtendBaseWidget(s)
 
-	s.OnChanged = func(_ string) {
+	s.Select.OnChanged = func(string) {
 		index := s.SelectedIndex()
 		if index < 0 {
 			var zero T
@@ -30,7 +32,9 @@ func NewItemSelector[T any](options []T, strFunc func(T) string, cmpFunc func(T,
 			s.Selected = s.options[index]
 		}
 
-		changed(s.Selected)
+		if s.OnChanged != nil {
+			s.OnChanged(s.Selected)
+		}
 	}
 
 	s.SetOptions(options)

@@ -1,8 +1,15 @@
 settings/
 patches/
+defaultclients/
 
+release/bin
 release/launcher
+release/releases
 
 *.exe
 *.zip
 *.log
+*.db
+*.json
+
+*.tmp

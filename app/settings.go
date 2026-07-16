@@ -1,35 +1,22 @@
 package app
 
 import (
-	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"log/slog"
 	"os"
-	"path/filepath"
 	"slices"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"github.com/I-Am-Dench/goverbuild/models/boot"
 	"github.com/I-Am-Dench/nimbus-launcher/app/nlwidgets"
 	"github.com/I-Am-Dench/nimbus-launcher/client"
 )
-
-type SettingsBinding struct {
-	binding.Item[*Settings]
-}
-
-func (b *SettingsBinding) Settings() *Settings {
-	s, _ := b.Get()
-	return s
-}
 
 type Settings struct {
 	Launch LaunchConfig `json:"launch"`
@@ -43,12 +30,12 @@ func profileName(p *Profile) string {
 	return p.Name
 }
 
-type profileSettings struct {
+type profileSettingsWidget struct {
 	*fyne.Container
-	ProfileListBinding
+	Preferences
 	window fyne.Window
 
-	profilesPath string
+	settingsDir string
 
 	profileSelector  *nlwidgets.ItemSelector[*Profile]
 	listContainer    *fyne.Container
@@ -58,40 +45,25 @@ type profileSettings struct {
 	content *fyne.Container
 }
 
-func newProfileSettings(window fyne.Window, profilesBinding ProfileListBinding, profilesPath string) *profileSettings {
-	p := &profileSettings{
-		ProfileListBinding: profilesBinding,
-		window:             window,
-		profilesPath:       profilesPath,
-		patcherContainer:   container.NewStack(),
-		content:            container.NewStack(),
+func newProfileSettingsWidget(window fyne.Window, preferences Preferences, settingsDir string) *profileSettingsWidget {
+	p := &profileSettingsWidget{
+		Preferences:      preferences,
+		window:           window,
+		settingsDir:      settingsDir,
+		patcherContainer: container.NewStack(),
+		content:          container.NewStack(),
 	}
 
-	directory := nlwidgets.NewDirectorySelector(window)
+	clientSettings := nlwidgets.NewClientSettings(window, false)
 
-	clientName := widget.NewEntry()
-	clientName.PlaceHolder = client.DefaultExe
-
-	packed := widget.NewCheck("Client uses a catalog file (i.e. versions/primary.pki)", func(b bool) {})
-	packed.Partial = true
-
-	resetPacked := widget.NewButton("", func() {
-		packed.Partial = true
-		packed.Refresh()
-	})
-	resetPacked.Icon = theme.ViewRefreshIcon()
-
-	clientSettings := widget.NewAccordionItem(
+	clientSettingsOverride := widget.NewAccordionItem(
 		"Client (Override Default)",
-		widget.NewForm(
-			widget.NewFormItem("Directory", directory),
-			widget.NewFormItem("Client Name", clientName),
-			widget.NewFormItem("Packed", container.NewBorder(nil, nil, packed, resetPacked)),
-		),
+		widget.NewForm(clientSettings.Form()...),
 	)
 
-	// === Selector
-	p.profileSelector = nlwidgets.NewItemSelector(p.Profiles(), profileName, compareProfiles, func(profile *Profile) {
+	// === Selector === //
+	p.profileSelector = nlwidgets.NewItemSelector(p.AppProfiles().Get(), profileName, compareProfiles)
+	p.profileSelector.OnChanged = func(profile *Profile) {
 		if profile == nil {
 			return
 		}
@@ -99,30 +71,26 @@ func newProfileSettings(window fyne.Window, profilesBinding ProfileListBinding, 
 		p.SetPatcherSettings(profile)
 
 		if profile.Client == nil {
-			directory.SetText("")
-			clientName.SetText("")
-			packed.Partial = true
+			clientSettings.Set(client.Optional{})
 		} else {
-			directory.SetText(profile.Client.Directory)
-			clientName.SetText(profile.Client.Name)
-			packed.SetChecked(profile.Client.IsPacked)
+			clientSettings.Set(*profile.Client)
 		}
 
-		clientSettings.Open = profile.Client != nil
-	})
+		clientSettingsOverride.Open = profile.Client != nil
+	}
 	p.profileSelector.PlaceHolder = "(Select server)"
 	p.profileSelector.SetSelectedIndex(0)
 
 	addServerButton := widget.NewButtonWithIcon("Add Server", theme.ContentAddIcon(), p.ShowNewProfile)
 	addServerButton.Importance = widget.LowImportance
 
-	// === Menu
+	// === Menu === //
 	editItem := fyne.NewMenuItem("Edit", p.ShowEditProfile)
 	editItem.Icon = theme.DocumentCreateIcon()
 
 	removeItem := fyne.NewMenuItem("Remove", func() {
 		index := p.profileSelector.SelectedIndex()
-		profiles := p.Profiles()
+		profiles := p.AppProfiles().Get()
 
 		profile := profiles[index]
 		if profile == nil {
@@ -131,8 +99,7 @@ func newProfileSettings(window fyne.Window, profilesBinding ProfileListBinding, 
 
 		dialog.NewCustomConfirm(
 			"Remove Server",
-			"Remove",
-			"Cancel",
+			"Remove", "Cancel",
 			widget.NewLabel(fmt.Sprintf("Remove profile %q?", profile.Name)),
 			func(ok bool) {
 				if !ok {
@@ -140,16 +107,14 @@ func newProfileSettings(window fyne.Window, profilesBinding ProfileListBinding, 
 				}
 
 				profiles = append(profiles[:index], profiles[index+1:]...)
-				profilesBinding.Set(profiles)
-
 				if err := os.Remove(profile.Server.Boot); err != nil {
 					slog.Error("Failed to remove boot config", "boot", profile.Server.Boot, "error", err)
 				}
 
-				if err := p.SaveProfiles(profiles); err != nil {
+				if err := preferences.AppProfiles().Save(profiles); err != nil {
 					dialog.ShowError(err, p.window)
 				} else {
-					dialog.ShowInformation("Remove Profile", fmt.Sprintf("Removed %q", profile.Name), window)
+					dialog.ShowInformation("Remove Profile", fmt.Sprintf("Remove %q", profile.Name), p.window)
 				}
 				p.profileSelector.SetSelectedIndex(0)
 			},
@@ -172,7 +137,7 @@ func newProfileSettings(window fyne.Window, profilesBinding ProfileListBinding, 
 		menu.ShowAtRelativePosition(position, serverMenuButton)
 	}
 
-	// === Pages
+	// === Pages === //
 	heading := canvas.NewText("Servers", theme.Color(theme.ColorNameForeground))
 	heading.TextSize = 16
 
@@ -182,14 +147,11 @@ func newProfileSettings(window fyne.Window, profilesBinding ProfileListBinding, 
 			return
 		}
 
-		if len(directory.Text) == 0 && len(clientName.Text) == 0 && packed.Partial {
+		clientConfig := clientSettings.GetOptional()
+		if clientConfig.IsEmpty() {
 			profile.Client = nil
 		} else {
-			profile.Client = &client.Config{
-				Directory: directory.Text,
-				Name:      clientName.Text,
-				IsPacked:  !packed.Partial && packed.Checked,
-			}
+			profile.Client = &clientConfig
 		}
 
 		if p.patcherFunc != nil && profile.Server.Patcher != nil {
@@ -200,7 +162,7 @@ func newProfileSettings(window fyne.Window, profilesBinding ProfileListBinding, 
 		if err := p.SaveProfile(profile, &bootConfig); err != nil {
 			dialog.ShowError(err, p.window)
 		} else {
-			dialog.ShowInformation("Save User Settings", "Saved!", p.window)
+			dialog.ShowInformation("User Settings", "Saved!", p.window)
 		}
 	})
 	saveButton.Importance = widget.HighImportance
@@ -218,12 +180,12 @@ func newProfileSettings(window fyne.Window, profilesBinding ProfileListBinding, 
 				),
 				widget.NewSeparator(),
 				p.patcherContainer,
-				widget.NewAccordion(clientSettings),
+				widget.NewAccordion(clientSettingsOverride),
 			),
 		),
 	)
 
-	profilesBinding.AddListener(p)
+	preferences.AppProfiles().Binding().AddListener(p)
 
 	p.ShowProfileList()
 	p.Container = container.NewPadded(p.content)
@@ -231,12 +193,12 @@ func newProfileSettings(window fyne.Window, profilesBinding ProfileListBinding, 
 	return p
 }
 
-func (p *profileSettings) DataChanged() {
-	p.profileSelector.SetOptions(p.Profiles())
+func (p profileSettingsWidget) DataChanged() {
+	p.profileSelector.SetOptions(p.AppProfiles().Get())
 	p.profileSelector.SetSelectedIndex(p.profileSelector.SelectedIndex())
 }
 
-func (p *profileSettings) SetPatcherSettings(profile *Profile) {
+func (p *profileSettingsWidget) SetPatcherSettings(profile *Profile) {
 	p.patcherContainer.RemoveAll()
 
 	patcher, ok := profile.Server.GetPatcher()
@@ -250,8 +212,8 @@ func (p *profileSettings) SetPatcherSettings(profile *Profile) {
 	p.patcherFunc = patcherFunc
 }
 
-func (p *profileSettings) SelectedProfile() *Profile {
-	profiles := p.Profiles()
+func (p profileSettingsWidget) SelectedProfile() *Profile {
+	profiles := p.AppProfiles().Get()
 	if len(profiles) == 0 {
 		return nil
 	}
@@ -259,36 +221,24 @@ func (p *profileSettings) SelectedProfile() *Profile {
 	return profiles[p.profileSelector.SelectedIndex()]
 }
 
-func (s *profileSettings) ShowProfileList() {
-	s.content.RemoveAll()
-	s.content.Add(s.listContainer)
+func (p profileSettingsWidget) ShowProfileList() {
+	p.content.RemoveAll()
+	p.content.Add(p.listContainer)
 }
 
-func (s *profileSettings) SaveProfiles(profiles []*Profile) error {
-	data, err := json.MarshalIndent(profiles, "", "    ")
-	if err != nil {
-		return fmt.Errorf("save profiles: %v", err)
-	}
-
-	if err := os.WriteFile(s.profilesPath, data, 0664); err != nil {
-		return fmt.Errorf("save profiles: %v", err)
-	}
-
-	s.Set(profiles)
-	return nil
-}
-
-func (s *profileSettings) SaveProfile(profile *Profile, bootConfig *boot.Config) error {
+func (p profileSettingsWidget) SaveProfile(profile *Profile, bootConfig *BootConfig) error {
 	bootPath := profile.Server.Boot
 	if len(bootPath) == 0 { // Allows manually edited boot paths
-		bootPath = profile.DefaultBootPath(filepath.Dir(s.profilesPath))
+		bootPath = profile.DefaultBootPath(p.settingsDir)
 	}
 
 	if err := profile.Server.SaveBootConfig(bootPath, bootConfig); err != nil {
 		return fmt.Errorf("save profile: %v", err)
 	}
 
-	profiles := s.Profiles()
+	profile.ServerList.once = nil
+
+	profiles := p.AppProfiles().Get()
 
 	index := slices.IndexFunc(profiles, func(p *Profile) bool { return p != nil && p.Id == profile.Id })
 	if index < 0 {
@@ -297,27 +247,27 @@ func (s *profileSettings) SaveProfile(profile *Profile, bootConfig *boot.Config)
 		profiles[index] = profile
 	}
 
-	return s.SaveProfiles(profiles)
+	return p.AppProfiles().Save(profiles)
 }
 
-func (s *profileSettings) ShowNewProfile() {
-	form := NewProfileForm(nil, s.window)
-	s.content.RemoveAll()
+func (p *profileSettingsWidget) ShowNewProfile() {
+	form := NewProfileForm(nil, p.window)
+	p.content.RemoveAll()
 
-	back := widget.NewButtonWithIcon("Back", theme.NavigateBackIcon(), s.ShowProfileList)
+	back := widget.NewButtonWithIcon("Back", theme.NavigateBackIcon(), p.ShowProfileList)
 	back.Importance = widget.LowImportance
 
 	add := widget.NewButtonWithIcon("Create", theme.ContentAddIcon(), func() {
-		if err := s.SaveProfile(form.Get()); err != nil {
-			dialog.ShowError(err, s.window)
+		if err := p.SaveProfile(form.Get()); err != nil {
+			dialog.ShowError(err, p.window)
 		} else {
-			dialog.ShowInformation("Create Server", "Server created!", s.window)
-			s.ShowProfileList()
+			dialog.ShowInformation("Create Server", "Server created!", p.window)
+			p.ShowProfileList()
 		}
 	})
 	add.Importance = widget.HighImportance
 
-	s.content.Add(
+	p.content.Add(
 		container.NewBorder(
 			nil, container.NewBorder(nil, nil, back, add), nil, nil,
 			container.NewVScroll(form.Container),
@@ -325,18 +275,18 @@ func (s *profileSettings) ShowNewProfile() {
 	)
 }
 
-func (s *profileSettings) ShowEditProfile() {
-	form := NewProfileForm(s.SelectedProfile(), s.window)
-	s.content.RemoveAll()
+func (p *profileSettingsWidget) ShowEditProfile() {
+	form := NewProfileForm(p.SelectedProfile(), p.window)
+	p.content.RemoveAll()
 
-	back := widget.NewButtonWithIcon("Back", theme.NavigateBackIcon(), s.ShowProfileList)
+	back := widget.NewButtonWithIcon("Back", theme.NavigateBackIcon(), p.ShowProfileList)
 	back.Importance = widget.LowImportance
 
 	update := widget.NewButtonWithIcon("Save", theme.DocumentSaveIcon(), func() {
-		if err := s.SaveProfile(form.Get()); err != nil {
-			dialog.ShowError(err, s.window)
+		if err := p.SaveProfile(form.Get()); err != nil {
+			dialog.ShowError(err, p.window)
 		} else {
-			dialog.ShowInformation("Edit Server", "Server updated!", s.window)
+			dialog.ShowInformation("Edit Server", "Server updated!", p.window)
 		}
 	})
 	update.Importance = widget.HighImportance
@@ -348,7 +298,7 @@ func (s *profileSettings) ShowEditProfile() {
 			}
 
 			if err != nil {
-				dialog.ShowError(fmt.Errorf("error when choosing file: %v", err), s.window)
+				dialog.ShowError(fmt.Errorf("error when choosing file: %v", err), p.window)
 				return
 			}
 
@@ -356,19 +306,19 @@ func (s *profileSettings) ShowEditProfile() {
 			data, _ := xml.MarshalIndent(serverXml, "", "    ")
 
 			if _, err := writer.Write(append([]byte(xml.Header), data...)); err != nil {
-				dialog.ShowError(fmt.Errorf("cannot write server.xml: %v", err), s.window)
+				dialog.ShowError(fmt.Errorf("cannot write server.xml: %v", err), p.window)
 				return
 			}
 
-			dialog.ShowInformation("Export Complete", "Exported server configuration successfully!", s.window)
-		}, s.window)
+			dialog.ShowInformation("Export Complete", "Exported server configuration successfully!", p.window)
+		}, p.window)
 
 		dialog.SetFileName("server.xml")
 		dialog.SetFilter(storage.NewExtensionFileFilter([]string{".xml"}))
 		dialog.Show()
 	})
 
-	s.content.Add(
+	p.content.Add(
 		container.NewBorder(
 			nil, container.NewBorder(nil, nil, back, container.NewHBox(export, update)), nil, nil,
 			container.NewVScroll(form.Container),
@@ -376,17 +326,12 @@ func (s *profileSettings) ShowEditProfile() {
 	)
 }
 
-type launcherSettings struct {
+type launcherSettingsWidget struct {
 	*fyne.Container
-	SettingsBinding
 }
 
-func newLauncherSettings(window fyne.Window, settingsBinding SettingsBinding) *launcherSettings {
-	l := &launcherSettings{
-		SettingsBinding: settingsBinding,
-	}
-
-	settings := l.Settings()
+func newLauncherSettingsWidget(window fyne.Window, preferences Preferences) *launcherSettingsWidget {
+	settings := preferences.AppSettings().Get()
 
 	generalHeading := canvas.NewText("General", theme.Color(theme.ColorNameForeground))
 	generalHeading.TextSize = 16
@@ -400,63 +345,52 @@ func newLauncherSettings(window fyne.Window, settingsBinding SettingsBinding) *l
 	clientHeading := canvas.NewText("Default Client", theme.Color(theme.ColorNameForeground))
 	clientHeading.TextSize = 16
 
-	installDirectory := nlwidgets.NewDirectorySelector(window)
-	installDirectory.SetText(settings.Launch.DefaultClient.Directory)
-
-	clientName := widget.NewEntry()
-	clientName.PlaceHolder = "client/legouniverse.exe"
-	clientName.SetText(settings.Launch.DefaultClient.Name)
-
-	packed := widget.NewCheck("Client uses a catalog file (i.e. versions/primary.pki)", func(b bool) {})
-	packed.SetChecked(settings.Launch.DefaultClient.IsPacked)
+	clientSettings := nlwidgets.NewClientSettings(window, true, settings.Launch.DefaultClient.ToOptional())
 
 	etcSettings, etcFunc := NewEtcSettings(window, settings)
 
 	saveButton := widget.NewButtonWithIcon("Save Launcher", theme.DocumentSaveIcon(), func() {
-		settings := l.Settings()
-
-		settings.Launch.CloseOnPlay = closeOnPlay.Checked
-		settings.Launch.ReviewPatchesBeforeUpdate = reviewPatches.Checked
-
-		settings.Launch.DefaultClient = client.Config{
-			Directory: installDirectory.Text,
-			Name:      clientName.Text,
-			IsPacked:  packed.Checked,
-			Etc:       etcFunc(),
+		settings := Settings{
+			Launch: LaunchConfig{
+				DefaultClient:             clientSettings.Get(),
+				CloseOnPlay:               closeOnPlay.Checked,
+				ReviewPatchesBeforeUpdate: reviewPatches.Checked,
+			},
 		}
+		settings.Launch.DefaultClient.Etc = etcFunc()
 
-		dialog.ShowInformation("Launcher Settings", "Settings saved!", window)
-		l.Set(settings)
+		if err := preferences.AppSettings().Save(settings); err != nil {
+			slog.Error("Failed to save settings", "error", err)
+			dialog.ShowError(err, window)
+		} else {
+			dialog.ShowInformation("Launcher Settings", "Settings saved!", window)
+		}
 	})
 	saveButton.Importance = widget.HighImportance
 
-	l.Container = container.NewPadded(
-		container.NewBorder(
-			nil, container.NewBorder(nil, nil, nil, saveButton), nil, nil,
-			container.NewVScroll(
-				container.NewVBox(
-					generalHeading,
-					widget.NewForm(
-						widget.NewFormItem("Close On Play", closeOnPlay),
-						widget.NewFormItem("Review Patches", reviewPatches),
+	return &launcherSettingsWidget{
+		container.NewPadded(
+			container.NewBorder(
+				nil, container.NewBorder(nil, nil, nil, saveButton), nil, nil,
+				container.NewVScroll(
+					container.NewVBox(
+						generalHeading,
+						widget.NewForm(
+							widget.NewFormItem("Close On Play", closeOnPlay),
+							widget.NewFormItem("Review Patches", reviewPatches),
+						),
+						widget.NewSeparator(),
+						clientHeading,
+						widget.NewForm(clientSettings.Form()...),
+						etcSettings,
 					),
-					widget.NewSeparator(),
-					clientHeading,
-					widget.NewForm(
-						widget.NewFormItem("Directory", installDirectory),
-						widget.NewFormItem("Name", clientName),
-						widget.NewFormItem("Packed", packed),
-					),
-					etcSettings,
 				),
 			),
 		),
-	)
-
-	return l
+	}
 }
 
-func NewSettingsWindow(app fyne.App, settingsBinding SettingsBinding, profilesBinding ProfileListBinding, profilesPath string) fyne.Window {
+func NewSettingsWindow(app fyne.App, preferences Preferences, settingsDir string) fyne.Window {
 	window := app.NewWindow("Settings")
 	window.Resize(fyne.NewSize(800, 600))
 	window.SetIcon(theme.SettingsIcon())
@@ -465,8 +399,8 @@ func NewSettingsWindow(app fyne.App, settingsBinding SettingsBinding, profilesBi
 	heading := canvas.NewText("Settings", theme.Color(theme.ColorNameForeground))
 	heading.TextSize = 24
 
-	profiles := newProfileSettings(window, profilesBinding, profilesPath)
-	launcher := newLauncherSettings(window, settingsBinding)
+	profiles := newProfileSettingsWidget(window, preferences, settingsDir)
+	launcher := newLauncherSettingsWidget(window, preferences)
 
 	window.SetContent(
 		container.NewPadded(

@@ -15,7 +15,7 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/I-Am-Dench/goverbuild/encoding/ldf"
-	"github.com/I-Am-Dench/goverbuild/models/boot"
+	"github.com/I-Am-Dench/nimbus-launcher/client"
 )
 
 type ServerXml struct {
@@ -37,6 +37,8 @@ type ProfileForm struct {
 	patcherFunc func() Patcher
 	bootForm    *BootForm
 
+	client *client.Optional
+
 	patcherContainer *fyne.Container
 	patcherForm      *widget.Form
 }
@@ -45,13 +47,15 @@ func (p *ProfileForm) Set(profile Profile) {
 	p.id = profile.Id
 	p.name.SetText(profile.Name)
 
+	p.client = profile.Client
+
 	if profile.Server.Patcher != nil {
 		p.patcherType.SetSelected(profile.Server.Patcher.Id)
 		p.serviceUrl.SetText(profile.Server.Patcher.ServiceUrl)
 	}
 }
 
-func (p *ProfileForm) Get() (*Profile, *boot.Config) {
+func (p ProfileForm) Get() (*Profile, *BootConfig) {
 	id := p.id
 	if len(id) == 0 {
 		id = strconv.FormatInt(time.Now().Unix(), 10)
@@ -70,15 +74,16 @@ func (p *ProfileForm) Get() (*Profile, *boot.Config) {
 	}
 
 	return &Profile{
-		Id:   id,
-		Name: p.name.Text,
+		Id:     id,
+		Name:   p.name.Text,
+		Client: p.client,
 		Server: ServerInfo{
 			Patcher: patcherConfig,
 		},
 	}, p.bootForm.Get()
 }
 
-func (p *ProfileForm) GetXml() ServerXml {
+func (p ProfileForm) GetXml() ServerXml {
 	profile, bootConfig := p.Get()
 
 	bootData, _ := ldf.MarshalText(bootConfig)
@@ -95,7 +100,7 @@ func (p *ProfileForm) GetXml() ServerXml {
 func (p *ProfileForm) SetXml(serverXml ServerXml) error {
 	p.name.SetText(serverXml.Name)
 
-	bootConfig := boot.Config{}
+	bootConfig := BootConfig{}
 	if err := ldf.UnmarshalText(serverXml.Boot.Text, &bootConfig); err != nil {
 		return err
 	}
@@ -150,7 +155,7 @@ func NewProfileForm(profile *Profile, window fyne.Window) *ProfileForm {
 	form := &ProfileForm{
 		name:       widget.NewEntry(),
 		serviceUrl: widget.NewEntry(),
-		bootForm:   NewBootForm(),
+		bootForm:   NewBootForm(window),
 	}
 
 	form.name.PlaceHolder = "My Server"

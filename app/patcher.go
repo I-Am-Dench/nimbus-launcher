@@ -4,7 +4,6 @@ import (
 	"slices"
 
 	"fyne.io/fyne/v2/widget"
-	"github.com/I-Am-Dench/nimbus-launcher/app/nlwidgets"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher/protocols/netdevil"
 	"github.com/I-Am-Dench/nimbus-launcher/patcher/protocols/nimbus"
@@ -21,8 +20,8 @@ type Patcher interface {
 }
 
 var Patchers = map[string]Patcher{
-	"nd-nimbus": &NdNimbusPatcher{},
-	"nimbus":    &NimbusPatcher{},
+	"netdevil": NetDevilPatcher{},
+	"nimbus":   NimbusPatcher{},
 }
 
 func PatcherOptions() []string {
@@ -35,72 +34,72 @@ func PatcherOptions() []string {
 	return append([]string{"(None)"}, options...)
 }
 
-type NdNimbusPatcher struct {
+type NetDevilPatcher struct {
 	netdevil.Environment
 }
 
-func (e *NdNimbusPatcher) Default() Patcher {
-	return &NdNimbusPatcher{
+func (e NetDevilPatcher) Default() Patcher {
+	return &NetDevilPatcher{
 		Environment: netdevil.Environment{
 			Environment: "live",
-			UserConfig: netdevil.UserConfig{
-				Locale:       "en_US",
-				FullDownload: true,
-			},
 		},
 	}
 }
 
-func (e *NdNimbusPatcher) ProfileForm() ([]*widget.FormItem, PatcherFunc) {
+func (e NetDevilPatcher) ProfileForm() ([]*widget.FormItem, PatcherFunc) {
 	environment := widget.NewEntry()
 	environment.SetText(e.Environment.Environment)
 
 	return []*widget.FormItem{
 			widget.NewFormItem("Environment", environment),
 		}, func() Patcher {
-			return &NdNimbusPatcher{
+			return &NetDevilPatcher{
 				netdevil.Environment{
 					Environment: environment.Text,
-					UserConfig:  e.UserConfig,
 				},
 			}
 		}
 }
 
-func (e *NdNimbusPatcher) UserForm() ([]*widget.FormItem, PatcherFunc) {
-	locale := nlwidgets.NewLocaleSelector(e.Locale())
-
-	fullDownload := widget.NewCheck("Download before or during play", func(b bool) {})
-	fullDownload.SetChecked(e.FullDownload)
-
-	return []*widget.FormItem{
-			widget.NewFormItem("Locale", locale),
-			widget.NewFormItem("Full Download", fullDownload),
-		}, func() Patcher {
-			return &NdNimbusPatcher{
-				netdevil.Environment{
-					Environment: e.Environment.Environment,
-					UserConfig: netdevil.UserConfig{
-						Locale:       locale.Selected,
-						FullDownload: fullDownload.Checked,
-					},
-				},
-			}
+func (e NetDevilPatcher) UserForm() ([]*widget.FormItem, PatcherFunc) {
+	return []*widget.FormItem{}, func() Patcher {
+		return &NetDevilPatcher{
+			netdevil.Environment{
+				Environment: e.Environment.Environment,
+			},
 		}
+	}
 }
 
 type NimbusPatcher struct {
 	nimbus.Environment
 }
 
-func (e *NimbusPatcher) Default() Patcher {
-	return &NimbusPatcher{}
+func (e NimbusPatcher) Default() Patcher {
+	return &NimbusPatcher{
+		Environment: nimbus.Environment{
+			Environment: "live",
+		},
+	}
 }
 
-func (e *NimbusPatcher) ProfileForm() ([]*widget.FormItem, PatcherFunc) {
-	return []*widget.FormItem{}, func() Patcher { return e.Default() }
+func (e NimbusPatcher) ProfileForm() ([]*widget.FormItem, PatcherFunc) {
+	environment := widget.NewEntry()
+	environment.SetText(e.Environment.Environment)
+
+	return []*widget.FormItem{
+			widget.NewFormItem("Environment", environment),
+		}, func() Patcher {
+			return &NimbusPatcher{
+				nimbus.Environment{
+					Environment: environment.Text,
+				},
+			}
+		}
 }
 
-func (e *NimbusPatcher) UserForm() ([]*widget.FormItem, PatcherFunc) {
-	return e.ProfileForm()
+func (e NimbusPatcher) UserForm() ([]*widget.FormItem, PatcherFunc) {
+	return []*widget.FormItem{}, func() Patcher {
+		return &NimbusPatcher{e.Environment}
+	}
 }
